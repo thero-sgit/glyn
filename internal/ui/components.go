@@ -8,13 +8,21 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
+	"github.com/thero-sgit/xyn/internal/config"
 )
 
+
+const xynBanner = `
+██╗ ██╗██╗ ██╗███╗ ██╗
+ ████╔╝██████║██║█╗██║
+██║ ██╗    ██║██║ ███║
+╚═╝ ╚═╝    ╚═╝╚═╝ ╚══╝
+`
 var (
 	subtleStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
 	defaultBg    = lipgloss.NewStyle().Background(lipgloss.Color("#1A1A1A"))
 	bwLabelStyle = lipgloss.NewStyle().Background(lipgloss.Color("#f0efef")).Foreground(lipgloss.Color("#121111"))
-	accentColor  = lipgloss.Color("#ff6f47")
+	accentColor  = lipgloss.Color("#D4A574")
 	
 	helpCmdTabState   = 0
 	hlStyle           = lipgloss.NewStyle().Foreground(lipgloss.Color("#9dbdb7")).Bold(true)
@@ -67,6 +75,22 @@ var (
 
 	sendPromptState = sendPromptBtnStates[0]
 )
+
+func bunner() string {
+	inf := lipgloss.JoinVertical(
+		lipgloss.Top,
+		lipgloss.NewStyle().Bold(true).Width(10).Render("xyn") + subtleStyle.Render("v0.4.2"),
+		lipgloss.NewStyle().Bold(true).Width(10).Render("model") + subtleStyle.Render(config.Config.Model),
+
+		subtleStyle.MarginTop(1).Bold(true).Render("~"+config.Config.WorkingDir),
+	)
+
+	return lipgloss.JoinHorizontal(
+		lipgloss.Left,
+		lipgloss.NewStyle().Foreground(accentColor).Render(xynBanner),
+		lipgloss.NewStyle().MarginTop(1).MarginLeft(2).Render(inf),
+	)
+}
 
 type slashCommand struct{
 	name   string

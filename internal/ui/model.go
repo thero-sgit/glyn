@@ -100,12 +100,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		config.Config.SetRenderer(m.viewport.Width-2)
 
+		m.chatCentre.updatedWidths(m.viewport.Width)
 		if len(m.chatCentre.prettyHistory()) < 1 && len(m.chatCentre.currentUserPrompt.pretty) == 0 {
-			m.viewport.SetContent(statusCmdComponent())
+			m.viewport.SetContent(bunner())
 		} else if len(m.chatCentre.prettyHistory()) > 0 {
 			m.viewport.SetContent(strings.Join(m.chatCentre.prettyHistory(), "\n"))
-		}
-		m.chatCentre.updatedWidths(m.viewport.Width)
+		}		
 
 	case tea.MouseMsg:
         if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {

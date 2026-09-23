@@ -31,7 +31,7 @@ func newChatCentre() chatCentre {
 }
 
 func (c *chatCentre) prettyHistory() []string {
-	var h []string
+	h := []string{bunner()}
 	for _, item := range c.history {
 		h = append(h, item.getPretty())
 	}
@@ -113,20 +113,12 @@ func (up *userPrompt) animate() {
 		Width(up.width).
 		PaddingRight(1).
 		Render(
-			lipgloss.JoinHorizontal(
-				lipgloss.Left,
-				lipgloss.NewStyle().Background(accentColor).Render(" you $ "),
-				lipgloss.NewStyle().PaddingLeft(1).Render(newPretty.String()),
-			),
+			lipgloss.NewStyle().Background(accentColor).Render(" you $ ") + lipgloss.NewStyle().PaddingLeft(1).Render(newPretty.String()),
 		)
 }
 
 func (up *userPrompt) sent() {
-	p := lipgloss.JoinHorizontal(
-		lipgloss.Left,
-		lipgloss.NewStyle().Background(accentColor).Render(" you $ "),
-		lipgloss.NewStyle().PaddingLeft(1).Render(up.message),
-	)
+	p := lipgloss.NewStyle().Background(accentColor).Render(" you $ ") + lipgloss.NewStyle().PaddingLeft(1).Render(up.message)
 
 	up.pretty = lipgloss.NewStyle().
 		MarginBottom(1).
@@ -142,11 +134,7 @@ func (up *userPrompt) sent() {
 }
 
 func (up *userPrompt) err() {
-	p := lipgloss.JoinHorizontal(
-		lipgloss.Left,
-		lipgloss.NewStyle().Background(accentColor).Render(" you $ "),
-		lipgloss.NewStyle().Strikethrough(true).PaddingLeft(1).Render(up.message),
-	)
+	p := lipgloss.NewStyle().Background(accentColor).Render(" you $ ") + lipgloss.NewStyle().Strikethrough(true).PaddingLeft(1).Render(up.message)
 
 	ed := lipgloss.JoinHorizontal(
 		lipgloss.Left,
