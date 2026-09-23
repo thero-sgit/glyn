@@ -174,8 +174,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         m.chatCentre.isAgentWorking = false
         m.chatCentre.sendingPrompt  = false
         sendPromptState = sendPromptBtnStates[0]
-        m.chatCentre.currentUserPrompt.err()    
-        m.viewport.SetContent(strings.Join(m.chatCentre.prettyHistory(), "\n"))
+        m.chatCentre.currentUserPrompt.err()
+        m.viewport.SetContent(strings.Join(append(m.chatCentre.prettyHistory(), m.chatCentre.currentUserPrompt.getPretty()), "\n"))
 
         return m, nil
 

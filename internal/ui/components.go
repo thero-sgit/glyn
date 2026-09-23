@@ -11,12 +11,18 @@ import (
 	"github.com/thero-sgit/xyn/internal/config"
 )
 
-
-const xynBanner = `
+const xynLargeText = `
 ██╗ ██╗██╗ ██╗███╗ ██╗
  ████╔╝██████║██║█╗██║
 ██║ ██╗    ██║██║ ███║
 ╚═╝ ╚═╝    ╚═╝╚═╝ ╚══╝
+`
+
+const codeLargeText = `
+█████╗█████╗████╗ ██████╗
+██╔══╝██║██║██║██║████╔═╝
+█████╗█████║████╔╝██████╗
+╚════╝╚════╝╚═══╝ ╚═════╝
 `
 var (
 	subtleStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
@@ -80,15 +86,21 @@ var (
 func bunner() string {
 	inf := lipgloss.JoinVertical(
 		lipgloss.Top,
-		boldStyle.Width(10).Render("xyn") + boldStyle.Render(subtleStyle.Render("v0.4.2")),
-		boldStyle.Width(10).Render("model") + boldStyle.Render(subtleStyle.Render(config.Config.Model)),
-		boldStyle.Render(subtleStyle.Render("~"+config.Config.WorkingDir)),
+		boldStyle.Render("xyn  ") + subtleStyle.Render("v0.4.2"),
+		boldStyle.Foreground(accentColor).Render("* ") + subtleStyle.Render(config.Config.Model),
+		boldStyle.Foreground(accentColor).Render("~ ") + subtleStyle.Render(config.Config.WorkingDir),
 	)
 
-	return lipgloss.JoinHorizontal(
+	largeText := lipgloss.JoinHorizontal(
 		lipgloss.Left,
-		lipgloss.NewStyle().Foreground(accentColor).Render(xynBanner),
-		lipgloss.NewStyle().MarginTop(1).MarginLeft(2).Render(inf),
+		lipgloss.NewStyle().Foreground(accentColor).Render(xynLargeText),
+		subtleStyle.Render(codeLargeText),
+	)
+
+	return lipgloss.JoinVertical(
+		lipgloss.Top,
+		largeText,
+		lipgloss.NewStyle().MarginBottom(1).Render(inf),
 	)
 }
 
