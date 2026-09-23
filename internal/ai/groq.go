@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strings"
 
@@ -103,7 +102,7 @@ func (g groq) CreateChatCompletionStream(ctx context.Context, reqBody GroqStream
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Fatalf("Initial request error: %v", err)
+		return &GroqChatCompletionStream{}, err
 	}
 
 	if resp.StatusCode != http.StatusOK {

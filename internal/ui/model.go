@@ -88,12 +88,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		m.textarea = createTextArea(msg.Width, m.textarea.Value())
+		
+		taHeight := 2
+		if m.textarea.Length() > 0 {
+			taHeight = 6
+		}
+
+		m.textarea = createTextArea(msg.Width, taHeight, m.textarea.Value())
 
         headerHeight := 2
         footerHeight := 1
         middleHeight := m.height - headerHeight - footerHeight
-        promptBoxHeight := 7
+        promptBoxHeight := taHeight + 1
 
 		m.viewport.Height = max(middleHeight - promptBoxHeight, 1)
 		m.viewport.Width  = m.width - 4

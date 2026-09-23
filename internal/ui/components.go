@@ -20,9 +20,10 @@ const xynBanner = `
 `
 var (
 	subtleStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
-	defaultBg    = lipgloss.NewStyle().Background(lipgloss.Color("#1A1A1A"))
+	defaultBg    = lipgloss.NewStyle().Background(lipgloss.Color("#4e4842"))
 	bwLabelStyle = lipgloss.NewStyle().Background(lipgloss.Color("#f0efef")).Foreground(lipgloss.Color("#121111"))
 	accentColor  = lipgloss.Color("#D4A574")
+	boldStyle    = lipgloss.NewStyle().Bold(true)
 	
 	helpCmdTabState   = 0
 	hlStyle           = lipgloss.NewStyle().Foreground(lipgloss.Color("#9dbdb7")).Bold(true)
@@ -79,10 +80,9 @@ var (
 func bunner() string {
 	inf := lipgloss.JoinVertical(
 		lipgloss.Top,
-		lipgloss.NewStyle().Bold(true).Width(10).Render("xyn") + subtleStyle.Render("v0.4.2"),
-		lipgloss.NewStyle().Bold(true).Width(10).Render("model") + subtleStyle.Render(config.Config.Model),
-
-		subtleStyle.MarginTop(1).Bold(true).Render("~"+config.Config.WorkingDir),
+		boldStyle.Width(10).Render("xyn") + boldStyle.Render(subtleStyle.Render("v0.4.2")),
+		boldStyle.Width(10).Render("model") + boldStyle.Render(subtleStyle.Render(config.Config.Model)),
+		boldStyle.Render(subtleStyle.Render("~"+config.Config.WorkingDir)),
 	)
 
 	return lipgloss.JoinHorizontal(
@@ -237,15 +237,15 @@ func statusCmdComponent() string {
 	)
 }
 
-func createTextArea(width int, value string) textarea.Model {
+func createTextArea(width, height int, value string,) textarea.Model {
 	ta := textarea.New()
 	ta.Placeholder = ` Try "how does <filename> work?"`
 	ta.ShowLineNumbers = false
 	ta.Prompt = ""
 	
-	ta.SetHeight(2)
 	ta.SetWidth(width - 11)
 	ta.SetValue(value)
+	ta.SetHeight(height)
 
 	ta.FocusedStyle.Base = lipgloss.NewStyle()
 	ta.FocusedStyle.CursorLine = lipgloss.NewStyle()
@@ -259,7 +259,7 @@ func createTextArea(width int, value string) textarea.Model {
 func dirAndSessionLabel(directoryPath, sessionName string) string {
 	directoryPath = defaultBg.
 		PaddingLeft(2).
-		Foreground(lipgloss.Color("#9dbdb7")).
+		Bold(true).
 		Render("~" + directoryPath)
 	
 	sColor := func() string {
@@ -267,7 +267,7 @@ func dirAndSessionLabel(directoryPath, sessionName string) string {
 			return "#b1b2b1"
 		}
 
-		return "#5DCAA5"
+		return "#17ef7c"
 	}()
 
 	separator := defaultBg.
@@ -290,12 +290,13 @@ func labelValueBand(label, value string) string {
 	label = defaultBg.
 		PaddingLeft(1).
 		Bold(true).
-		Foreground(lipgloss.Color("#9dbdb7")).
+		Foreground(accentColor).
 		Render(label)
 
 	value = defaultBg.
 		PaddingLeft(1).
 		PaddingRight(1).
+		Bold(true).
 		Render(value)
 
 	joined := lipgloss.JoinHorizontal(lipgloss.Left, label, value)

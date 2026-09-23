@@ -2,8 +2,8 @@ package ui
 
 import (
 	"github.com/charmbracelet/lipgloss"
-	"github.com/thero-sgit/xyn/internal/config"
 	zone "github.com/lrstanley/bubblezone"
+	"github.com/thero-sgit/xyn/internal/config"
 )
 
 func (m Model) headerBar(headerHeight int) string {
@@ -20,20 +20,28 @@ func (m Model) headerBar(headerHeight int) string {
 
 
 func (m Model) chatUi(middleHeight int) string {
+	taHeight := 2
+	if m.textarea.Length() > 0 {
+		taHeight = 6
+	}
+	m.textarea.SetHeight(taHeight)
+	m.viewport.Height = middleHeight - (taHeight + 1)
+
 	prompt := lipgloss.NewStyle().
 		Height(2).
 		AlignHorizontal(lipgloss.Center).
 		AlignVertical(lipgloss.Center).
 		Render("  >  ")
 
-	inputBoxContent := zone.Mark("text-area", lipgloss.JoinHorizontal(lipgloss.Top, prompt, m.textarea.View()))
+	inputBoxContent := lipgloss.NewStyle().
+		Render(lipgloss.JoinHorizontal(lipgloss.Top, prompt, m.textarea.View()))
+
+	inputBoxContent = zone.Mark("text-area", inputBoxContent)
 
 	boxStyle := lipgloss.NewStyle().
-		Border(lipgloss.NormalBorder()).
 		Width(m.width-6)
 
-	leftHemiContent := lipgloss.NewStyle().
-		Border(lipgloss.NormalBorder(), false, false, false, true).
+	workingDirAndSessionLabel := lipgloss.NewStyle().
 		Render(
 			lipgloss.JoinHorizontal(lipgloss.Left, dirAndSessionLabel(config.Config.SanitizedWd, m.chatCentre.sessionName)),
 		)
@@ -45,17 +53,14 @@ func (m Model) chatUi(middleHeight int) string {
 		Render("\uFF0B")
 
 	addContextbutton := zone.Mark("add-context-btn", addContext)
-	modelLabelButton := zone.Mark("model-selector-btn", labelValueBand("⬡", config.Config.Model))
 	modeLabelButton  := zone.Mark("mode-toggle-btn", labelValueBand(config.Config.Mode.Icon, config.Config.Mode.Name))
-	sendPromptButton := zone.Mark("send-prompt-btn", sendPromptState)
 
-	btnContHalfStyle := lipgloss.NewStyle().Width((m.width-8)/2)
-
-	inpLabels := lipgloss.NewStyle().PaddingLeft(1).MarginTop(1).Render(
+	inpLabels := lipgloss.NewStyle().PaddingLeft(1).Render(
 		lipgloss.JoinHorizontal(
-			lipgloss.Left, 
-			btnContHalfStyle.Render(addContextbutton, modelLabelButton + " ", modeLabelButton + " ",),
-			btnContHalfStyle.AlignHorizontal(lipgloss.Right).Render(sendPromptButton),
+			lipgloss.Left,
+			addContextbutton, 
+			modeLabelButton + " ",
+			workingDirAndSessionLabel,
 		),
 	)
 	
@@ -65,12 +70,12 @@ func (m Model) chatUi(middleHeight int) string {
 
 	activity := lipgloss.NewStyle().
 		Width(m.width-4).
-		Height(middleHeight-8).
+		Height(middleHeight - (taHeight + 1)).
 		MarginLeft(2).
 		MarginRight(2).
 		Render(m.viewport.View())
 
-	main := lipgloss.JoinVertical(lipgloss.Top, activity, leftHemiContent, promptBox)
+	main := lipgloss.JoinVertical(lipgloss.Top, activity, promptBox)
 
 	return lipgloss.NewStyle().
 		Width(m.width).
@@ -90,4 +95,16 @@ func (m Model) footerBar(footerHeight int) string {
 		AlignHorizontal(lipgloss.Right).
 		Height(footerHeight).
 		Render(joined)
+}
+
+func chunkString(s string, n int) []string {
+    var chunks []string
+    for i := 0; i < len(s); i += n {
+        end := i + n
+        if end > len(s) {
+            end = len(s)
+        }
+        chunks = append(chunks, s[i:end])
+    }
+    return chunks
 }
