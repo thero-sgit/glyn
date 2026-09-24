@@ -9,7 +9,7 @@ import (
 	"github.com/charmbracelet/glamour"
 )
 
-var modes = []string{"ask", "agent"}
+var modes = []string{"ask ", "agent"}
 
 type mode struct {
 	Icon string
@@ -22,10 +22,10 @@ func (m *mode) Toggle() {
 	m.Name = modes[m.i]
 
 	switch m.Name {
-	case "ask":
-		m.Icon = "?"
+	case "ask ":
+		m.Icon = " ?"
 	case "agent":
-		m.Icon = "W"
+		m.Icon = "\u2726"
 	}
 }
 

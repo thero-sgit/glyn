@@ -19,21 +19,20 @@ const xynLargeText = `
 `
 
 const codeLargeText = `
-█████╗█████╗████╗ ██████╗
-██╔══╝██║██║██║██║████╔═╝
-█████╗█████║████╔╝██████╗
-╚════╝╚════╝╚═══╝ ╚═════╝
+█████╗██████╗█████╗ ██████╗
+██╔══╝██║ ██║██║ ██╗████╔═╝
+█████╗██████║█████╔╝██████╗
+╚════╝╚═════╝╚════╝ ╚═════╝
 `
 var (
 	subtleStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
-	defaultBg    = lipgloss.NewStyle().Background(lipgloss.Color("#4e4842"))
+	highlighedStyle = lipgloss.NewStyle().Background(accentColor).Foreground(lipgloss.Color("#000000"))
 	bwLabelStyle = lipgloss.NewStyle().Background(lipgloss.Color("#f0efef")).Foreground(lipgloss.Color("#121111"))
 	accentColor  = lipgloss.Color("#D4A574")
 	boldStyle    = lipgloss.NewStyle().Bold(true)
 	
 	helpCmdTabState   = 0
-	hlStyle           = lipgloss.NewStyle().Foreground(lipgloss.Color("#9dbdb7")).Bold(true)
-	groupLabelStyle   = lipgloss.NewStyle().MarginTop(1).Foreground(accentColor)
+	hlStyle           = lipgloss.NewStyle().Foreground(accentColor).Bold(true)
 	helpCmdGeneralTabContent = lipgloss.NewStyle().
 		Render(
 			lipgloss.JoinVertical(
@@ -41,16 +40,15 @@ var (
 				hlStyle.Render("esc") + "/" + hlStyle.Render("ctrl+c") + " to quit xyn",
 				hlStyle.Render("/") + " display '/' command input screen",
 
-				groupLabelStyle.Render("AI interaction & config"),
-				hlStyle.Render("alt+enter") + "/click (" + hlStyle.Render("\u27A4") + " ) send prompt",
+				subtleStyle.MarginTop(1).Render("AI interaction & config"),
+				hlStyle.Render("alt+enter") + "/click (" + sendPromptBtnStates[0] + ") send prompt",
 				"click (" + hlStyle.Render("\uFF0B") + ") to add context",
-				"click (" + labelValueBand("⬡", "`model-name`") + ") to switch models",
-				"click (" + labelValueBand("?/W", "`mode`") + ") to switch mode",
+				"click (" + labelValueBand("?/" + "\u2726", "`mode`") + ") to switch mode",
 				
-				groupLabelStyle.Render("In chat screen"),
+				subtleStyle.MarginTop(1).Render("In chat screen"),
 				hlStyle.Render("pgup, pgdn, up, down arrows") + "/" + hlStyle.Render("mouse") + " to scroll",
 				hlStyle.Render("ctrl+e") + " to focus prompt text input",
-				hlStyle.Render("ctrl+x") + "/click (" + hlStyle.Render("\u25A0") + " ) to interupt session",
+				hlStyle.Render("ctrl+x") + "/click (" + sendPromptBtnStates[1] + ") to interupt session",
 			),
 		)
 
@@ -69,15 +67,8 @@ var (
 	}
 
 	sendPromptBtnStates = []string {
-		lipgloss.NewStyle().
-		PaddingLeft(1).
-		PaddingRight(1).
-		Foreground(accentColor).
-		Render("\u27A4"),
-
-		lipgloss.NewStyle().
-		PaddingRight(1).
-		Render("\u25A0"),
+		highlighedStyle.PaddingLeft(1).PaddingRight(1).Bold(true).Render("send " + "\u27A4"),
+		bwLabelStyle.PaddingLeft(1).PaddingRight(1).Bold(true).Render("stop " + "\u25A0"),
 	}
 
 	sendPromptState = sendPromptBtnStates[0]
@@ -176,22 +167,16 @@ func (s *slashCmdCtrl) view() string {
 }
 
 func helpCmdComponent() string {
-	highlighedStyle := lipgloss.NewStyle().
-		Background(accentColor).
-		Foreground(lipgloss.Color("#000000")).
-		PaddingLeft(1).
-		PaddingRight(1)
-
 	var generalTabBtn  string
 	var commandsTabBtn string
 	var content        string
 	if helpCmdTabState == 0 {
-		generalTabBtn  = highlighedStyle.Render("General")
+		generalTabBtn  = highlighedStyle.PaddingLeft(1).PaddingRight(1).Render("General")
 		commandsTabBtn = subtleStyle.Render(" Commands ")
 		content 	   = helpCmdGeneralTabContent
 	} else {
 		generalTabBtn  = subtleStyle.Render(" General ")
-		commandsTabBtn = highlighedStyle.Render("Commands")
+		commandsTabBtn = highlighedStyle.PaddingLeft(1).PaddingRight(1).Render("Commands")
 		content        = helpCmdCommandsTabContent
 	}
 
@@ -269,24 +254,22 @@ func createTextArea(width, height int, value string,) textarea.Model {
 }
 
 func dirAndSessionLabel(directoryPath, sessionName string) string {
-	directoryPath = defaultBg.
-		PaddingLeft(2).
-		Bold(true).
-		Render("~" + directoryPath)
+	directoryPath = lipgloss.NewStyle().
+		Render(lipgloss.NewStyle().Foreground(accentColor).Render("~") + subtleStyle.Faint(true).Render(directoryPath))
 	
 	sColor := func() string {
 		if sessionName == "" {
 			return "#b1b2b1"
 		}
 
-		return "#17ef7c"
+		return "#06753a"
 	}()
 
-	separator := defaultBg.
+	separator := lipgloss.NewStyle().
 		Foreground(lipgloss.Color(sColor)).
 		Render(" • ")
 
-	sessionName = defaultBg.
+	sessionName = lipgloss.NewStyle().
 		PaddingRight(2).
 		Render(sessionName)
 
@@ -299,21 +282,20 @@ func dirAndSessionLabel(directoryPath, sessionName string) string {
 }
 
 func labelValueBand(label, value string) string {
-	label = defaultBg.
-		PaddingLeft(1).
+	label = highlighedStyle.
 		Bold(true).
-		Foreground(accentColor).
-		Render(label)
-
-	value = defaultBg.
 		PaddingLeft(1).
 		PaddingRight(1).
+		Render(label )
+
+	value = highlighedStyle.
 		Bold(true).
+		PaddingRight(1).
 		Render(value)
 
 	joined := lipgloss.JoinHorizontal(lipgloss.Left, label, value)
 
-	output := defaultBg.
+	output := bwLabelStyle.
 		AlignHorizontal(lipgloss.Left).
 		Render(joined)
 

@@ -41,11 +41,6 @@ func (m Model) chatUi(middleHeight int) string {
 	boxStyle := lipgloss.NewStyle().
 		Width(m.width-6)
 
-	workingDirAndSessionLabel := lipgloss.NewStyle().
-		Render(
-			lipgloss.JoinHorizontal(lipgloss.Left, dirAndSessionLabel(config.Config.SanitizedWd, m.chatCentre.sessionName)),
-		)
-
 	addContext := lipgloss.NewStyle().
 		MarginLeft(1).
 		PaddingLeft(1).
@@ -54,13 +49,14 @@ func (m Model) chatUi(middleHeight int) string {
 
 	addContextbutton := zone.Mark("add-context-btn", addContext)
 	modeLabelButton  := zone.Mark("mode-toggle-btn", labelValueBand(config.Config.Mode.Icon, config.Config.Mode.Name))
+	sendStopBtn      := zone.Mark("send-prompt-btn", sendPromptState)
 
 	inpLabels := lipgloss.NewStyle().PaddingLeft(1).Render(
 		lipgloss.JoinHorizontal(
 			lipgloss.Left,
 			addContextbutton, 
 			modeLabelButton + " ",
-			workingDirAndSessionLabel,
+			sendStopBtn + " ",
 		),
 	)
 	
@@ -95,16 +91,4 @@ func (m Model) footerBar(footerHeight int) string {
 		AlignHorizontal(lipgloss.Right).
 		Height(footerHeight).
 		Render(joined)
-}
-
-func chunkString(s string, n int) []string {
-    var chunks []string
-    for i := 0; i < len(s); i += n {
-        end := i + n
-        if end > len(s) {
-            end = len(s)
-        }
-        chunks = append(chunks, s[i:end])
-    }
-    return chunks
 }
