@@ -104,3 +104,33 @@ func (h *Handler) handlePrompt(m Model) (Model, tea.Cmd) {
 
     return m, tea.Batch(cmds...)
 }
+
+
+type models struct {
+    m []ai.GroqModelInfo
+    c chan []ai.GroqModelInfo
+}
+
+func awaitModels(ctx context.Context, c chan []ai.GroqModelInfo) tea.Cmd {
+    return func() tea.Msg {
+        select {
+        case m, ok := <-c:
+            if !ok {
+                return nil
+            }
+            
+            return models{m: m, c: c}
+        case <-ctx.Done():
+            return nil
+        }
+    }
+}
+
+func (h *Handler) handleGetModels(m Model) (Model, tea.Cmd) {
+    responseChan := make(chan []ai.GroqModelInfo)
+    errChan := make(chan error, 2)
+
+    h.session.RetrieveModels(responseChan, errChan)
+
+    return m, tea.Batch(errorListener(h.session.Ctx, errChan), awaitModels(h.session.Ctx, responseChan))
+}

@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
+	"github.com/thero-sgit/xyn/internal/ai"
 	"github.com/thero-sgit/xyn/internal/config"
 )
 
@@ -64,6 +65,7 @@ var (
 	slashCommands = []slashCommand {
 		{ name: "/help  ", pretty: "/help  ", comp: helpCmdComponent},
 		{ name: "/status", pretty: "/status", comp: statusCmdComponent},
+		{ name: "/models", pretty: "/models"},
 	}
 
 	sendPromptBtnStates = []string {
@@ -77,9 +79,9 @@ var (
 func bunner() string {
 	inf := lipgloss.JoinVertical(
 		lipgloss.Top,
-		boldStyle.Render("xyn  ") + subtleStyle.Render("v0.4.2"),
-		boldStyle.Foreground(accentColor).Render("* ") + subtleStyle.Render(config.Config.Model),
-		boldStyle.Foreground(accentColor).Render("~ ") + subtleStyle.Render(config.Config.WorkingDir),
+		boldStyle.Render("xyn  ") + subtleStyle.Bold(true).Render("v0.4.2"),
+		boldStyle.Foreground(accentColor).Render("* ") + subtleStyle.Bold(true).Render(config.Config.Model),
+		boldStyle.Foreground(accentColor).Render("~ ") + subtleStyle.Bold(true).Render(config.Config.WorkingDir),
 	)
 
 	largeText := lipgloss.JoinHorizontal(
@@ -231,6 +233,65 @@ func statusCmdComponent() string {
 		tokenUsageProgressBar,
 		tokenUsageBreakdown,
 		context,
+	)
+}
+
+func modelCard(modelInfo ai.GroqModelInfo, width int) string {
+	header := lipgloss.NewStyle().Render(
+			boldStyle.Render(subtleStyle.Render("\u27E1")) +
+			" " + modelInfo.Name + 
+			" (" + modelInfo.Id + ") " + 
+			subtleStyle.Render(modelInfo.OwnedBy),
+	)
+
+	c := map[string]string {
+		"tools": 	 "\u2692",
+		"reasoning": "\u223f",
+	}
+
+	var labels []string
+	for _, s := range modelInfo.SupportedFeatures {
+		val, ok := c[s]
+		if ok {
+			labels = append(
+				labels,
+				subtleStyle.Render(val + " ") + s + "  ",
+			)
+		}
+	}
+
+	capabilities := lipgloss.NewStyle().Render(
+		lipgloss.JoinVertical(
+			lipgloss.Top,
+			subtleStyle.Render("Capabilities"),
+			lipgloss.JoinHorizontal(lipgloss.Left, labels...),
+		),
+	)
+
+	card := lipgloss.NewStyle().MarginTop(1).Render(
+		lipgloss.JoinVertical(
+			lipgloss.Top,
+			header,
+			capabilities,
+		),
+	)
+
+	return card
+}
+
+func modelsCmdComponent(content string, models []ai.GroqModelInfo, width int) string {
+	cmdLabel := bwLabelStyle.Render(" /models ")
+
+	if content == "" && len(models)>0 {
+		for _, model := range models {
+			content += modelCard(model, width) + "\n"
+		}
+	}
+
+	return lipgloss.JoinVertical(
+		lipgloss.Top,
+		cmdLabel,
+		content,
 	)
 }
 

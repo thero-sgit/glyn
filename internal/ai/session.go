@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"slices"
 	"sync"
 	"time"
 )
@@ -183,6 +184,24 @@ func (s *Session) handleError(err error, errChan chan error) {
     }
 
     s.SetNewContext()
+}
+
+func (s *Session) RetrieveModels(c chan []GroqModelInfo, errChan chan error){
+    go func() {
+        res, err := s.groq.getModels(s.Ctx)
+        if err != nil {
+            s.handleError(err, errChan)
+        }
+
+        var models []GroqModelInfo
+        for _, model := range res.Data {
+            if model.Active && slices.Contains(model.SupportedFeatures, "tools") && slices.Contains(model.SupportedFeatures, "reasoning") {
+                models = append(models, model)
+            }
+        }
+
+        c <- models
+    }()
 }
 
 func InitSession() {

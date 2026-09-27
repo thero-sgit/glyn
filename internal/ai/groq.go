@@ -81,7 +81,7 @@ type groq struct {
 
 func newGroq() *groq {
 	return &groq{
-		url:     "https://api.groq.com/openai/v1/chat/completions",
+		url:     "https://api.groq.com/openai/v1",
 		apiKey:	 config.Config.GroqApiKey,
 	}
 }
@@ -92,7 +92,7 @@ func (g groq) CreateChatCompletionStream(ctx context.Context, reqBody GroqStream
 		return &GroqChatCompletionStream{}, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", g.url, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequestWithContext(ctx, "POST", g.url + "/chat/completions", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return &GroqChatCompletionStream{}, err
 	}
@@ -131,4 +131,57 @@ func (g groq) handlePrompt(ctx context.Context, messages []GroqChatCompletionMes
 	}
 
 	return *stream, nil
+}
+
+type GroqModelInfo struct {
+	Id 			                string 	 `json:"id"`
+	Object 		                string   `json:"object"`
+	Created                     int 	 `json:"created"`
+	OwnedBy                     string   `json:"owned_by"`
+	Active                      bool   	 `json:"active"`
+	ContextWindow               int   	 `json:"context_window"`
+	PublicApps                  string 	 `json:"public_apps,omitempty"`
+	MaxCompletionTokens			int 	 `json:"max_completion_tokens"`
+	HuggingFaceId				string   `json:"hugging_face_id"`
+	Name						string   `json:"name"`
+	InputModalities				[]string `json:"input_modalities"`
+	OutputModalities			[]string `json:"output_modalities"`
+	ContextLength				int      `json:"context_length"`
+	MaxOutputLength				int      `json:"max_output_length"`
+	SupportedSamplingParameters []string `json:"supported_sampling_parameters"`
+	SupportedFeatures			[]string `json:"supported_features"`
+}
+
+type GroqModelList struct {
+	Object string          `json:"object"`
+	Data   []GroqModelInfo `json:"data"`
+}
+
+
+func (g groq) getModels(ctx context.Context) (GroqModelList, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", g.url + "/models", nil)
+	if err != nil {
+		return GroqModelList{}, err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+g.apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return GroqModelList{}, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return GroqModelList{}, err
+	}
+
+	var modelList GroqModelList
+	if err := json.Unmarshal(body, &modelList); err != nil {
+		return GroqModelList{}, err
+	}
+
+	return modelList, nil
 }

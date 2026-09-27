@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
+	"github.com/thero-sgit/xyn/internal/ai"
 	"github.com/thero-sgit/xyn/internal/config"
 )
 
@@ -248,6 +249,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         return m, awaitSessionInfo(CHandler.session.Ctx, msg.c)
 
 
+	case models:
+		models := msg.m
+		m.viewport.SetContent(modelsCmdComponent("", models, m.viewport.Width))
+
+		return m, nil
+
+
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c" :
@@ -361,8 +369,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "enter":
 			if m.slashCmdCon.acceptingCmd && m.slashCmdCon.cmdLen > 0 && !m.textarea.Focused() {
-				m.viewport.SetContent(m.slashCmdCon.highlighted.comp())
 				m.slashCmdCon.acceptingCmd = false
+				if m.slashCmdCon.highlighted.name == "/models" {
+					m.viewport.SetContent(modelsCmdComponent("Loading...", []ai.GroqModelInfo{}, 0))
+					m, cmds := CHandler.handleGetModels(m)
+
+					return m, cmds
+				}
+
+				m.viewport.SetContent(m.slashCmdCon.highlighted.comp())
 
 				if strings.HasPrefix(m.slashCmdCon.highlighted.name, "/help") {
 					m.slashCmdCon.isInHelpCmd = true
