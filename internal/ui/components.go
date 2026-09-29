@@ -13,10 +13,10 @@ import (
 )
 
 const xynLargeText = `
-██╗ ██╗██╗ ██╗███╗ ██╗
- ████╔╝██████║██║█╗██║
-██║ ██╗    ██║██║ ███║
-╚═╝ ╚═╝    ╚═╝╚═╝ ╚══╝
+██╗ ██╗██╗ ██╗████╗██╗
+ ████╔╝██████║██║█║██║
+██║ ██╗    ██║██║████║
+╚═╝ ╚═╝    ╚═╝╚═╝╚═══╝
 `
 
 const codeLargeText = `
@@ -33,23 +33,22 @@ var (
 	boldStyle    = lipgloss.NewStyle().Bold(true)
 	
 	helpCmdTabState   = 0
-	hlStyle           = lipgloss.NewStyle().Foreground(accentColor).Bold(true)
 	helpCmdGeneralTabContent = lipgloss.NewStyle().
 		Render(
 			lipgloss.JoinVertical(
 				lipgloss.Top,
-				hlStyle.Render("esc") + "/" + hlStyle.Render("ctrl+c") + " to quit xyn",
-				hlStyle.Render("/") + " display '/' command input screen",
+				boldStyle.Render("esc") + "/" + boldStyle.Render("ctrl+c") + " to quit xyn",
+				boldStyle.Render("/") + " display '/' command input screen",
 
 				subtleStyle.MarginTop(1).Render("AI interaction & config"),
-				hlStyle.Render("alt+enter") + "/click (" + sendPromptBtnStates[0] + ") send prompt",
-				"click (" + hlStyle.Render("\uFF0B") + ") to add context",
-				"click (" + labelValueBand("?/" + "\u2726", "`mode`") + ") to switch mode",
+				boldStyle.Render("alt+enter") + "/click " + sendPromptBtnStates[0] + " send prompt",
+				"click " + boldStyle.Render("\uFF0B") + " to add context",
+				"click " + labelValueBand("?/" + "\u2726", "`mode`") + " to switch mode",
 				
 				subtleStyle.MarginTop(1).Render("In chat screen"),
-				hlStyle.Render("pgup, pgdn, up, down arrows") + "/" + hlStyle.Render("mouse") + " to scroll",
-				hlStyle.Render("ctrl+e") + " to focus prompt text input",
-				hlStyle.Render("ctrl+x") + "/click (" + sendPromptBtnStates[1] + ") to interupt session",
+				boldStyle.Render("pgup, pgdn, up, down arrows") + "/" + boldStyle.Render("mouse") + " to scroll",
+				boldStyle.Render("ctrl+e") + " to focus prompt text input",
+				boldStyle.Render("ctrl+x") + "/click " + sendPromptBtnStates[1] + " to interupt session",
 			),
 		)
 
@@ -57,13 +56,13 @@ var (
 		Render(
 			lipgloss.JoinVertical(
 				lipgloss.Top,
-				hlStyle.Render("/help") + " display helpful keyboard shortcuts",
-				hlStyle.Render("/status") + " display usage and general status",
+				boldStyle.Render("/help") + " display helpful keyboard shortcuts",
+				boldStyle.Render("/status") + " display usage and general status",
 			),
 		)
 
 	slashCommands = []slashCommand {
-		{ name: "/help  ", pretty: "/help  ", comp: helpCmdComponent},
+		{ name: "/help", pretty: "/help  ", comp: helpCmdComponent},
 		{ name: "/status", pretty: "/status", comp: statusCmdComponent},
 		{ name: "/models", pretty: "/models"},
 	}
@@ -77,11 +76,12 @@ var (
 )
 
 func bunner() string {
-	inf := lipgloss.JoinVertical(
-		lipgloss.Top,
-		boldStyle.Render("xyn  ") + subtleStyle.Bold(true).Render("v0.4.2"),
-		boldStyle.Foreground(accentColor).Render("* ") + subtleStyle.Bold(true).Render(config.Config.Model),
-		boldStyle.Foreground(accentColor).Render("~ ") + subtleStyle.Bold(true).Render(config.Config.WorkingDir),
+	inf := lipgloss.NewStyle().MarginLeft(3).MarginTop(1).Render(lipgloss.JoinVertical(
+			lipgloss.Top,
+			boldStyle.Render("xyn ") + subtleStyle.Bold(true).Render("v0.4.2"),
+			boldStyle.Foreground(accentColor).Render("\u27E1 ") + subtleStyle.Render(config.Config.Model),
+			boldStyle.Foreground(accentColor).Render("~") + subtleStyle.Render(config.Config.WorkingDir),
+		),
 	)
 
 	largeText := lipgloss.JoinHorizontal(
@@ -90,8 +90,8 @@ func bunner() string {
 		subtleStyle.Render(codeLargeText),
 	)
 
-	return lipgloss.JoinVertical(
-		lipgloss.Top,
+	return lipgloss.JoinHorizontal(
+		lipgloss.Left,
 		largeText,
 		lipgloss.NewStyle().MarginBottom(1).Render(inf),
 	)
@@ -107,7 +107,7 @@ type slashCmdCtrl struct {
 	ta               textinput.Model
 	cmdLen           int
 	acceptingCmd     bool
-	isInHelpCmd      bool
+	openCmd          string
 	highlighted 	 slashCommand
 	highlightedIndex int	 
 }
@@ -143,7 +143,7 @@ func (s *slashCmdCtrl) view() string {
 	}
 	
 	if s.cmdLen >= 1 {
-		cmds[s.highlightedIndex].pretty = lipgloss.NewStyle().Foreground(accentColor).Render("> ") + cmds[s.highlightedIndex].name
+		cmds[s.highlightedIndex].pretty = lipgloss.NewStyle().Foreground(accentColor).Render("■ ") + cmds[s.highlightedIndex].name
 		s.highlighted = cmds[s.highlightedIndex]
 	}	
 
@@ -268,7 +268,7 @@ func modelCard(modelInfo ai.GroqModelInfo, width int) string {
 		),
 	)
 
-	card := lipgloss.NewStyle().MarginTop(1).Render(
+	card := lipgloss.NewStyle().MarginBottom(1).Render(
 		lipgloss.JoinVertical(
 			lipgloss.Top,
 			header,
@@ -280,7 +280,13 @@ func modelCard(modelInfo ai.GroqModelInfo, width int) string {
 }
 
 func modelsCmdComponent(content string, models []ai.GroqModelInfo, width int) string {
-	cmdLabel := bwLabelStyle.Render(" /models ")
+	cmdLabel := lipgloss.JoinHorizontal(
+		lipgloss.Left,
+		bwLabelStyle.Render(" /models "),
+		" Compatible models from Groq ",
+		subtleStyle.Render("(console.groq.com/docs/models)"),
+		subtleStyle.MarginLeft(5).Render("press 'esc' to close"),
+	)
 
 	if content == "" && len(models)>0 {
 		for _, model := range models {
@@ -291,7 +297,7 @@ func modelsCmdComponent(content string, models []ai.GroqModelInfo, width int) st
 	return lipgloss.JoinVertical(
 		lipgloss.Top,
 		cmdLabel,
-		content,
+		lipgloss.NewStyle().MarginTop(1).Render(content),
 	)
 }
 

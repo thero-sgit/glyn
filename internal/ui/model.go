@@ -68,6 +68,8 @@ func InitialModel() Model {
 		viewport: vp,
 	}
 
+	model.viewport.SetContent(strings.Join(model.chatCentre.prettyHistory(), "\n"))
+
 	InitHandler()
 
 	return model
@@ -108,11 +110,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		config.Config.SetRenderer(m.viewport.Width-2)
 
 		m.chatCentre.updatedWidths(m.viewport.Width)
-		if len(m.chatCentre.prettyHistory()) < 1 && len(m.chatCentre.currentUserPrompt.pretty) == 0 {
-			m.viewport.SetContent(bunner())
-		} else if len(m.chatCentre.prettyHistory()) > 0 {
-			m.viewport.SetContent(strings.Join(m.chatCentre.prettyHistory(), "\n"))
-		}		
 
 	case tea.MouseMsg:
         if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
@@ -124,13 +121,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			case zone.Get("add-context-btn").InBounds(msg):
 				m.slashCmdCon.acceptingCmd = false
-				m.slashCmdCon.isInHelpCmd = false
+				m.slashCmdCon.openCmd = ""
 				m.viewport.SetContent("ADD CONTEXT!!")
                 return m, nil
 
 			case zone.Get("model-selector-btn").InBounds(msg):
 				m.slashCmdCon.acceptingCmd = false
-				m.slashCmdCon.isInHelpCmd = false
+				m.slashCmdCon.openCmd = ""
 				m.viewport.SetContent("MODELL!!")
                 return m, nil
 
@@ -172,6 +169,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         }
 
 	case errMsg:
+		if m.slashCmdCon.openCmd == "/models" {
+			m.viewport.SetContent(modelsCmdComponent(msg.err.Error(), []ai.GroqModelInfo{}, 0))
+
+			return m, nil
+		}
+
         m.chatCentre.isAgentWorking = false
         m.chatCentre.sendingPrompt  = false
         sendPromptState = sendPromptBtnStates[0]
@@ -255,7 +258,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, nil
 
-
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c" :
@@ -263,9 +265,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case "esc":
-			if m.slashCmdCon.acceptingCmd || m.slashCmdCon.isInHelpCmd {
+			if m.slashCmdCon.acceptingCmd || m.slashCmdCon.openCmd != "" {
 				m.slashCmdCon.acceptingCmd = false
-				m.slashCmdCon.isInHelpCmd = false
+				m.slashCmdCon.openCmd = ""
 
 				if len(m.chatCentre.prettyHistory()) == 0 {
 					m.viewport.SetContent(subtleStyle.Render("press 'ctrl+e' to start chat"))
@@ -347,7 +349,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case "left", "right":
-			if m.slashCmdCon.isInHelpCmd {
+			if m.slashCmdCon.openCmd == "/help" {
 				switch msg.String() {
 				case "left":
 					helpCmdTabState = 0
@@ -370,6 +372,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			if m.slashCmdCon.acceptingCmd && m.slashCmdCon.cmdLen > 0 && !m.textarea.Focused() {
 				m.slashCmdCon.acceptingCmd = false
+				m.slashCmdCon.openCmd = m.slashCmdCon.highlighted.name
+
 				if m.slashCmdCon.highlighted.name == "/models" {
 					m.viewport.SetContent(modelsCmdComponent("Loading...", []ai.GroqModelInfo{}, 0))
 					m, cmds := CHandler.handleGetModels(m)
@@ -378,19 +382,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 
 				m.viewport.SetContent(m.slashCmdCon.highlighted.comp())
-
-				if strings.HasPrefix(m.slashCmdCon.highlighted.name, "/help") {
-					m.slashCmdCon.isInHelpCmd = true
-				}
 			}
 
 		case "?":
 			if !m.textarea.Focused() {
-				m.slashCmdCon.isInHelpCmd = true
+				m.slashCmdCon.openCmd = m.slashCmdCon.highlighted.name
 				m.viewport.SetContent(helpCmdComponent())
 			}
-		}
-		
+		}		
 	}
 
 	if m.slashCmdCon.acceptingCmd {
@@ -404,10 +403,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		sendPromptState = sendPromptBtnStates[1]
 	} else {
 		sendPromptState = sendPromptBtnStates[0]
-	}
-
-	if m.slashCmdCon.isInHelpCmd {
-		m.viewport.SetContent(helpCmdComponent())
 	}
 
 	m.textarea, taCmd       = m.textarea.Update(msg)
