@@ -64,7 +64,7 @@ var (
 	slashCommands = []uiOption {
 		&slashCommand{ info: uiOptionInfo {name: "/help", pretty: "/help  ", comp: helpCmdComponent}},
 		&slashCommand{ info: uiOptionInfo {name: "/status", pretty: "/status", comp: statusCmdComponent}},
-		&slashCommand{ info: uiOptionInfo {name: "/models", pretty: "/models"}},
+		&slashCommand{ info: uiOptionInfo {name: "/model", pretty: "/models"}},
 	}
 
 	sendPromptBtnStates = []string {

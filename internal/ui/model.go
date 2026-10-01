@@ -172,7 +172,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         }
 
 	case errMsg:
-		if m.slashCmdCon.info.openCmd == "/models" {
+		if m.slashCmdCon.info.openCmd == "/model" {
 			_, content := modelsCmdComponent(m.modelsSelCon, msg.err.Error(), []ai.GroqModelInfo{})
 			m.viewport.SetContent(content)
 
@@ -275,7 +275,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "esc":
 			if m.slashCmdCon.info.acceptingInp || m.slashCmdCon.info.openCmd != "" {
-				m.slashCmdCon.info.acceptingInp = false
+				m.slashCmdCon.info.acceptingInp  = false
+				m.modelsSelCon.info.acceptingInp = false
 				m.slashCmdCon.info.openCmd = ""
 
 				if len(m.chatCentre.prettyHistory()) == 0 {
@@ -296,7 +297,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+e":
 			if !m.textarea.Focused() {
 				m.textarea.Focus()
-				m.slashCmdCon.info.acceptingInp = false
+				m.slashCmdCon.info.acceptingInp  = false
+				m.modelsSelCon.info.acceptingInp = false
 			} else {
 				m.textarea.Blur()
 			}				
@@ -353,7 +355,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return selectorInfo{}, errors.New("")
 			}()
 
-			if err == nil {
+			if err == nil && info.optsLen > 1 {
 				if msg.String() == "up" {
 					if info.highlightedIndex == 0 {
 						info.highlightedIndex = info.optsLen - 1
@@ -398,6 +400,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "/":
 			if !m.textarea.Focused() {
 				m.slashCmdCon.info.acceptingInp = true
+				m.modelsSelCon.info.acceptingInp = false
 				m.slashCmdCon              		= newSlashCmdCtrl()			
 			}
 
@@ -406,7 +409,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.slashCmdCon.info.acceptingInp = false
 				m.slashCmdCon.info.openCmd = m.slashCmdCon.info.options[m.slashCmdCon.info.highlightedIndex].getInfo().name
 
-				if m.slashCmdCon.info.options[m.slashCmdCon.info.highlightedIndex].getInfo().name == "/models" {
+				if m.slashCmdCon.info.openCmd == "/model" {
 					m.modelsSelCon = newModelsSelectorCtrl()
 					m, cmds := CHandler.handleGetModels(m)
 
@@ -426,7 +429,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	if m.slashCmdCon.info.acceptingInp || m.modelsSelCon.info.acceptingInp {
 		if m.slashCmdCon.info.acceptingInp {
-			m.slashCmdCon.info.options = slashCommands
 			m.viewport.SetContent(viewSelector(&m.slashCmdCon))
 		} else {
 			_, content := modelsCmdComponent(m.modelsSelCon, "", []ai.GroqModelInfo{})
