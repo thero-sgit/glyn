@@ -62,9 +62,9 @@ var (
 		)
 
 	slashCommands = []uiOption {
-		&slashCommand{ name: "/help", pretty: "/help  ", comp: helpCmdComponent},
-		&slashCommand{ name: "/status", pretty: "/status", comp: statusCmdComponent},
-		&slashCommand{ name: "/models", pretty: "/models"},
+		&slashCommand{ info: uiOptionInfo {name: "/help", pretty: "/help  ", comp: helpCmdComponent}},
+		&slashCommand{ info: uiOptionInfo {name: "/status", pretty: "/status", comp: statusCmdComponent}},
+		&slashCommand{ info: uiOptionInfo {name: "/models", pretty: "/models"}},
 	}
 
 	sendPromptBtnStates = []string {
@@ -97,50 +97,64 @@ func bunner() string {
 	)
 }
 
-type uiOption interface {
-	setPretty(string)
-	getPretty() string
-	getName()   string
-	component() string
-}
-
-type slashCommand struct{
+// -- UI OPTIONS
+type uiOptionInfo struct {
 	name   string
 	pretty string
 	comp   func() string
 }
 
-func (s *slashCommand) setPretty(pretty string) {
-	s.pretty = pretty
+type uiOption interface {
+	getInfo() uiOptionInfo
 }
 
-func (s *slashCommand) getPretty() string {
-	return s.pretty
+type slashCommand struct{
+	info uiOptionInfo
 }
 
-func (s *slashCommand) getName() string {
-	return s.name
+func (s *slashCommand) getInfo() uiOptionInfo {
+	return s.info
 }
 
-func (s *slashCommand) component() string {
-	return s.comp()
+type modelUiOption struct{
+	info uiOptionInfo
 }
 
+func (m *modelUiOption) getInfo() uiOptionInfo {
+	return m.info
+}
+
+// -- SELECTORS
 type selectorInfo struct {
 	ta               textinput.Model
 	options          []uiOption
 	optsLen           int
-	acceptingCmd     bool
+	acceptingInp     bool
 	openCmd          string
 	highlightedIndex int
 }
 
 type selector interface {
-	getSelectorInfo() selectorInfo
+	label() 		   string
+	usefulInfo()	   string
+	optionPrefix()     string
+	getSelectorInfo()  selectorInfo
 }
 
 type slashCmdCtrl struct {
 	info selectorInfo
+}
+
+func (s *slashCmdCtrl) label() string {
+	return "command"
+}
+
+func (s *slashCmdCtrl) usefulInfo() string {
+	return subtleStyle.Render("press 'esc' to close")
+}
+
+func (s *slashCmdCtrl) optionPrefix() string {
+	return "/"
 }
 
 func (s *slashCmdCtrl) getSelectorInfo() selectorInfo {
@@ -154,40 +168,74 @@ func newSlashCmdCtrl() slashCmdCtrl {
 
 	info := selectorInfo {
 		ta:               ta,
-		optsLen:           len(slashCommands),
-		acceptingCmd:     true,
-		options: slashCommands,
+		optsLen:          len(slashCommands),
+		acceptingInp:     true,
+		options: 		  slashCommands,
 		highlightedIndex: 0,
 	}
 
-	return slashCmdCtrl {
-		info: info,
+	return slashCmdCtrl { info: info }
+}
+
+type modelsSelectorCtrl struct {
+	info selectorInfo
+}
+
+func (m *modelsSelectorCtrl) label() string {
+	return "name"
+}
+
+func (m *modelsSelectorCtrl) usefulInfo() string {
+	return ""
+}
+
+func (m *modelsSelectorCtrl) optionPrefix() string {
+	return ""
+}
+
+func (m *modelsSelectorCtrl) getSelectorInfo() selectorInfo {
+	return m.info
+}
+
+func newModelsSelectorCtrl() modelsSelectorCtrl {
+	ta := textinput.New()
+	ta.Focus()
+	ta.CharLimit = 15
+
+	info := selectorInfo {
+		ta:               ta,
+		optsLen:          1,
+		acceptingInp:     true,
+		highlightedIndex: 0,
 	}
+
+	return modelsSelectorCtrl { info: info }
 }
 
 func viewSelector[T selector](s T) string {
 	info := s.getSelectorInfo()
 
 	if len(info.ta.Value()) > 0 && !strings.HasPrefix(info.ta.Value(), "/") { 
-		info.ta.SetValue("/" + info.ta.Value())
+		info.ta.SetValue(s.optionPrefix() + info.ta.Value())
 	 }
 
 	opts := []uiOption{}
 	for _, option := range info.options {
-		if strings.HasPrefix(option.getName(), info.ta.Value()) {
+		if strings.HasPrefix(option.getInfo().name, info.ta.Value()) {
 			opts = append(opts, option)
 		}
 	}
 	
 	info.options = opts
 	info.optsLen = len(opts)
+	info.ta.CursorEnd()
 
 	toDisplay := func() []string {
 		var r []string
 		for i, opt := range opts {
-			p := opt.getPretty()
+			p := opt.getInfo().pretty
 			if i == info.highlightedIndex {
-				p = lipgloss.NewStyle().Foreground(accentColor).Render("> ") + opts[info.highlightedIndex].getPretty()
+				p = lipgloss.NewStyle().Foreground(accentColor).Render("> ") + opts[info.highlightedIndex].getInfo().pretty
 			}
 			r = append(r, p)
 		}
@@ -199,8 +247,8 @@ func viewSelector[T selector](s T) string {
 			lipgloss.Top,
 			lipgloss.JoinHorizontal(
 				lipgloss.Left,
-				lipgloss.NewStyle().Width(27).MarginRight(5).Render("command: " + info.ta.View()),
-				subtleStyle.Render("press 'esc' to close"),
+				lipgloss.NewStyle().Width(27).MarginRight(5).Render(s.label() + ": " + info.ta.View()),
+				s.usefulInfo(),
 			),
 			strings.Join(toDisplay, "\n"),
 		),
@@ -272,6 +320,42 @@ func statusCmdComponent() string {
 		tokenUsageProgressBar,
 		tokenUsageBreakdown,
 		context,
+	)
+}
+
+func modelsCmdComponent(m modelsSelectorCtrl, content string, models []ai.GroqModelInfo) (selectorInfo, string) {
+	cmdLabel := lipgloss.NewStyle().MarginBottom(1).Render(lipgloss.JoinHorizontal(
+		lipgloss.Left,
+		bwLabelStyle.Render(" /models "),
+		" Compatible models from Groq ",
+		subtleStyle.Render("(console.groq.com/docs/models)  "),
+		),
+	)
+
+	var modelOptions []uiOption
+	if content == "" && len(models)>0 {
+		for _, model := range models {
+			modelOptions = append(
+				modelOptions,
+				&modelUiOption{
+					info: uiOptionInfo{
+						name: model.Name,
+						pretty: modelCard(model),
+					},
+				},
+			)
+		}
+	}
+	
+	if len(m.info.options) == 0 {
+		m.info.options = modelOptions
+		m.info.optsLen = max(len(m.info.options), 1)
+	}
+
+	return m.getSelectorInfo(), lipgloss.JoinVertical(
+		lipgloss.Top,
+		cmdLabel,
+		viewSelector(&m),
 	)
 }
 
