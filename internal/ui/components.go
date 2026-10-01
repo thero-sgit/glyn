@@ -325,10 +325,11 @@ func statusCmdComponent() string {
 
 func modelsCmdComponent(m modelsSelectorCtrl, content string, models []ai.GroqModelInfo) (selectorInfo, string) {
 	cmdLabel := lipgloss.NewStyle().MarginBottom(1).Render(lipgloss.JoinHorizontal(
-		lipgloss.Left,
-		bwLabelStyle.Render(" /models "),
-		" Compatible models from Groq ",
-		subtleStyle.Render("(console.groq.com/docs/models)  "),
+			lipgloss.Left,
+			bwLabelStyle.Render(" /models "),
+			" Compatible models from Groq ",
+			subtleStyle.Render("(console.groq.com/docs/models)  "),
+			subtleStyle.Render("press 'esc' to close"),
 		),
 	)
 
@@ -408,7 +409,7 @@ func createTextArea(width, height int, value string,) textarea.Model {
 	ta.ShowLineNumbers = false
 	ta.Prompt = ""
 	
-	ta.SetWidth(width - 11)
+	ta.SetWidth(width - 20)
 	ta.SetValue(value)
 	ta.SetHeight(height)
 

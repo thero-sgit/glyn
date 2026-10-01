@@ -33,10 +33,11 @@ func (m Model) chatUi(middleHeight int) string {
 		AlignVertical(lipgloss.Center).
 		Render("  >  ")
 
-	inputBoxContent := lipgloss.NewStyle().
-		Render(lipgloss.JoinHorizontal(lipgloss.Top, prompt, m.textarea.View()))
+	textArea := lipgloss.JoinHorizontal(lipgloss.Left, prompt, m.textarea.View())
+	textArea = zone.Mark("text-area", textArea)
+	sendStopBtn := zone.Mark("send-prompt-btn", sendPromptState)
 
-	inputBoxContent = zone.Mark("text-area", inputBoxContent)
+	inputBoxContent := lipgloss.NewStyle().Render(textArea, sendStopBtn)
 
 	boxStyle := lipgloss.NewStyle().
 		Width(m.width-6)
@@ -49,14 +50,14 @@ func (m Model) chatUi(middleHeight int) string {
 
 	addContextbutton := zone.Mark("add-context-btn", addContext)
 	modeLabelButton  := zone.Mark("mode-toggle-btn", labelValueBand(config.Config.Mode.Icon, config.Config.Mode.Name))
-	sendStopBtn      := zone.Mark("send-prompt-btn", sendPromptState)
+	modelLabelBtn    := zone.Mark("model-selector-btn", labelValueBand("\u27E1", config.Config.Model))
 
 	inpLabels := lipgloss.NewStyle().PaddingLeft(1).Render(
 		lipgloss.JoinHorizontal(
 			lipgloss.Left,
-			addContextbutton, 
+			addContextbutton,
+			modelLabelBtn + " ",
 			modeLabelButton + " ",
-			sendStopBtn + " ",
 		),
 	)
 	

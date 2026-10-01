@@ -103,7 +103,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.textarea = createTextArea(msg.Width, taHeight, m.textarea.Value())
 
         headerHeight := 2
-        footerHeight := 1
+        footerHeight := 2
         middleHeight := m.height - headerHeight - footerHeight
         promptBoxHeight := taHeight + 1
 
@@ -124,14 +124,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			case zone.Get("add-context-btn").InBounds(msg):
 				m.slashCmdCon.info.acceptingInp = false
+				m.modelsSelCon.info.acceptingInp = false
 				m.slashCmdCon.info.openCmd = ""
 				m.viewport.SetContent("ADD CONTEXT!!")
                 return m, nil
 
 			case zone.Get("model-selector-btn").InBounds(msg):
 				m.slashCmdCon.info.acceptingInp = false
-				m.slashCmdCon.info.openCmd = ""
-				m.viewport.SetContent("MODELL!!")
+				m.modelsSelCon.info.acceptingInp = true
+				m.slashCmdCon.info.openCmd = "/model"
                 return m, nil
 
 			case zone.Get("mode-toggle-btn").InBounds(msg):
@@ -297,8 +298,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+e":
 			if !m.textarea.Focused() {
 				m.textarea.Focus()
-				m.slashCmdCon.info.acceptingInp  = false
-				m.modelsSelCon.info.acceptingInp = false
 			} else {
 				m.textarea.Blur()
 			}				
@@ -427,7 +426,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}		
 	}
 
-	if m.slashCmdCon.info.acceptingInp || m.modelsSelCon.info.acceptingInp {
+	if (m.slashCmdCon.info.acceptingInp || m.modelsSelCon.info.acceptingInp) {
 		if m.slashCmdCon.info.acceptingInp {
 			m.viewport.SetContent(viewSelector(&m.slashCmdCon))
 		} else {
@@ -444,8 +443,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	m.textarea, taCmd       	   = m.textarea.Update(msg)
 	m.viewport, vpCmd       	   = m.viewport.Update(msg)
-	m.slashCmdCon.info.ta, ciCmd   = m.slashCmdCon.info.ta.Update(msg)
-	m.modelsSelCon.info.ta, mniCmd = m.modelsSelCon.info.ta.Update(msg)
+	
+	if !m.textarea.Focused() {
+		m.slashCmdCon.info.ta, ciCmd   = m.slashCmdCon.info.ta.Update(msg)
+		m.modelsSelCon.info.ta, mniCmd = m.modelsSelCon.info.ta.Update(msg)
+	}
+
 	return m, tea.Batch(taCmd, vpCmd, ciCmd, mniCmd, cmd)
 }
 
