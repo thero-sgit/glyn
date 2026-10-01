@@ -126,64 +126,25 @@ func (s *slashCommand) component() string {
 	return s.comp()
 }
 
+type selectorInfo struct {
+	ta               textinput.Model
+	options          []uiOption
+	optsLen           int
+	acceptingCmd     bool
+	openCmd          string
+	highlightedIndex int
+}
+
 type selector interface {
-	textArea()      textinput.Model
-	setTaWSlash()
-	setTaPH(string)
-
-	opts() 	 		[]uiOption
-	setOpts([]uiOption)
-	optsLen() 	 	int
-	setOptsLen(int)
-
-	hiIdx()        	int
-	setHiIdx(int)
+	getSelectorInfo() selectorInfo
 }
 
 type slashCmdCtrl struct {
-	ta               textinput.Model
-	options          []uiOption
-	cmdLen           int
-	acceptingCmd     bool
-	openCmd          string
-	highlightedIndex int	 
+	info selectorInfo
 }
 
-func (s *slashCmdCtrl) textArea() textinput.Model {
-	return s.ta
-}
-
-func (s *slashCmdCtrl) setTaWSlash() {
-	s.ta.SetValue("/" + s.textArea().Value())
-	s.ta.CursorEnd()
-}
-
-func (s *slashCmdCtrl) setTaPH(ph string) {
-	s.ta.Placeholder = ph
-}
-
-func (s *slashCmdCtrl) opts() []uiOption {
-	return s.options
-}
-
-func (s *slashCmdCtrl) setOpts(opts []uiOption) {
-	s.options = opts
-}
-
-func (s *slashCmdCtrl) optsLen() int {
-	return s.cmdLen
-}
-
-func (s *slashCmdCtrl) setOptsLen(l int) {
-	s.cmdLen = l
-}
-
-func (s *slashCmdCtrl) hiIdx() int {
-	return s.highlightedIndex
-}
-
-func (s *slashCmdCtrl) setHiIdx(i int) {
-	s.highlightedIndex = i
+func (s *slashCmdCtrl) getSelectorInfo() selectorInfo {
+	return s.info
 }
 
 func newSlashCmdCtrl() slashCmdCtrl {
@@ -191,34 +152,42 @@ func newSlashCmdCtrl() slashCmdCtrl {
 	ta.Focus()
 	ta.CharLimit = 15
 
-	return slashCmdCtrl{
+	info := selectorInfo {
 		ta:               ta,
-		cmdLen:           len(slashCommands),
+		optsLen:           len(slashCommands),
 		acceptingCmd:     true,
 		options: slashCommands,
 		highlightedIndex: 0,
 	}
+
+	return slashCmdCtrl {
+		info: info,
+	}
 }
 
 func viewSelector[T selector](s T) string {
-	if len(s.textArea().Value()) > 0 && !strings.HasPrefix(s.textArea().Value(), "/") { s.setTaWSlash() }
+	info := s.getSelectorInfo()
+
+	if len(info.ta.Value()) > 0 && !strings.HasPrefix(info.ta.Value(), "/") { 
+		info.ta.SetValue("/" + info.ta.Value())
+	 }
 
 	opts := []uiOption{}
-	for _, option := range s.opts() {
-		if strings.HasPrefix(option.getName(), s.textArea().Value()) {
+	for _, option := range info.options {
+		if strings.HasPrefix(option.getName(), info.ta.Value()) {
 			opts = append(opts, option)
 		}
-	} // FIX OPTS BUG!
+	}
 	
-	s.setOpts(opts)
-	s.setOptsLen(len(opts))
+	info.options = opts
+	info.optsLen = len(opts)
 
 	toDisplay := func() []string {
 		var r []string
 		for i, opt := range opts {
 			p := opt.getPretty()
-			if i == s.hiIdx() {
-				p = lipgloss.NewStyle().Foreground(accentColor).Render("> ") + opts[s.hiIdx()].getPretty()
+			if i == info.highlightedIndex {
+				p = lipgloss.NewStyle().Foreground(accentColor).Render("> ") + opts[info.highlightedIndex].getPretty()
 			}
 			r = append(r, p)
 		}
@@ -230,7 +199,7 @@ func viewSelector[T selector](s T) string {
 			lipgloss.Top,
 			lipgloss.JoinHorizontal(
 				lipgloss.Left,
-				lipgloss.NewStyle().Width(27).MarginRight(5).Render("command: " + s.textArea().View()),
+				lipgloss.NewStyle().Width(27).MarginRight(5).Render("command: " + info.ta.View()),
 				subtleStyle.Render("press 'esc' to close"),
 			),
 			strings.Join(toDisplay, "\n"),
@@ -306,7 +275,7 @@ func statusCmdComponent() string {
 	)
 }
 
-func modelCard(modelInfo ai.GroqModelInfo, width int) string {
+func modelCard(modelInfo ai.GroqModelInfo) string {
 	header := lipgloss.NewStyle().Render(
 			boldStyle.Render(subtleStyle.Render("\u27E1")) +
 			" " + modelInfo.Name + 
@@ -347,28 +316,6 @@ func modelCard(modelInfo ai.GroqModelInfo, width int) string {
 	)
 
 	return card
-}
-
-func modelsCmdComponent(content string, models []ai.GroqModelInfo, width int) string {
-	cmdLabel := lipgloss.JoinHorizontal(
-		lipgloss.Left,
-		bwLabelStyle.Render(" /models "),
-		" Compatible models from Groq ",
-		subtleStyle.Render("(console.groq.com/docs/models)"),
-		subtleStyle.MarginLeft(5).Render("press 'esc' to close"),
-	)
-
-	if content == "" && len(models)>0 {
-		for _, model := range models {
-			content += modelCard(model, width) + "\n"
-		}
-	}
-
-	return lipgloss.JoinVertical(
-		lipgloss.Top,
-		cmdLabel,
-		lipgloss.NewStyle().MarginTop(1).Render(content),
-	)
 }
 
 func createTextArea(width, height int, value string,) textarea.Model {

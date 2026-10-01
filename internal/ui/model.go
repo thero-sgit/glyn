@@ -120,14 +120,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
                 return m, nil
 
 			case zone.Get("add-context-btn").InBounds(msg):
-				m.slashCmdCon.acceptingCmd = false
-				m.slashCmdCon.openCmd = ""
+				m.slashCmdCon.info.acceptingCmd = false
+				m.slashCmdCon.info.openCmd = ""
 				m.viewport.SetContent("ADD CONTEXT!!")
                 return m, nil
 
 			case zone.Get("model-selector-btn").InBounds(msg):
-				m.slashCmdCon.acceptingCmd = false
-				m.slashCmdCon.openCmd = ""
+				m.slashCmdCon.info.acceptingCmd = false
+				m.slashCmdCon.info.openCmd = ""
 				m.viewport.SetContent("MODELL!!")
                 return m, nil
 
@@ -169,7 +169,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         }
 
 	case errMsg:
-		if m.slashCmdCon.openCmd == "/models" {
+		if m.slashCmdCon.info.openCmd == "/models" {
 			m.viewport.SetContent(modelsCmdComponent(msg.err.Error(), []ai.GroqModelInfo{}, 0))
 
 			return m, nil
@@ -265,9 +265,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case "esc":
-			if m.slashCmdCon.acceptingCmd || m.slashCmdCon.openCmd != "" {
-				m.slashCmdCon.acceptingCmd = false
-				m.slashCmdCon.openCmd = ""
+			if m.slashCmdCon.info.acceptingCmd || m.slashCmdCon.info.openCmd != "" {
+				m.slashCmdCon.info.acceptingCmd = false
+				m.slashCmdCon.info.openCmd = ""
 
 				if len(m.chatCentre.prettyHistory()) == 0 {
 					m.viewport.SetContent(subtleStyle.Render("press 'ctrl+e' to start chat"))
@@ -287,7 +287,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+e":
 			if !m.textarea.Focused() {
 				m.textarea.Focus()
-				m.slashCmdCon.acceptingCmd = false
+				m.slashCmdCon.info.acceptingCmd = false
 			} else {
 				m.textarea.Blur()
 			}				
@@ -332,23 +332,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.textarea, taCmd = m.textarea.Update(msg)
 			}
 
-			if m.slashCmdCon.acceptingCmd {
+			if m.slashCmdCon.info.acceptingCmd {
 				if msg.String() == "up" {
-					if m.slashCmdCon.highlightedIndex == 0 {
-						m.slashCmdCon.highlightedIndex = m.slashCmdCon.cmdLen - 1
+					if m.slashCmdCon.info.highlightedIndex == 0 {
+						m.slashCmdCon.info.highlightedIndex = m.slashCmdCon.info.optsLen - 1
 					} else {
-						m.slashCmdCon.highlightedIndex = m.slashCmdCon.highlightedIndex - 1
+						m.slashCmdCon.info.highlightedIndex = m.slashCmdCon.info.highlightedIndex - 1
 					}
 				}
 
 				if msg.String() == "down" {
-					m.slashCmdCon.highlightedIndex = (m.slashCmdCon.highlightedIndex + 1) % m.slashCmdCon.cmdLen
+					m.slashCmdCon.info.highlightedIndex = (m.slashCmdCon.info.highlightedIndex + 1) % m.slashCmdCon.info.optsLen
 				}
 
 				
-				if len(m.slashCmdCon.ta.Value()) <= 1 {
-					 m.slashCmdCon.ta.Reset()
-					 m.slashCmdCon.ta.Placeholder = m.slashCmdCon.options[m.slashCmdCon.highlightedIndex].getName()
+				if len(m.slashCmdCon.info.ta.Value()) <= 1 {
+					 m.slashCmdCon.info.ta.Reset()
+					 m.slashCmdCon.info.ta.Placeholder = m.slashCmdCon.info.options[m.slashCmdCon.info.highlightedIndex].getName()
 				}
 				m.viewport.SetContent(lipgloss.JoinVertical(
 					lipgloss.Top,
@@ -359,7 +359,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case "left", "right":
-			if m.slashCmdCon.openCmd == "/help" {
+			if m.slashCmdCon.info.openCmd == "/help" {
 				switch msg.String() {
 				case "left":
 					helpCmdTabState = 0
@@ -375,35 +375,35 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "/":
 			if !m.textarea.Focused() {
-				m.slashCmdCon.acceptingCmd = true
+				m.slashCmdCon.info.acceptingCmd = true
 				m.slashCmdCon              = newSlashCmdCtrl()			
 			}
 
 		case "enter":
-			if m.slashCmdCon.acceptingCmd && m.slashCmdCon.cmdLen > 0 && !m.textarea.Focused() {
-				m.slashCmdCon.acceptingCmd = false
-				m.slashCmdCon.openCmd = m.slashCmdCon.options[m.slashCmdCon.highlightedIndex].getName()
+			if m.slashCmdCon.info.acceptingCmd && m.slashCmdCon.info.optsLen > 0 && !m.textarea.Focused() {
+				m.slashCmdCon.info.acceptingCmd = false
+				m.slashCmdCon.info.openCmd = m.slashCmdCon.info.options[m.slashCmdCon.info.highlightedIndex].getName()
 
-				if m.slashCmdCon.options[m.slashCmdCon.highlightedIndex].getName() == "/models" {
-					m.viewport.SetContent(modelsCmdComponent("Loading...", []ai.GroqModelInfo{}, 0))
+				if m.slashCmdCon.info.options[m.slashCmdCon.info.highlightedIndex].getName() == "/models" {
+					m.viewport.SetContent(modelsCmdComponent("Loading...", []ai.GroqModelInfo{}))
 					m, cmds := CHandler.handleGetModels(m)
 
 					return m, cmds
 				}
 
-				m.viewport.SetContent(m.slashCmdCon.options[m.slashCmdCon.highlightedIndex].component())
+				m.viewport.SetContent(m.slashCmdCon.info.options[m.slashCmdCon.info.highlightedIndex].component())
 			}
 
 		case "?":
 			if !m.textarea.Focused() {
-				m.slashCmdCon.openCmd = "/help"
+				m.slashCmdCon.info.openCmd = "/help"
 				m.viewport.SetContent(helpCmdComponent())
 			}
 		}		
 	}
 
-	if m.slashCmdCon.acceptingCmd {
-		m.slashCmdCon.options = slashCommands
+	if m.slashCmdCon.info.acceptingCmd {
+		m.slashCmdCon.info.options = slashCommands
 		m.viewport.SetContent(lipgloss.JoinVertical(
 			lipgloss.Top,
 			viewSelector(&m.slashCmdCon),
@@ -418,7 +418,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	m.textarea, taCmd       = m.textarea.Update(msg)
 	m.viewport, vpCmd       = m.viewport.Update(msg)
-	m.slashCmdCon.ta, ciCmd = m.slashCmdCon.ta.Update(msg)
+	m.slashCmdCon.info.ta, ciCmd = m.slashCmdCon.info.ta.Update(msg)
 	return m, tea.Batch(taCmd, vpCmd, ciCmd, cmd)
 }
 
