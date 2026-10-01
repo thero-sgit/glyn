@@ -61,10 +61,10 @@ var (
 			),
 		)
 
-	slashCommands = []slashCommand {
-		{ name: "/help", pretty: "/help  ", comp: helpCmdComponent},
-		{ name: "/status", pretty: "/status", comp: statusCmdComponent},
-		{ name: "/models", pretty: "/models"},
+	slashCommands = []uiOption {
+		&slashCommand{ name: "/help", pretty: "/help  ", comp: helpCmdComponent},
+		&slashCommand{ name: "/status", pretty: "/status", comp: statusCmdComponent},
+		&slashCommand{ name: "/models", pretty: "/models"},
 	}
 
 	sendPromptBtnStates = []string {
@@ -97,19 +97,93 @@ func bunner() string {
 	)
 }
 
+type uiOption interface {
+	setPretty(string)
+	getPretty() string
+	getName()   string
+	component() string
+}
+
 type slashCommand struct{
 	name   string
 	pretty string
 	comp   func() string
 }
 
+func (s *slashCommand) setPretty(pretty string) {
+	s.pretty = pretty
+}
+
+func (s *slashCommand) getPretty() string {
+	return s.pretty
+}
+
+func (s *slashCommand) getName() string {
+	return s.name
+}
+
+func (s *slashCommand) component() string {
+	return s.comp()
+}
+
+type selector interface {
+	textArea()      textinput.Model
+	setTaWSlash()
+	setTaPH(string)
+
+	opts() 	 		[]uiOption
+	setOpts([]uiOption)
+	optsLen() 	 	int
+	setOptsLen(int)
+
+	hiIdx()        	int
+	setHiIdx(int)
+}
+
 type slashCmdCtrl struct {
 	ta               textinput.Model
+	options          []uiOption
 	cmdLen           int
 	acceptingCmd     bool
 	openCmd          string
-	highlighted 	 slashCommand
 	highlightedIndex int	 
+}
+
+func (s *slashCmdCtrl) textArea() textinput.Model {
+	return s.ta
+}
+
+func (s *slashCmdCtrl) setTaWSlash() {
+	s.ta.SetValue("/" + s.textArea().Value())
+	s.ta.CursorEnd()
+}
+
+func (s *slashCmdCtrl) setTaPH(ph string) {
+	s.ta.Placeholder = ph
+}
+
+func (s *slashCmdCtrl) opts() []uiOption {
+	return s.options
+}
+
+func (s *slashCmdCtrl) setOpts(opts []uiOption) {
+	s.options = opts
+}
+
+func (s *slashCmdCtrl) optsLen() int {
+	return s.cmdLen
+}
+
+func (s *slashCmdCtrl) setOptsLen(l int) {
+	s.cmdLen = l
+}
+
+func (s *slashCmdCtrl) hiIdx() int {
+	return s.highlightedIndex
+}
+
+func (s *slashCmdCtrl) setHiIdx(i int) {
+	s.highlightedIndex = i
 }
 
 func newSlashCmdCtrl() slashCmdCtrl {
@@ -121,46 +195,42 @@ func newSlashCmdCtrl() slashCmdCtrl {
 		ta:               ta,
 		cmdLen:           len(slashCommands),
 		acceptingCmd:     true,
+		options: slashCommands,
 		highlightedIndex: 0,
 	}
 }
 
-func (s *slashCmdCtrl) view() string {
-	if len(s.ta.Value()) > 0 && !strings.HasPrefix(s.ta.Value(), "/") {
-		s.ta.SetValue("/" + s.ta.Value())
-		s.ta.CursorEnd()
-	}
+func viewSelector[T selector](s T) string {
+	if len(s.textArea().Value()) > 0 && !strings.HasPrefix(s.textArea().Value(), "/") { s.setTaWSlash() }
 
-	cmds := []slashCommand{}
-	for _, command := range slashCommands {
-		if strings.HasPrefix(command.name, s.ta.Value()) {
-			cmds = append(cmds, command)
+	opts := []uiOption{}
+	for _, option := range s.opts() {
+		if strings.HasPrefix(option.getName(), s.textArea().Value()) {
+			opts = append(opts, option)
 		}
-	}
-	s.cmdLen = len(cmds)
-	if s.highlightedIndex >= s.cmdLen || s.highlightedIndex < 0 {
-		s.highlightedIndex = max(s.cmdLen - 1, 0)
-	}
+	} // FIX OPTS BUG!
 	
-	if s.cmdLen >= 1 {
-		cmds[s.highlightedIndex].pretty = lipgloss.NewStyle().Foreground(accentColor).Render("■ ") + cmds[s.highlightedIndex].name
-		s.highlighted = cmds[s.highlightedIndex]
-	}	
+	s.setOpts(opts)
+	s.setOptsLen(len(opts))
 
 	toDisplay := func() []string {
 		var r []string
-		for _, c := range cmds {r = append(r, c.pretty)}
+		for i, opt := range opts {
+			p := opt.getPretty()
+			if i == s.hiIdx() {
+				p = lipgloss.NewStyle().Foreground(accentColor).Render("> ") + opts[s.hiIdx()].getPretty()
+			}
+			r = append(r, p)
+		}
 		return  r
 	}()
-
-	s.ta.Placeholder = s.highlighted.name
 
 	return lipgloss.NewStyle().Render(
 		lipgloss.JoinVertical(
 			lipgloss.Top,
 			lipgloss.JoinHorizontal(
 				lipgloss.Left,
-				lipgloss.NewStyle().Width(27).MarginRight(5).Render("command: " + s.ta.View()),
+				lipgloss.NewStyle().Width(27).MarginRight(5).Render("command: " + s.textArea().View()),
 				subtleStyle.Render("press 'esc' to close"),
 			),
 			strings.Join(toDisplay, "\n"),

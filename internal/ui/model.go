@@ -334,19 +334,29 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			if m.slashCmdCon.acceptingCmd {
 				if msg.String() == "up" {
-					m.slashCmdCon.highlightedIndex = (m.slashCmdCon.highlightedIndex - 1) % m.slashCmdCon.cmdLen
+					if m.slashCmdCon.highlightedIndex == 0 {
+						m.slashCmdCon.highlightedIndex = m.slashCmdCon.cmdLen - 1
+					} else {
+						m.slashCmdCon.highlightedIndex = m.slashCmdCon.highlightedIndex - 1
+					}
 				}
 
 				if msg.String() == "down" {
 					m.slashCmdCon.highlightedIndex = (m.slashCmdCon.highlightedIndex + 1) % m.slashCmdCon.cmdLen
 				}
 
-				if len(m.slashCmdCon.ta.Value()) <= 1 { m.slashCmdCon.ta.Reset() }
+				
+				if len(m.slashCmdCon.ta.Value()) <= 1 {
+					 m.slashCmdCon.ta.Reset()
+					 m.slashCmdCon.ta.Placeholder = m.slashCmdCon.options[m.slashCmdCon.highlightedIndex].getName()
+				}
 				m.viewport.SetContent(lipgloss.JoinVertical(
 					lipgloss.Top,
-					m.slashCmdCon.view(),
+					viewSelector(&m.slashCmdCon),
 				))
 			}
+
+			return m, nil
 
 		case "left", "right":
 			if m.slashCmdCon.openCmd == "/help" {
@@ -372,30 +382,31 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			if m.slashCmdCon.acceptingCmd && m.slashCmdCon.cmdLen > 0 && !m.textarea.Focused() {
 				m.slashCmdCon.acceptingCmd = false
-				m.slashCmdCon.openCmd = m.slashCmdCon.highlighted.name
+				m.slashCmdCon.openCmd = m.slashCmdCon.options[m.slashCmdCon.highlightedIndex].getName()
 
-				if m.slashCmdCon.highlighted.name == "/models" {
+				if m.slashCmdCon.options[m.slashCmdCon.highlightedIndex].getName() == "/models" {
 					m.viewport.SetContent(modelsCmdComponent("Loading...", []ai.GroqModelInfo{}, 0))
 					m, cmds := CHandler.handleGetModels(m)
 
 					return m, cmds
 				}
 
-				m.viewport.SetContent(m.slashCmdCon.highlighted.comp())
+				m.viewport.SetContent(m.slashCmdCon.options[m.slashCmdCon.highlightedIndex].component())
 			}
 
 		case "?":
 			if !m.textarea.Focused() {
-				m.slashCmdCon.openCmd = m.slashCmdCon.highlighted.name
+				m.slashCmdCon.openCmd = "/help"
 				m.viewport.SetContent(helpCmdComponent())
 			}
 		}		
 	}
 
 	if m.slashCmdCon.acceptingCmd {
+		m.slashCmdCon.options = slashCommands
 		m.viewport.SetContent(lipgloss.JoinVertical(
 			lipgloss.Top,
-			m.slashCmdCon.view(),
+			viewSelector(&m.slashCmdCon),
 		))
 	}
 
