@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func listMatches(token string) ([]os.DirEntry, error) {
+func ListMatches(token string) ([]os.DirEntry, error) {
 	dir, prefix := filepath.Split(token)
 
 	if dir == "" {

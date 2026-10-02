@@ -15,13 +15,16 @@ import (
 const xynLargeText = `
 ██╗ ██╗██╗ ██╗████╗██╗
  ████╔╝██████║██║█║██║
-██║ ██╗    ██║██║████║
-╚═╝ ╚═╝    ╚═╝╚═╝╚═══╝
+██║ ██╗    ██║██║█║██║
+╚═╝ ╚═╝    ╚═╝██║████║
+              ╚═╝╚═══╝
 `
 
 const codeLargeText = `
 █████╗██████╗█████╗ ██████╗
-██╔══╝██║ ██║██║ ██╗████╔═╝
+██╔══╝██║ ██║██║ ██╗██╔═══╝
+██║   ██║ ██║██║ ██║█████╗
+██║   ██║ ██║██║ ██║██╔══╝
 █████╗██████║█████╔╝██████╗
 ╚════╝╚═════╝╚════╝ ╚═════╝
 `
@@ -80,6 +83,7 @@ func bunner() string {
 			lipgloss.Top,
 			boldStyle.Render("xyn ") + subtleStyle.Bold(true).Render("v0.4.2"),
 			boldStyle.Foreground(accentColor).Render("\u27E1 ") + subtleStyle.Render(config.Config.Model),
+			boldStyle.Foreground(accentColor).Render("@ ") + subtleStyle.Underline(true).Render("console.groq.com"),
 			boldStyle.Foreground(accentColor).Render("~") + subtleStyle.Render(config.Config.WorkingDir),
 		),
 	)

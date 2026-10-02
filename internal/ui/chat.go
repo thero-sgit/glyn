@@ -83,7 +83,7 @@ func newUserPrompt(prompt string, width int) userPrompt {
 		Render(
 			lipgloss.JoinHorizontal(
 				lipgloss.Left,
-				lipgloss.NewStyle().Background(accentColor).Render(" you $ "),
+				highlighedStyle.Render(" you $ "),
 				lipgloss.NewStyle().PaddingLeft(1).Render(prompt),
 			),
 		)
@@ -113,12 +113,12 @@ func (up *userPrompt) animate() {
 		Width(up.width).
 		PaddingRight(1).
 		Render(
-			lipgloss.NewStyle().Background(accentColor).Render(" you $ ") + lipgloss.NewStyle().PaddingLeft(1).Render(newPretty.String()),
+			highlighedStyle.Render(" you $ ") + lipgloss.NewStyle().PaddingLeft(1).Render(newPretty.String()),
 		)
 }
 
 func (up *userPrompt) sent() {
-	p := lipgloss.NewStyle().Background(accentColor).Render(" you $ ") + lipgloss.NewStyle().PaddingLeft(1).Render(up.message)
+	p := highlighedStyle.Render(" you $ ") + lipgloss.NewStyle().PaddingLeft(1).Render(up.message)
 
 	up.pretty = lipgloss.NewStyle().
 		MarginBottom(1).
@@ -134,7 +134,7 @@ func (up *userPrompt) sent() {
 }
 
 func (up *userPrompt) err() {
-	p := lipgloss.NewStyle().Background(accentColor).Render(" you $ ") + lipgloss.NewStyle().Strikethrough(true).PaddingLeft(1).Render(up.message)
+	p := highlighedStyle.Render(" you $ ") + lipgloss.NewStyle().Strikethrough(true).PaddingLeft(1).Render(up.message)
 
 	ed := lipgloss.JoinHorizontal(
 		lipgloss.Left,

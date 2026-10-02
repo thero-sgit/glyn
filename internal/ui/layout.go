@@ -45,8 +45,9 @@ func (m Model) chatUi(middleHeight int) string {
 	addContext := lipgloss.NewStyle().
 		MarginLeft(1).
 		PaddingLeft(1).
-		PaddingRight(1).
-		Render("\uFF0B")
+		PaddingRight(2).
+		Bold(true).
+		Render("@")
 
 	addContextbutton := zone.Mark("add-context-btn", addContext)
 	modeLabelButton  := zone.Mark("mode-toggle-btn", labelValueBand(config.Config.Mode.Icon, config.Config.Mode.Name))
