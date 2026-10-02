@@ -6,7 +6,13 @@ import (
 	"strings"
 )
 
-func ListMatches(token string) ([]os.DirEntry, error) {
+type FileEntry struct {
+	Name 	 string
+	Path     string
+	IsDir    bool
+}
+
+func ListMatches(token string) ([]FileEntry, error) {
 	dir, prefix := filepath.Split(token)
 
 	if dir == "" {
@@ -15,13 +21,21 @@ func ListMatches(token string) ([]os.DirEntry, error) {
 
 	destination, err := os.ReadDir(dir)
 	if err != nil {
-		return []os.DirEntry{}, err
+		return []FileEntry{}, err
 	}
 
-	var entries []os.DirEntry
+	var entries []FileEntry
 	for _, e := range destination {
-		if strings.HasPrefix(strings.ToLower(e.Name()), strings.ToLower(prefix)) {
-			entries = append(entries, e)
+		name := e.Name()
+
+		if strings.HasPrefix(strings.ToLower(name), strings.ToLower(prefix)) {
+			path_ := filepath.Join(dir, name)
+			if e.IsDir() {
+				name = name + "/"
+				path_ = path_ + "/"
+			}
+
+			entries = append(entries, FileEntry{name, path_, e.IsDir()})
 		}		
 	}
 

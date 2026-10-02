@@ -13,6 +13,7 @@ import (
 	zone "github.com/lrstanley/bubblezone"
 	"github.com/thero-sgit/xyn/internal/ai"
 	"github.com/thero-sgit/xyn/internal/config"
+	"github.com/thero-sgit/xyn/internal/utils"
 )
 
 type tickMsg50 time.Time
@@ -88,6 +89,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		taCmd  tea.Cmd
 		ciCmd  tea.Cmd
 		mniCmd tea.Cmd	
+		fvpCmd tea.Cmd
+		ftiCmd tea.Cmd
 	)
 
 	switch msg := msg.(type) {
@@ -122,11 +125,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.textarea.Focus()
                 return m, nil
 
-			case zone.Get("add-context-btn").InBounds(msg):
-				m.slashCmdCon.info.acceptingInp = false
+			case zone.Get("add-file-btn").InBounds(msg):
+				m.slashCmdCon.info.acceptingInp  = false
 				m.modelsSelCon.info.acceptingInp = false
-				m.slashCmdCon.info.openCmd = ""
-				m.viewport.SetContent("ADD CONTEXT!!")
+				
+				m.chatCentre.fileInpBox 	= newFileInputBox(0, 0)
+				m.chatCentre.fileInpBoxOpen = true
                 return m, nil
 
 			case zone.Get("model-selector-btn").InBounds(msg):
@@ -262,7 +266,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		info, content := modelsCmdComponent(m.modelsSelCon, "", models)
 		m.modelsSelCon.info = info
 		m.modelsSelCon.info.acceptingInp = true
-		m.modelsSelCon.info.ta.Focus()
+		m.modelsSelCon.info.ti.Focus()
 
 		m.viewport.SetContent(content)
 
@@ -289,6 +293,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					))
 				}
 
+				return m, nil
+			}
+
+			if m.chatCentre.fileInpBoxOpen {
+				m.chatCentre.fileInpBoxOpen = false
 				return m, nil
 			}
 
@@ -342,6 +351,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.textarea, taCmd = m.textarea.Update(msg)
 			}
 
+			m.chatCentre.fileInpBox.vp, fvpCmd = m.chatCentre.fileInpBox.vp.Update(msg)
+
 			info, err := func() (selectorInfo, error) {
 				if m.slashCmdCon.info.acceptingInp {
 					return m.slashCmdCon.info, nil
@@ -368,9 +379,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 
 				
-				if len(info.ta.Value()) <= 1 {
-					 info.ta.Reset()
-					 info.ta.Placeholder = info.options[info.highlightedIndex].getInfo().name
+				if len(info.ti.Value()) <= 1 {
+					 info.ti.Reset()
+					 info.ti.Placeholder = info.options[info.highlightedIndex].getInfo().name
 				}
 
 
@@ -397,13 +408,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case "/":
-			if !m.textarea.Focused() {
+			if !m.textarea.Focused() && !m.chatCentre.fileInpBoxOpen {
 				m.slashCmdCon.info.acceptingInp = true
 				m.modelsSelCon.info.acceptingInp = false
 				m.slashCmdCon              		= newSlashCmdCtrl()			
 			}
 
 		case "enter":
+			if m.chatCentre.fileInpBoxOpen {
+				m.chatCentre.fileInpBoxOpen = false
+			}
+
 			if m.slashCmdCon.info.acceptingInp && m.slashCmdCon.info.optsLen > 0 && !m.textarea.Focused() {
 				m.slashCmdCon.info.acceptingInp = false
 				m.slashCmdCon.info.openCmd = m.slashCmdCon.info.options[m.slashCmdCon.info.highlightedIndex].getInfo().name
@@ -423,7 +438,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.slashCmdCon.info.openCmd = "/help"
 				m.viewport.SetContent(helpCmdComponent())
 			}
-		}		
+
+		case "tab":
+			c := m.chatCentre
+			if c.fileInpBoxOpen && len(c.fileInpBox.matches) > 0 {
+				c.fileInpBox.ti.SetValue(c.fileInpBox.matches[0].Path)
+				c.fileInpBox.ti.CursorEnd()
+				c.fileInpBox.vp.GotoTop()
+			}
+
+			m.chatCentre = c
+
+		case "@":
+			if !m.textarea.Focused() {
+				m.chatCentre.fileInpBox 	= newFileInputBox(0, 0)
+				m.chatCentre.fileInpBoxOpen = true
+
+				return m, nil
+			}
+		}
 	}
 
 	if (m.slashCmdCon.info.acceptingInp || m.modelsSelCon.info.acceptingInp) {
@@ -435,6 +468,33 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	if m.chatCentre.fileInpBoxOpen {
+		ti := m.chatCentre.fileInpBox.ti
+		vp := m.chatCentre.fileInpBox.vp
+
+		matches, err := utils.ListMatches(ti.Value())
+
+		if err != nil {
+			vp.GotoTop()
+			vp.SetContent(err.Error())
+		} else {
+			listItemStyle := lipgloss.NewStyle().MarginLeft(2)
+			var mList []string
+			for _, e := range matches {
+				if e.IsDir {
+					mList = append(mList, listItemStyle.Bold(true).Foreground(accentColor).Render(e.Name))
+				} else {
+					mList = append(mList, listItemStyle.Render(e.Name))
+				}
+			}
+			vp.SetContent(strings.Join(mList, "\n"))
+		}		
+
+		m.chatCentre.fileInpBox.ti = ti 
+		m.chatCentre.fileInpBox.vp = vp
+		m.chatCentre.fileInpBox.matches = matches
+	}
+
 	if m.chatCentre.sendingPrompt {
 		sendPromptState = sendPromptBtnStates[1]
 	} else {
@@ -443,13 +503,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	m.textarea, taCmd       	   = m.textarea.Update(msg)
 	m.viewport, vpCmd       	   = m.viewport.Update(msg)
+
+	if m.chatCentre.fileInpBoxOpen {
+		m.chatCentre.fileInpBox.vp, fvpCmd = m.chatCentre.fileInpBox.vp.Update(msg)
+		m.chatCentre.fileInpBox.ti, ftiCmd = m.chatCentre.fileInpBox.ti.Update(msg)
+	}	
 	
 	if !m.textarea.Focused() {
-		m.slashCmdCon.info.ta, ciCmd   = m.slashCmdCon.info.ta.Update(msg)
-		m.modelsSelCon.info.ta, mniCmd = m.modelsSelCon.info.ta.Update(msg)
+		m.slashCmdCon.info.ti, ciCmd   = m.slashCmdCon.info.ti.Update(msg)
+		m.modelsSelCon.info.ti, mniCmd = m.modelsSelCon.info.ti.Update(msg)
 	}
 
-	return m, tea.Batch(taCmd, vpCmd, ciCmd, mniCmd, cmd)
+	return m, tea.Batch(taCmd, vpCmd, ciCmd, mniCmd, fvpCmd, ftiCmd, cmd)
 }
 
 func (m Model) View() string {

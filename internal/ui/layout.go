@@ -21,10 +21,19 @@ func (m Model) headerBar(headerHeight int) string {
 
 func (m Model) chatUi(middleHeight int) string {
 	taHeight := 2
-	if m.textarea.Length() > 0 {
+	if m.textarea.Length() > 0 || m.chatCentre.fileInpBoxOpen {
 		taHeight = 6
 	}
-	m.textarea.SetHeight(taHeight)
+
+	if m.chatCentre.fileInpBoxOpen {
+		if m.chatCentre.fileInpBox.vp.Height == 0 {
+			m.chatCentre.fileInpBox.vp.Height = taHeight - 2
+			m.chatCentre.fileInpBox.vp.Width  = m.width - 8
+		}		
+	} else {
+		m.textarea.SetHeight(taHeight)
+	}
+
 	m.viewport.Height = middleHeight - (taHeight + 1)
 
 	prompt := lipgloss.NewStyle().
@@ -37,26 +46,31 @@ func (m Model) chatUi(middleHeight int) string {
 	textArea = zone.Mark("text-area", textArea)
 	sendStopBtn := zone.Mark("send-prompt-btn", sendPromptState)
 
-	inputBoxContent := lipgloss.NewStyle().Render(textArea, sendStopBtn)
+	var inputBoxContent string
+	if m.chatCentre.fileInpBoxOpen {
+		inputBoxContent = m.chatCentre.fileInpBox.view()
+	} else {
+		inputBoxContent = lipgloss.NewStyle().Render(textArea, sendStopBtn)
+	}	
 
 	boxStyle := lipgloss.NewStyle().
 		Width(m.width-6)
 
-	addContext := lipgloss.NewStyle().
+	addFile := lipgloss.NewStyle().
 		MarginLeft(1).
 		PaddingLeft(1).
 		PaddingRight(2).
 		Bold(true).
 		Render("@")
 
-	addContextbutton := zone.Mark("add-context-btn", addContext)
+	addFileButton := zone.Mark("add-file-btn", addFile)
 	modeLabelButton  := zone.Mark("mode-toggle-btn", labelValueBand(config.Config.Mode.Icon, config.Config.Mode.Name))
 	modelLabelBtn    := zone.Mark("model-selector-btn", labelValueBand("\u27E1", config.Config.Model))
 
 	inpLabels := lipgloss.NewStyle().PaddingLeft(1).Render(
 		lipgloss.JoinHorizontal(
 			lipgloss.Left,
-			addContextbutton,
+			addFileButton,
 			modelLabelBtn + " ",
 			modeLabelButton + " ",
 		),

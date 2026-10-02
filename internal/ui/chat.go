@@ -21,6 +21,8 @@ type chatCentre struct {
 	currentUserPrompt userPrompt
 	currentAgentRes   agentResponse
 	sendingPrompt     bool
+	fileInpBox        fileInputBox
+	fileInpBoxOpen    bool
 }
 
 func newChatCentre() chatCentre {

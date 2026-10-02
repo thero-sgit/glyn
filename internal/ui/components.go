@@ -6,10 +6,12 @@ import (
 
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 	"github.com/thero-sgit/xyn/internal/ai"
 	"github.com/thero-sgit/xyn/internal/config"
+	"github.com/thero-sgit/xyn/internal/utils"
 )
 
 const xynLargeText = `
@@ -130,7 +132,7 @@ func (m *modelUiOption) getInfo() uiOptionInfo {
 
 // -- SELECTORS
 type selectorInfo struct {
-	ta               textinput.Model
+	ti               textinput.Model
 	options          []uiOption
 	optsLen           int
 	acceptingInp     bool
@@ -171,7 +173,7 @@ func newSlashCmdCtrl() slashCmdCtrl {
 	ta.CharLimit = 15
 
 	info := selectorInfo {
-		ta:               ta,
+		ti:               ta,
 		optsLen:          len(slashCommands),
 		acceptingInp:     true,
 		options: 		  slashCommands,
@@ -207,7 +209,7 @@ func newModelsSelectorCtrl() modelsSelectorCtrl {
 	ta.CharLimit = 15
 
 	info := selectorInfo {
-		ta:               ta,
+		ti:               ta,
 		optsLen:          1,
 		acceptingInp:     true,
 		highlightedIndex: 0,
@@ -219,20 +221,20 @@ func newModelsSelectorCtrl() modelsSelectorCtrl {
 func viewSelector[T selector](s T) string {
 	info := s.getSelectorInfo()
 
-	if len(info.ta.Value()) > 0 && !strings.HasPrefix(info.ta.Value(), "/") { 
-		info.ta.SetValue(s.optionPrefix() + info.ta.Value())
+	if len(info.ti.Value()) > 0 && !strings.HasPrefix(info.ti.Value(), "/") { 
+		info.ti.SetValue(s.optionPrefix() + info.ti.Value())
 	 }
 
 	opts := []uiOption{}
 	for _, option := range info.options {
-		if strings.HasPrefix(option.getInfo().name, info.ta.Value()) {
+		if strings.HasPrefix(option.getInfo().name, info.ti.Value()) {
 			opts = append(opts, option)
 		}
 	}
 	
 	info.options = opts
 	info.optsLen = len(opts)
-	info.ta.CursorEnd()
+	info.ti.CursorEnd()
 
 	toDisplay := func() []string {
 		var r []string
@@ -251,7 +253,7 @@ func viewSelector[T selector](s T) string {
 			lipgloss.Top,
 			lipgloss.JoinHorizontal(
 				lipgloss.Left,
-				lipgloss.NewStyle().Width(27).MarginRight(5).Render(s.label() + ": " + info.ta.View()),
+				lipgloss.NewStyle().Width(27).MarginRight(5).Render(s.label() + ": " + info.ti.View()),
 				s.usefulInfo(),
 			),
 			strings.Join(toDisplay, "\n"),
@@ -509,4 +511,33 @@ func retryButton() string {
 		Render("Retry "+ "\u21BB")
 
 	return zone.Mark("retry-button", b)
+}
+
+
+// -- File Input Component
+type fileInputBox struct {
+	ti 			     textinput.Model
+	vp               viewport.Model
+	matches          []utils.FileEntry
+	selectedFilePath string
+}
+
+func newFileInputBox(width, height int) fileInputBox {
+	ti := textinput.New()
+	ti.Prompt = bwLabelStyle.Bold(true).Render(" Add file: ") + lipgloss.NewStyle().Foreground(accentColor).Bold(true).Render(" @")
+	ti.Focus()
+
+	return fileInputBox {
+		ti: ti,
+		vp: viewport.New(width, height),
+	}
+}
+
+func (f *fileInputBox) view() string {
+	return lipgloss.NewStyle().MarginLeft(2).MarginBottom(1).Render(lipgloss.JoinVertical(
+			lipgloss.Top,
+			f.ti.View(),
+			f.vp.View(),
+		),
+	)
 }
