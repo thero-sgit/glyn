@@ -450,7 +450,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.chatCentre = c
 
 		case "@":
-			if !m.textarea.Focused() {
+			if !m.textarea.Focused() && !m.slashCmdCon.info.acceptingInp && !m.modelsSelCon.info.acceptingInp {
 				m.chatCentre.fileInpBox 	= newFileInputBox(0, 0)
 				m.chatCentre.fileInpBoxOpen = true
 
@@ -509,7 +509,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.chatCentre.fileInpBox.ti, ftiCmd = m.chatCentre.fileInpBox.ti.Update(msg)
 	}	
 	
-	if !m.textarea.Focused() {
+	if !m.textarea.Focused() && !m.chatCentre.fileInpBoxOpen {
 		m.slashCmdCon.info.ti, ciCmd   = m.slashCmdCon.info.ti.Update(msg)
 		m.modelsSelCon.info.ti, mniCmd = m.modelsSelCon.info.ti.Update(msg)
 	}
