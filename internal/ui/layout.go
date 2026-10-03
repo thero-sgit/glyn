@@ -20,9 +20,9 @@ func (m Model) headerBar(headerHeight int) string {
 
 
 func (m Model) chatUi(middleHeight int) string {
-	taHeight := 2
+	taHeight := 3
 	if m.textarea.Length() > 0 || m.chatCentre.fileInpBoxOpen {
-		taHeight = 6
+		taHeight = 7
 	}
 
 	if m.chatCentre.fileInpBoxOpen {
@@ -31,7 +31,7 @@ func (m Model) chatUi(middleHeight int) string {
 			m.chatCentre.fileInpBox.vp.Width  = m.width - 8
 		}		
 	} else {
-		m.textarea.SetHeight(taHeight)
+		m.textarea.SetHeight(taHeight-1)
 	}
 
 	m.viewport.Height = middleHeight - (taHeight + 1)
@@ -50,7 +50,7 @@ func (m Model) chatUi(middleHeight int) string {
 	if m.chatCentre.fileInpBoxOpen {
 		inputBoxContent = m.chatCentre.fileInpBox.view()
 	} else {
-		inputBoxContent = lipgloss.NewStyle().Render(textArea, sendStopBtn)
+		inputBoxContent = lipgloss.JoinVertical(lipgloss.Top, filesForContextLabel(m.chatCentre.filesForContext), lipgloss.NewStyle().Render(textArea, sendStopBtn))
 	}	
 
 	boxStyle := lipgloss.NewStyle().

@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"slices"
 	"strings"
-	
+
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 	"github.com/thero-sgit/xyn/internal/config"
@@ -23,6 +24,7 @@ type chatCentre struct {
 	sendingPrompt     bool
 	fileInpBox        fileInputBox
 	fileInpBoxOpen    bool
+	filesForContext   []string
 }
 
 func newChatCentre() chatCentre {
@@ -48,6 +50,12 @@ func (c *chatCentre) updatedWidths(width int) {
 	}
 
 	c.history = updatedHistory
+}
+
+func (c *chatCentre) addFileForContext(path string) {
+	if !slices.Contains(c.filesForContext, path) {
+		c.filesForContext = append(c.filesForContext, path)
+	}
 }
 
 // -- CHAT ITEMS CONTROL

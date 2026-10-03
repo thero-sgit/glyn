@@ -513,13 +513,22 @@ func retryButton() string {
 	return zone.Mark("retry-button", b)
 }
 
+func filesForContextLabel(files []string) string {
+	var f []string
+	for _, file := range files {
+		f = append(f, lipgloss.NewStyle().MarginLeft(1).MarginRight(1).Render(lipgloss.NewStyle().Foreground(accentColor).Bold(true).Render(" @") + subtleStyle.Italic(true).Render(file) + " "))
+	}
+
+	return lipgloss.JoinHorizontal(lipgloss.Left, f...)
+}
+
 
 // -- File Input Component
 type fileInputBox struct {
 	ti 			     textinput.Model
 	vp               viewport.Model
 	matches          []utils.FileEntry
-	selectedFilePath string
+	selectedFile     string
 }
 
 func newFileInputBox(width, height int) fileInputBox {

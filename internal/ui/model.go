@@ -416,7 +416,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "enter":
 			if m.chatCentre.fileInpBoxOpen {
-				m.chatCentre.fileInpBoxOpen = false
+				file := m.chatCentre.fileInpBox.matches[0]
+				if !file.IsDir {
+					m.chatCentre.addFileForContext(file.Path)
+					m.chatCentre.fileInpBoxOpen = false
+				}					
 			}
 
 			if m.slashCmdCon.info.acceptingInp && m.slashCmdCon.info.optsLen > 0 && !m.textarea.Focused() {
@@ -490,7 +494,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			vp.SetContent(strings.Join(mList, "\n"))
 		}		
 
-		m.chatCentre.fileInpBox.ti = ti 
+		m.chatCentre.fileInpBox.ti = ti
 		m.chatCentre.fileInpBox.vp = vp
 		m.chatCentre.fileInpBox.matches = matches
 	}
