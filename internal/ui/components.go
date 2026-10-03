@@ -14,22 +14,20 @@ import (
 	"github.com/thero-sgit/xyn/internal/utils"
 )
 
-const xynLargeText = `
-██╗ ██╗██╗ ██╗████╗██╗
- ████╔╝██████║██║█║██║
-██║ ██╗    ██║██║█║██║
-╚═╝ ╚═╝    ╚═╝██║████║
-              ╚═╝╚═══╝
-`
+const xynLargeText = 
+`██╗ ██╗██╗ ██╗██████╗
+ ████╔╝██████║██╔═██║
+██╔═██╗╚═══██║██║ ██║
+╚═╝ ╚═╝    ╚═╝╚═╝ ╚═╝`
 
-const codeLargeText = `
-█████╗██████╗█████╗ ██████╗
-██╔══╝██║ ██║██║ ██╗██╔═══╝
-██║   ██║ ██║██║ ██║█████╗
-██║   ██║ ██║██║ ██║██╔══╝
-█████╗██████║█████╔╝██████╗
-╚════╝╚═════╝╚════╝ ╚═════╝
-`
+const codeLargeText = 
+`██████╗██████╗    ██╗██████╗█████╗
+██╔═██║██╔═██║██████║██╔═██║██╔═██╗
+██████║██║ ██║██╔═██║█████╔╝██║ ╚═╝
+    ██║██████║██████║██████╗███╗
+    ╚═╝╚═════╝╚═════╝╚═════╝╚══╝`
+
+
 var (
 	subtleStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
 	highlighedStyle = lipgloss.NewStyle().Background(accentColor).Foreground(lipgloss.Color("#000000"))
@@ -47,7 +45,8 @@ var (
 
 				subtleStyle.MarginTop(1).Render("AI interaction & config"),
 				boldStyle.Render("alt+enter") + "/click " + sendPromptBtnStates[0] + " send prompt",
-				"click " + boldStyle.Render("\uFF0B") + " to add context",
+				boldStyle.Render("@") + "/click " + boldStyle.Render("@") + " to add files",
+				"click " + labelValueBand("\u27E1", "`model-id`") + " to view models list",
 				"click " + labelValueBand("?/" + "\u2726", "`mode`") + " to switch mode",
 				
 				subtleStyle.MarginTop(1).Render("In chat screen"),
@@ -63,13 +62,14 @@ var (
 				lipgloss.Top,
 				boldStyle.Render("/help") + " display helpful keyboard shortcuts",
 				boldStyle.Render("/status") + " display usage and general status",
+				boldStyle.Render("/model") + " display models list",
 			),
 		)
 
 	slashCommands = []uiOption {
 		&slashCommand{ info: uiOptionInfo {name: "/help", pretty: "/help  ", comp: helpCmdComponent}},
 		&slashCommand{ info: uiOptionInfo {name: "/status", pretty: "/status", comp: statusCmdComponent}},
-		&slashCommand{ info: uiOptionInfo {name: "/model", pretty: "/models"}},
+		&slashCommand{ info: uiOptionInfo {name: "/model", pretty: "/model"}},
 	}
 
 	sendPromptBtnStates = []string {
@@ -81,25 +81,19 @@ var (
 )
 
 func bunner() string {
-	inf := lipgloss.NewStyle().MarginLeft(3).MarginTop(1).Render(lipgloss.JoinVertical(
+	inf := lipgloss.NewStyle().MarginLeft(2).Render(lipgloss.JoinVertical(
 			lipgloss.Top,
-			boldStyle.Render("xyn ") + subtleStyle.Bold(true).Render("v0.4.2"),
+			boldStyle.Render("xyn ") + subtleStyle.Bold(true).Render(config.Config.Version),
 			boldStyle.Foreground(accentColor).Render("\u27E1 ") + subtleStyle.Render(config.Config.Model),
 			boldStyle.Foreground(accentColor).Render("@ ") + subtleStyle.Underline(true).Render("console.groq.com"),
 			boldStyle.Foreground(accentColor).Render("~") + subtleStyle.Render(config.Config.WorkingDir),
 		),
 	)
 
-	largeText := lipgloss.JoinHorizontal(
-		lipgloss.Left,
-		lipgloss.NewStyle().Foreground(accentColor).Render(xynLargeText),
-		subtleStyle.Render(codeLargeText),
-	)
-
 	return lipgloss.JoinHorizontal(
 		lipgloss.Left,
-		largeText,
-		lipgloss.NewStyle().MarginBottom(1).Render(inf),
+		lipgloss.JoinHorizontal(lipgloss.Left, lipgloss.NewStyle().Foreground(accentColor).Render(xynLargeText), subtleStyle.Render(codeLargeText)),
+		inf,
 	)
 }
 
@@ -516,7 +510,19 @@ func retryButton() string {
 func filesForContextLabel(files []string) string {
 	var f []string
 	for _, file := range files {
-		f = append(f, lipgloss.NewStyle().MarginLeft(1).MarginRight(1).Render(lipgloss.NewStyle().Foreground(accentColor).Bold(true).Render(" @") + subtleStyle.Italic(true).Render(file) + " "))
+		f = append(
+			f, lipgloss.NewStyle().
+				MarginLeft(1).
+				MarginRight(1).
+				Render(
+					lipgloss.NewStyle().
+					Foreground(accentColor).
+					Bold(true).
+					Render(" @") + 
+					lipgloss.NewStyle().Italic(true).Render(file) + 
+					" ",
+				),
+		)
 	}
 
 	return lipgloss.JoinHorizontal(lipgloss.Left, f...)

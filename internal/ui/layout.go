@@ -7,7 +7,7 @@ import (
 )
 
 func (m Model) headerBar(headerHeight int) string {
-	version := subtleStyle.Render("v0.4.2")
+	version := subtleStyle.Render(config.Config.Version)
 
 	return lipgloss.NewStyle().
 		Width(m.width).

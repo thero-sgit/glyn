@@ -32,6 +32,7 @@ func (m *mode) Toggle() {
 var Config configuration
 
 type configuration struct {
+	Version          string
 	WorkingDir       string
 	SanitizedWd      string
 	GroqApiKey       string
@@ -113,6 +114,7 @@ func (c *configuration) SetRenderer(width int) {
 
 func Init() {
 	Config = configuration {
+		Version:    "v1.0.0",
 		WorkingDir: getWd(),
 		GroqApiKey: apiKey(),
 		Model:		"openai/gpt-oss-120b",
