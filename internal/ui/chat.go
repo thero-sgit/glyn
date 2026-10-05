@@ -58,6 +58,12 @@ func (c *chatCentre) addFileForContext(path string) {
 	}
 }
 
+func (c *chatCentre) removeFileForContext(path string) {
+	c.filesForContext = slices.DeleteFunc(c.filesForContext, func(s string) bool {
+		return s == path 
+	})
+}
+
 // -- CHAT ITEMS CONTROL
 type chatItem interface {
 	getPretty() string

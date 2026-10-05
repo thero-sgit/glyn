@@ -416,11 +416,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "enter":
 			if m.chatCentre.fileInpBoxOpen {
-				file := m.chatCentre.fileInpBox.matches[0]
-				if !file.IsDir {
-					m.chatCentre.addFileForContext(file.Path)
-					m.chatCentre.fileInpBoxOpen = false
-				}					
+				if len(m.chatCentre.fileInpBox.matches) > 0 {
+					file := m.chatCentre.fileInpBox.matches[0]
+					if m.chatCentre.fileInpBox.prompt == "rm " {
+						m.chatCentre.removeFileForContext(file.Path)
+						m.chatCentre.fileInpBoxOpen = false
+
+						return m, cmd
+					}
+
+					if !file.IsDir {
+						m.chatCentre.addFileForContext(file.Path)
+						m.chatCentre.fileInpBoxOpen = false
+					}
+				}
+
 			}
 
 			if m.slashCmdCon.info.acceptingInp && m.slashCmdCon.info.optsLen > 0 && !m.textarea.Focused() {
@@ -475,6 +485,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.chatCentre.fileInpBoxOpen {
 		ti := m.chatCentre.fileInpBox.ti
 		vp := m.chatCentre.fileInpBox.vp
+
+		if ti.Value() == "rm " {
+			ti = m.chatCentre.fileInpBox.setPrompt(ti, "rm ")
+			ti.Reset()
+		}
 
 		matches, err := utils.ListMatches(ti.Value())
 

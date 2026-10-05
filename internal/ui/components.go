@@ -534,18 +534,36 @@ type fileInputBox struct {
 	ti 			     textinput.Model
 	vp               viewport.Model
 	matches          []utils.FileEntry
-	selectedFile     string
+	prompt           string
 }
 
 func newFileInputBox(width, height int) fileInputBox {
 	ti := textinput.New()
-	ti.Prompt = bwLabelStyle.Bold(true).Render(" Add file: ") + lipgloss.NewStyle().Foreground(accentColor).Bold(true).Render(" @")
 	ti.Focus()
+	ti.Placeholder = "<filename> to add / rm + space to remove file"
 
-	return fileInputBox {
+	fib := fileInputBox {
 		ti: ti,
 		vp: viewport.New(width, height),
 	}
+
+	fib.ti = fib.setPrompt(fib.ti, "@")
+
+	return fib
+}
+
+func (f *fileInputBox) setPrompt(ti textinput.Model, p string) textinput.Model {
+	label := " Add file: "
+
+	if p == "rm "{
+		label = " Remove file: "
+		ti.Placeholder = "<filename> to remove"
+	}
+
+	ti.Prompt = bwLabelStyle.Bold(true).Render(label) + lipgloss.NewStyle().Foreground(accentColor).Bold(true).Render(" " + p)
+	f.prompt = p
+
+	return ti
 }
 
 func (f *fileInputBox) view() string {
