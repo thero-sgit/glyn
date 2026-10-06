@@ -136,6 +136,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case zone.Get("model-selector-btn").InBounds(msg):
 				m.slashCmdCon.info.acceptingInp = false
 				m.modelsSelCon.info.acceptingInp = true
+				m.chatCentre.fileInpBoxOpen = false
 				m.slashCmdCon.info.openCmd = "/model"
                 return m, nil
 
