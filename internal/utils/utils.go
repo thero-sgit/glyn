@@ -12,6 +12,15 @@ type FileEntry struct {
 	IsDir    bool
 }
 
+func ListCmdMatches(token string, allCmds []string) []string {
+	var r []string
+	for _, name := range allCmds {
+		if strings.HasPrefix(strings.ToLower(name), strings.ToLower(token)) { r = append(r, name)}
+	}
+
+	return r
+}
+
 func ListMatches(token string) ([]FileEntry, error) {
 	dir, prefix := filepath.Split(token)
 

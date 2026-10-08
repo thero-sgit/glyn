@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"errors"
 	"strings"
 	"time"
 
@@ -11,7 +10,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
-	"github.com/thero-sgit/xyn/internal/ai"
 	"github.com/thero-sgit/xyn/internal/config"
 	"github.com/thero-sgit/xyn/internal/utils"
 )
@@ -50,7 +48,6 @@ type Model struct {
 
 	//
 	slashCmdCon    slashCmdCtrl
-	modelsSelCon   modelsSelectorCtrl
 }
 
 func InitialModel() Model {
@@ -68,6 +65,7 @@ func InitialModel() Model {
 
 	model := Model{
 		chatCentre: newChatCentre(),
+		slashCmdCon: newSlashCmdCtrl(0, 0),
 		viewport: vp,
 	}
 
@@ -126,18 +124,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
                 return m, nil
 
 			case zone.Get("add-file-btn").InBounds(msg):
-				m.slashCmdCon.info.acceptingInp  = false
-				m.modelsSelCon.info.acceptingInp = false
+				m.slashCmdCon.acceptingCmd  = false
 				
 				m.chatCentre.fileInpBox 	= newFileInputBox(0, 0)
 				m.chatCentre.fileInpBoxOpen = true
                 return m, nil
 
 			case zone.Get("model-selector-btn").InBounds(msg):
-				m.slashCmdCon.info.acceptingInp = false
-				m.modelsSelCon.info.acceptingInp = true
+				m.slashCmdCon.acceptingCmd  = false
 				m.chatCentre.fileInpBoxOpen = false
-				m.slashCmdCon.info.openCmd = "/model"
+				m.slashCmdCon.openCmd = "/model"
                 return m, nil
 
 			case zone.Get("mode-toggle-btn").InBounds(msg):
@@ -178,9 +174,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         }
 
 	case errMsg:
-		if m.slashCmdCon.info.openCmd == "/model" {
-			_, content := modelsCmdComponent(m.modelsSelCon, msg.err.Error(), []ai.GroqModelInfo{})
-			m.viewport.SetContent(content)
+		if m.slashCmdCon.openCmd == "/model" {
+			m.viewport.SetContent(msg.err.Error())
 
 			return m, nil
 		}
@@ -262,16 +257,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         return m, awaitSessionInfo(CHandler.session.Ctx, msg.c)
 
 
-	case models:
-		models := msg.m
-		info, content := modelsCmdComponent(m.modelsSelCon, "", models)
-		m.modelsSelCon.info = info
-		m.modelsSelCon.info.acceptingInp = true
-		m.modelsSelCon.info.ti.Focus()
+	// case models:
+	// 	models := msg.m
+	// 	info, content := modelsCmdComponent(m.modelsSelCon, "", models)
+	// 	m.modelsSelCon.info = info
+	// 	m.modelsSelCon.info.acceptingCmd = true
+	// 	m.modelsSelCon.info.ti.Focus()
 
-		m.viewport.SetContent(content)
+	// 	m.viewport.SetContent(content)
 
-		return m, nil
+	// 	return m, nil
 
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -280,10 +275,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case "esc":
-			if m.slashCmdCon.info.acceptingInp || m.slashCmdCon.info.openCmd != "" {
-				m.slashCmdCon.info.acceptingInp  = false
-				m.modelsSelCon.info.acceptingInp = false
-				m.slashCmdCon.info.openCmd = ""
+			if m.slashCmdCon.acceptingCmd || m.slashCmdCon.openCmd != "" {
+				m.slashCmdCon.acceptingCmd  = false
+				m.slashCmdCon.openCmd = ""
 
 				if len(m.chatCentre.prettyHistory()) == 0 {
 					m.viewport.SetContent(subtleStyle.Render("press 'ctrl+e' to start chat"))
@@ -352,49 +346,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.textarea, taCmd = m.textarea.Update(msg)
 			}
 
-			m.chatCentre.fileInpBox.vp, fvpCmd = m.chatCentre.fileInpBox.vp.Update(msg)
-
-			info, err := func() (selectorInfo, error) {
-				if m.slashCmdCon.info.acceptingInp {
-					return m.slashCmdCon.info, nil
-				}
-
-				if m.modelsSelCon.info.acceptingInp {
-					return m.modelsSelCon.info, nil
-				}
-
-				return selectorInfo{}, errors.New("")
-			}()
-
-			if err == nil && info.optsLen > 1 {
-				if msg.String() == "up" {
-					if info.highlightedIndex == 0 {
-						info.highlightedIndex = info.optsLen - 1
-					} else {
-						info.highlightedIndex = info.highlightedIndex - 1
-					}
-				}
-
-				if msg.String() == "down" {
-					info.highlightedIndex = (info.highlightedIndex + 1) % max(info.optsLen, 1)
-				}
-
-				
-				if len(info.ti.Value()) <= 1 {
-					 info.ti.Reset()
-					 info.ti.Placeholder = info.options[info.highlightedIndex].getInfo().name
-				}
-
-
-				if m.slashCmdCon.info.acceptingInp {
-					m.slashCmdCon.info = info
-				} else {
-					m.modelsSelCon.info = info
-				}
-			}
+			if m.chatCentre.fileInpBoxOpen { m.chatCentre.fileInpBox.vp, fvpCmd = m.chatCentre.fileInpBox.vp.Update(msg) }
 
 		case "left", "right":
-			if m.slashCmdCon.info.openCmd == "/help" {
+			if m.slashCmdCon.openCmd == "/help" {
 				switch msg.String() {
 				case "left":
 					helpCmdTabState = 0
@@ -410,9 +365,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "/":
 			if !m.textarea.Focused() && !m.chatCentre.fileInpBoxOpen {
-				m.slashCmdCon.info.acceptingInp = true
-				m.modelsSelCon.info.acceptingInp = false
-				m.slashCmdCon              		= newSlashCmdCtrl()			
+				m.slashCmdCon = newSlashCmdCtrl(0, 0)
+				m.slashCmdCon.acceptingCmd = true
+				m.slashCmdCon.updateMatches()
+
+				return m, nil
 			}
 
 		case "enter":
@@ -434,23 +391,27 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			}
 
-			if m.slashCmdCon.info.acceptingInp && m.slashCmdCon.info.optsLen > 0 && !m.textarea.Focused() {
-				m.slashCmdCon.info.acceptingInp = false
-				m.slashCmdCon.info.openCmd = m.slashCmdCon.info.options[m.slashCmdCon.info.highlightedIndex].getInfo().name
+			if m.slashCmdCon.acceptingCmd {
+				if m.slashCmdCon.topMatch.name == "" {
+					return m, nil
+				}
 
-				if m.slashCmdCon.info.openCmd == "/model" {
-					m.modelsSelCon = newModelsSelectorCtrl()
+				m.slashCmdCon.acceptingCmd = false
+
+				if m.slashCmdCon.topMatch.name == "/model" {
 					m, cmds := CHandler.handleGetModels(m)
-
 					return m, cmds
 				}
 
-				m.viewport.SetContent(m.slashCmdCon.info.options[m.slashCmdCon.info.highlightedIndex].getInfo().comp())
+				if m.slashCmdCon.topMatch.comp != nil {
+					m.viewport.SetContent(m.slashCmdCon.topMatch.comp())
+				}
+				return m, nil
 			}
 
 		case "?":
 			if !m.textarea.Focused() {
-				m.slashCmdCon.info.openCmd = "/help"
+				m.slashCmdCon.openCmd = "/help"
 				m.viewport.SetContent(helpCmdComponent())
 			}
 
@@ -465,7 +426,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.chatCentre = c
 
 		case "@":
-			if !m.textarea.Focused() && !m.slashCmdCon.info.acceptingInp && !m.modelsSelCon.info.acceptingInp {
+			if !m.textarea.Focused() && !m.slashCmdCon.acceptingCmd  {
 				m.chatCentre.fileInpBox 	= newFileInputBox(0, 0)
 				m.chatCentre.fileInpBoxOpen = true
 
@@ -474,13 +435,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	if (m.slashCmdCon.info.acceptingInp || m.modelsSelCon.info.acceptingInp) {
-		if m.slashCmdCon.info.acceptingInp {
-			m.viewport.SetContent(viewSelector(&m.slashCmdCon))
-		} else {
-			_, content := modelsCmdComponent(m.modelsSelCon, "", []ai.GroqModelInfo{})
-			m.viewport.SetContent(content)
-		}
+	if m.slashCmdCon.acceptingCmd && !strings.HasPrefix(m.slashCmdCon.ti.Value(), "/") {
+		m.slashCmdCon.ti.SetValue("/" + m.slashCmdCon.ti.Value())
 	}
 
 	if m.chatCentre.fileInpBoxOpen {
@@ -529,9 +485,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.chatCentre.fileInpBox.ti, ftiCmd = m.chatCentre.fileInpBox.ti.Update(msg)
 	}	
 	
-	if !m.textarea.Focused() && !m.chatCentre.fileInpBoxOpen {
-		m.slashCmdCon.info.ti, ciCmd   = m.slashCmdCon.info.ti.Update(msg)
-		m.modelsSelCon.info.ti, mniCmd = m.modelsSelCon.info.ti.Update(msg)
+	if m.slashCmdCon.acceptingCmd && !m.textarea.Focused() && !m.chatCentre.fileInpBoxOpen {
+		m.slashCmdCon.ti, ciCmd = m.slashCmdCon.ti.Update(msg)
+		m.slashCmdCon.updateMatches()
 	}
 
 	return m, tea.Batch(taCmd, vpCmd, ciCmd, mniCmd, fvpCmd, ftiCmd, cmd)

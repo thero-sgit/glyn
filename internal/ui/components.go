@@ -66,11 +66,16 @@ var (
 			),
 		)
 
-	slashCommands = []uiOption {
-		&slashCommand{ info: uiOptionInfo {name: "/help", pretty: "/help  ", comp: helpCmdComponent}},
-		&slashCommand{ info: uiOptionInfo {name: "/status", pretty: "/status", comp: statusCmdComponent}},
-		&slashCommand{ info: uiOptionInfo {name: "/model", pretty: "/model"}},
+	slashCommands = []slashCommand {
+		slashCommand{ name: "/help", pretty: "/help  ", comp: helpCmdComponent},
+		slashCommand{ name: "/status", pretty: "/status", comp: statusCmdComponent},
+		slashCommand{ name: "/model", pretty: "/model"},
 	}
+	slashCmdNames = func() []string {
+		var names []string
+		for _, slashCmd := range slashCommands { names = append(names, slashCmd.name)}
+		return names
+	}()
 
 	sendPromptBtnStates = []string {
 		highlighedStyle.PaddingLeft(1).PaddingRight(1).Bold(true).Render("send " + "\u27A4"),
@@ -97,162 +102,10 @@ func bunner() string {
 	)
 }
 
-// -- UI OPTIONS
-type uiOptionInfo struct {
+type slashCommand struct {
 	name   string
 	pretty string
 	comp   func() string
-}
-
-type uiOption interface {
-	getInfo() uiOptionInfo
-}
-
-type slashCommand struct{
-	info uiOptionInfo
-}
-
-func (s *slashCommand) getInfo() uiOptionInfo {
-	return s.info
-}
-
-type modelUiOption struct{
-	info uiOptionInfo
-}
-
-func (m *modelUiOption) getInfo() uiOptionInfo {
-	return m.info
-}
-
-// -- SELECTORS
-type selectorInfo struct {
-	ti               textinput.Model
-	options          []uiOption
-	optsLen           int
-	acceptingInp     bool
-	openCmd          string
-	highlightedIndex int
-}
-
-type selector interface {
-	label() 		   string
-	usefulInfo()	   string
-	optionPrefix()     string
-	getSelectorInfo()  selectorInfo
-}
-
-type slashCmdCtrl struct {
-	info selectorInfo
-}
-
-func (s *slashCmdCtrl) label() string {
-	return "command"
-}
-
-func (s *slashCmdCtrl) usefulInfo() string {
-	return subtleStyle.Render("press 'esc' to close")
-}
-
-func (s *slashCmdCtrl) optionPrefix() string {
-	return "/"
-}
-
-func (s *slashCmdCtrl) getSelectorInfo() selectorInfo {
-	return s.info
-}
-
-func newSlashCmdCtrl() slashCmdCtrl {
-	ta := textinput.New()
-	ta.Focus()
-	ta.CharLimit = 15
-
-	info := selectorInfo {
-		ti:               ta,
-		optsLen:          len(slashCommands),
-		acceptingInp:     true,
-		options: 		  slashCommands,
-		highlightedIndex: 0,
-	}
-
-	return slashCmdCtrl { info: info }
-}
-
-type modelsSelectorCtrl struct {
-	info selectorInfo
-}
-
-func (m *modelsSelectorCtrl) label() string {
-	return "name"
-}
-
-func (m *modelsSelectorCtrl) usefulInfo() string {
-	return ""
-}
-
-func (m *modelsSelectorCtrl) optionPrefix() string {
-	return ""
-}
-
-func (m *modelsSelectorCtrl) getSelectorInfo() selectorInfo {
-	return m.info
-}
-
-func newModelsSelectorCtrl() modelsSelectorCtrl {
-	ta := textinput.New()
-	ta.Focus()
-	ta.CharLimit = 15
-
-	info := selectorInfo {
-		ti:               ta,
-		optsLen:          1,
-		acceptingInp:     true,
-		highlightedIndex: 0,
-	}
-
-	return modelsSelectorCtrl { info: info }
-}
-
-func viewSelector[T selector](s T) string {
-	info := s.getSelectorInfo()
-
-	if len(info.ti.Value()) > 0 && !strings.HasPrefix(info.ti.Value(), "/") { 
-		info.ti.SetValue(s.optionPrefix() + info.ti.Value())
-	 }
-
-	opts := []uiOption{}
-	for _, option := range info.options {
-		if strings.HasPrefix(option.getInfo().name, info.ti.Value()) {
-			opts = append(opts, option)
-		}
-	}
-	
-	info.options = opts
-	info.optsLen = len(opts)
-	info.ti.CursorEnd()
-
-	toDisplay := func() []string {
-		var r []string
-		for i, opt := range opts {
-			p := opt.getInfo().pretty
-			if i == info.highlightedIndex {
-				p = lipgloss.NewStyle().Foreground(accentColor).Render("> ") + opts[info.highlightedIndex].getInfo().pretty
-			}
-			r = append(r, p)
-		}
-		return  r
-	}()
-
-	return lipgloss.NewStyle().Render(
-		lipgloss.JoinVertical(
-			lipgloss.Top,
-			lipgloss.JoinHorizontal(
-				lipgloss.Left,
-				lipgloss.NewStyle().Width(27).MarginRight(5).Render(s.label() + ": " + info.ti.View()),
-				s.usefulInfo(),
-			),
-			strings.Join(toDisplay, "\n"),
-		),
-	)
 }
 
 func helpCmdComponent() string {
@@ -320,43 +173,6 @@ func statusCmdComponent() string {
 		tokenUsageProgressBar,
 		tokenUsageBreakdown,
 		context,
-	)
-}
-
-func modelsCmdComponent(m modelsSelectorCtrl, content string, models []ai.GroqModelInfo) (selectorInfo, string) {
-	cmdLabel := lipgloss.NewStyle().MarginBottom(1).Render(lipgloss.JoinHorizontal(
-			lipgloss.Left,
-			bwLabelStyle.Render(" /models "),
-			" Compatible models from Groq ",
-			subtleStyle.Render("(console.groq.com/docs/models)  "),
-			subtleStyle.Render("press 'esc' to close"),
-		),
-	)
-
-	var modelOptions []uiOption
-	if content == "" && len(models)>0 {
-		for _, model := range models {
-			modelOptions = append(
-				modelOptions,
-				&modelUiOption{
-					info: uiOptionInfo{
-						name: model.Name,
-						pretty: modelCard(model),
-					},
-				},
-			)
-		}
-	}
-	
-	if len(m.info.options) == 0 {
-		m.info.options = modelOptions
-		m.info.optsLen = max(len(m.info.options), 1)
-	}
-
-	return m.getSelectorInfo(), lipgloss.JoinVertical(
-		lipgloss.Top,
-		cmdLabel,
-		viewSelector(&m),
 	)
 }
 
@@ -571,6 +387,53 @@ func (f *fileInputBox) view() string {
 			lipgloss.Top,
 			f.ti.View(),
 			f.vp.View(),
+		),
+	)
+}
+
+// Slash Command Input Componenet
+type slashCmdCtrl struct {
+	ti 			     textinput.Model
+	vp               viewport.Model
+	matches          []string
+	topMatch         slashCommand
+	prompt           string
+	acceptingCmd     bool
+	openCmd          string
+}
+
+func newSlashCmdCtrl(width, height int) slashCmdCtrl {
+	ti := textinput.New()
+	ti.Focus()
+	ti.Placeholder = "/<command>"
+	ti.Prompt = bwLabelStyle.Bold(true).Render(" Command: ") + " "
+
+	return slashCmdCtrl {
+		ti: ti,
+		vp: viewport.New(width, height),
+	}
+}
+
+func (s *slashCmdCtrl) updateMatches() {
+	s.matches = utils.ListCmdMatches(s.ti.Value(), slashCmdNames)
+	s.vp.SetContent(strings.Join(s.matches, "\n"))
+	s.topMatch = slashCommand{}
+
+	if len(s.matches) > 0 {
+		for _, slashCmd := range slashCommands {
+			if slashCmd.name == s.matches[0] {
+				s.topMatch = slashCmd
+				break
+			}
+		}
+	}
+}
+
+func (s *slashCmdCtrl) view() string {
+	return lipgloss.NewStyle().MarginLeft(2).MarginBottom(1).Render(lipgloss.JoinVertical(
+			lipgloss.Top,
+			s.ti.View(),
+			s.vp.View(),
 		),
 	)
 }

@@ -21,15 +21,18 @@ func (m Model) headerBar(headerHeight int) string {
 
 func (m Model) chatUi(middleHeight int) string {
 	taHeight := 3
-	if m.textarea.Length() > 0 || m.chatCentre.fileInpBoxOpen {
+	if m.textarea.Length() > 0 || m.chatCentre.fileInpBoxOpen || m.slashCmdCon.acceptingCmd {
 		taHeight = 7
 	}
 
 	if m.chatCentre.fileInpBoxOpen {
-		if m.chatCentre.fileInpBox.vp.Height == 0 {
-			m.chatCentre.fileInpBox.vp.Height = taHeight - 2
-			m.chatCentre.fileInpBox.vp.Width  = m.width - 8
-		}		
+		m.chatCentre.fileInpBox.vp.Height = taHeight - 2
+		m.chatCentre.fileInpBox.vp.Width  = m.width - 8
+
+	} else if m.slashCmdCon.acceptingCmd {
+		m.slashCmdCon.vp.Height = taHeight - 2
+		m.slashCmdCon.vp.Width  = m.width - 8
+		
 	} else {
 		m.textarea.SetHeight(taHeight-1)
 	}
@@ -49,6 +52,8 @@ func (m Model) chatUi(middleHeight int) string {
 	var inputBoxContent string
 	if m.chatCentre.fileInpBoxOpen {
 		inputBoxContent = m.chatCentre.fileInpBox.view()
+	} else if m.slashCmdCon.acceptingCmd {
+		inputBoxContent = m.slashCmdCon.view()
 	} else {
 		inputBoxContent = lipgloss.JoinVertical(lipgloss.Top, filesForContextLabel(m.chatCentre.filesForContext), lipgloss.NewStyle().Render(textArea, sendStopBtn))
 	}	
