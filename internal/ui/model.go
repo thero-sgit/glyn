@@ -226,7 +226,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
             m.chatCentre.isAgentWorking = false
             m.chatCentre.currentAgentRes.agentBgActivity.done(false)
             sendPromptState = sendPromptBtnStates[0]
-            m.chatCentre.history = append(m.chatCentre.history, m.chatCentre.currentAgentRes)
+			m.chatCentre.currentAgentRes.responseBuffer, _ = config.Config.MdRenderer.Render(m.chatCentre.currentAgentRes.responseBuffer)
+			m.chatCentre.history = append(m.chatCentre.history, m.chatCentre.currentAgentRes)
             return m, doTick50()
         }
 
@@ -248,7 +249,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
         
         m.viewport.SetContent(strings.Join(append(m.chatCentre.prettyHistory(), m.chatCentre.currentAgentRes.getPretty()), "\n"))
-        m.viewport.GotoBottom()
 
         return m, tea.Batch(awaitResponse(CHandler.session.Ctx, msg.c), c)
 
