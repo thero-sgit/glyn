@@ -399,12 +399,16 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleTabKey()
 
 	case "@":
-		if !m.textarea.Focused() && !m.slashCmdCon.acceptingCmd {
-			m.chatCentre.fileInpBox = newFileInputBox(0, 0)
-			m.chatCentre.fileInpBoxOpen = true
+		return m.handleAtKey()
+	}
+}
 
-			return m, nil
-		}
+func (m *Model) handleAtKey() (tea.Model, tea.Cmd) {
+	if !m.textarea.Focused() && !m.slashCmdCon.acceptingCmd {
+		m.chatCentre.fileInpBox = newFileInputBox(0, 0)
+		m.chatCentre.fileInpBoxOpen = true
+
+		return m, nil
 	}
 }
 
