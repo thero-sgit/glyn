@@ -82,23 +82,13 @@ func (m *Model) Init() tea.Cmd {
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var (
-		cmd    tea.Cmd
-		vpCmd  tea.Cmd
-		taCmd  tea.Cmd
-		ciCmd  tea.Cmd
-		mniCmd tea.Cmd
-		fvpCmd tea.Cmd
-		ftiCmd tea.Cmd
-	)
-
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		return m.handleWindowSize(msg)
 	case tea.MouseMsg:
 		return m.handleMouseAction(msg)
 	case errMsg:
-		return m.handleErrMsg(msg)
+		return m.handleErrMsg()
 	case tickMsg50:
 		return m.handleTick50()
 	case tickMsg20:
@@ -111,62 +101,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleKeyMsg(msg)
 	}
 
-	if m.slashCmdCon.acceptingCmd && !strings.HasPrefix(m.slashCmdCon.ti.Value(), "/") {
-		m.slashCmdCon.ti.SetValue("/" + m.slashCmdCon.ti.Value())
-	}
-
-	if m.chatCentre.fileInpBoxOpen {
-		ti := m.chatCentre.fileInpBox.ti
-		vp := m.chatCentre.fileInpBox.vp
-
-		if ti.Value() == "rm " {
-			ti = m.chatCentre.fileInpBox.setPrompt(ti, "rm ")
-			ti.Reset()
-		}
-
-		matches, err := utils.ListMatches(ti.Value())
-
-		if err != nil {
-			vp.GotoTop()
-			vp.SetContent(err.Error())
-		} else {
-			listItemStyle := lipgloss.NewStyle().MarginLeft(2)
-			var mList []string
-			for _, e := range matches {
-				if e.IsDir {
-					mList = append(mList, listItemStyle.Bold(true).Foreground(accentColor).Render(e.Name))
-				} else {
-					mList = append(mList, listItemStyle.Render(e.Name))
-				}
-			}
-			vp.SetContent(strings.Join(mList, "\n"))
-		}
-
-		m.chatCentre.fileInpBox.ti = ti
-		m.chatCentre.fileInpBox.vp = vp
-		m.chatCentre.fileInpBox.matches = matches
-	}
-
-	if m.chatCentre.sendingPrompt {
-		sendPromptState = sendPromptBtnStates[1]
-	} else {
-		sendPromptState = sendPromptBtnStates[0]
-	}
-
-	m.textarea, taCmd = m.textarea.Update(msg)
-	m.viewport, vpCmd = m.viewport.Update(msg)
-
-	if m.chatCentre.fileInpBoxOpen {
-		m.chatCentre.fileInpBox.vp, fvpCmd = m.chatCentre.fileInpBox.vp.Update(msg)
-		m.chatCentre.fileInpBox.ti, ftiCmd = m.chatCentre.fileInpBox.ti.Update(msg)
-	}
-
-	if m.slashCmdCon.acceptingCmd && !m.textarea.Focused() && !m.chatCentre.fileInpBoxOpen {
-		m.slashCmdCon.ti, ciCmd = m.slashCmdCon.ti.Update(msg)
-		m.slashCmdCon.updateMatches()
-	}
-
-	return m, tea.Batch(taCmd, vpCmd, ciCmd, mniCmd, fvpCmd, ftiCmd, cmd)
+	return m, nil
 }
 
 func (m *Model) View() string {
@@ -187,7 +122,7 @@ func (m *Model) View() string {
 	return zone.Scan(screen)
 }
 
-func (m *Model) handleErrMsg(msg errMsg) (tea.Model, tea.Cmd) {
+func (m *Model) handleErrMsg() (tea.Model, tea.Cmd) {
 	m.chatCentre.isAgentWorking = false
 	m.chatCentre.sendingPrompt = false
 	sendPromptState = sendPromptBtnStates[0]
@@ -221,6 +156,7 @@ func (m *Model) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 
 	return m, nil
 }
+
 
 func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
@@ -284,6 +220,7 @@ func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+
 func (m *Model) handleTick50() (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	if m.chatCentre.isAgentWorking {
@@ -296,6 +233,7 @@ func (m *Model) handleTick50() (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+
 func (m *Model) handleTick20() (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	if m.chatCentre.sendingPrompt {
@@ -306,6 +244,7 @@ func (m *Model) handleTick20() (tea.Model, tea.Cmd) {
 
 	return m, cmd
 }
+
 
 func (m *Model) handleResponse(msg response) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
@@ -348,6 +287,7 @@ func (m *Model) handleResponse(msg response) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(awaitResponse(CHandler.session.Ctx, msg.c), cmd)
 }
 
+
 func (m *Model) handleSessionInfo(msg sessionInfo) (tea.Model, tea.Cmd) {
 	m.chatCentre.sessionName += msg.chunk.Data
 	if msg.chunk.EOS {
@@ -357,6 +297,8 @@ func (m *Model) handleSessionInfo(msg sessionInfo) (tea.Model, tea.Cmd) {
 	return m, awaitSessionInfo(CHandler.session.Ctx, msg.c)
 }
 
+
+// KEYS
 func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "ctrl+c":
@@ -367,21 +309,13 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleEscKey(msg)
 
 	case "ctrl+e":
-		return m.handleCtrlE(msg)
+		return m.handleCtrlE()
 
 	case "alt+enter":
 		return m.handleAltEnter(msg)
 
 	case "pgup", "pgdown", "up", "down":
-		if !m.textarea.Focused() {
-			m.viewport, vpCmd = m.viewport.Update(msg)
-		} else {
-			m.textarea, taCmd = m.textarea.Update(msg)
-		}
-
-		if m.chatCentre.fileInpBoxOpen {
-			m.chatCentre.fileInpBox.vp, fvpCmd = m.chatCentre.fileInpBox.vp.Update(msg)
-		}
+		return m.handleUpDownArrows(msg)
 
 	case "left", "right":
 		return m.handleLeftRightArrows(msg)
@@ -401,15 +335,31 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "@":
 		return m.handleAtKey()
 	}
+
+	return m.handleGenericKey(msg)
+}
+
+func (m *Model) handleUpDownArrows(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	var vpCmd, taCmd, fvpCmd tea.Cmd
+	if !m.textarea.Focused() {
+		m.viewport, vpCmd = m.viewport.Update(msg)
+	} else {
+		m.textarea, taCmd = m.textarea.Update(msg)
+	}
+
+	if m.chatCentre.fileInpBoxOpen {
+		m.chatCentre.fileInpBox.vp, fvpCmd = m.chatCentre.fileInpBox.vp.Update(msg)
+	}
+
+	return m, tea.Batch(vpCmd, taCmd, fvpCmd)
 }
 
 func (m *Model) handleAtKey() (tea.Model, tea.Cmd) {
 	if !m.textarea.Focused() && !m.slashCmdCon.acceptingCmd {
 		m.chatCentre.fileInpBox = newFileInputBox(0, 0)
 		m.chatCentre.fileInpBoxOpen = true
-
-		return m, nil
 	}
+	return m, nil
 }
 
 func (m *Model) handleHelpKey() (tea.Model, tea.Cmd) {
@@ -430,7 +380,7 @@ func (m *Model) handleSlash() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *Model) handleCtrlE(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *Model) handleCtrlE() (tea.Model, tea.Cmd) {
 	if !m.textarea.Focused() {
 		m.textarea.Focus()
 	} else {
@@ -570,4 +520,65 @@ func (m *Model) handleEscKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	CHandler.session.Close()
 	return m, tea.Quit
+}
+
+
+func (m *Model) handleGenericKey(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var taCmd, ciCmd, vpCmd, fvpCmd, ftiCmd tea.Cmd
+	if m.slashCmdCon.acceptingCmd && !strings.HasPrefix(m.slashCmdCon.ti.Value(), "/") {
+		m.slashCmdCon.ti.SetValue("/" + m.slashCmdCon.ti.Value())
+	}
+
+	if m.slashCmdCon.acceptingCmd && !m.textarea.Focused() && !m.chatCentre.fileInpBoxOpen {
+		m.slashCmdCon.ti, ciCmd = m.slashCmdCon.ti.Update(msg)
+		m.slashCmdCon.updateMatches()
+	}
+
+	if m.chatCentre.fileInpBoxOpen {
+		ti := m.chatCentre.fileInpBox.ti
+		vp := m.chatCentre.fileInpBox.vp
+
+		if ti.Value() == "rm " {
+			ti = m.chatCentre.fileInpBox.setPrompt(ti, "rm ")
+			ti.Reset()
+		}
+
+		matches, err := utils.ListMatches(ti.Value())
+
+		if err != nil {
+			vp.GotoTop()
+			vp.SetContent(err.Error())
+		} else {
+			listItemStyle := lipgloss.NewStyle().MarginLeft(2)
+			var mList []string
+			for _, e := range matches {
+				if e.IsDir {
+					mList = append(mList, listItemStyle.Bold(true).Foreground(accentColor).Render(e.Name))
+				} else {
+					mList = append(mList, listItemStyle.Render(e.Name))
+				}
+			}
+			vp.SetContent(strings.Join(mList, "\n"))
+		}
+
+		m.chatCentre.fileInpBox.ti = ti
+		m.chatCentre.fileInpBox.vp = vp
+		m.chatCentre.fileInpBox.matches = matches
+	}
+
+	if m.chatCentre.sendingPrompt {
+		sendPromptState = sendPromptBtnStates[1]
+	} else {
+		sendPromptState = sendPromptBtnStates[0]
+	}
+
+	m.textarea, taCmd = m.textarea.Update(msg)
+	m.viewport, vpCmd = m.viewport.Update(msg)
+
+	if m.chatCentre.fileInpBoxOpen {
+		m.chatCentre.fileInpBox.vp, fvpCmd = m.chatCentre.fileInpBox.vp.Update(msg)
+		m.chatCentre.fileInpBox.ti, ftiCmd = m.chatCentre.fileInpBox.ti.Update(msg)
+	}
+
+	return m, tea.Batch(taCmd, ciCmd, vpCmd, fvpCmd, ftiCmd)
 }
