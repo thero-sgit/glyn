@@ -103,46 +103,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleTick50()
 	case tickMsg20:
 		return m.handleTick20()
-
 	case response:
-		var c tea.Cmd
-		if m.chatCentre.sendingPrompt {
-			m.chatCentre.sendingPrompt = false
-			m.chatCentre.isAgentWorking = true
-			m.chatCentre.currentUserPrompt.sent()
-			m.chatCentre.history = append(m.chatCentre.history, m.chatCentre.currentUserPrompt)
-			c = doTick50()
-		}
-
-		if msg.chunk.EOS {
-			m.chatCentre.isAgentWorking = false
-			m.chatCentre.currentAgentRes.agentBgActivity.done(false)
-			sendPromptState = sendPromptBtnStates[0]
-			m.chatCentre.currentAgentRes.responseBuffer, _ = config.Config.MdRenderer.Render(m.chatCentre.currentAgentRes.responseBuffer)
-			m.chatCentre.history = append(m.chatCentre.history, m.chatCentre.currentAgentRes)
-			return m, doTick50()
-		}
-
-		if msg.chunk.Reasoning {
-			if !m.chatCentre.currentAgentRes.showReasoning {
-				m.chatCentre.currentAgentRes.showReasoning = true
-			}
-
-			m.chatCentre.currentAgentRes.reasoningBuffer += msg.chunk.Data
-		} else {
-			if m.chatCentre.currentAgentRes.showReasoning {
-				m.chatCentre.currentAgentRes.showReasoning = false
-			}
-
-			if m.chatCentre.isAgentWorking {
-				m.chatCentre.currentAgentRes.agentBgActivity.done(false)
-			}
-			m.chatCentre.currentAgentRes.responseBuffer += msg.chunk.Data
-		}
-
-		m.viewport.SetContent(strings.Join(append(m.chatCentre.prettyHistory(), m.chatCentre.currentAgentRes.getPretty()), "\n"))
-
-		return m, tea.Batch(awaitResponse(CHandler.session.Ctx, msg.c), c)
+		return m.handleResponse(msg)
 
 	case sessionInfo:
 		m.chatCentre.sessionName += msg.chunk.Data
@@ -519,7 +481,6 @@ func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-
 func (m *Model) handleTick50() (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	if m.chatCentre.isAgentWorking {
@@ -532,7 +493,6 @@ func (m *Model) handleTick50() (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-
 func (m *Model) handleTick20() (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	if m.chatCentre.sendingPrompt {
@@ -542,4 +502,46 @@ func (m *Model) handleTick20() (tea.Model, tea.Cmd) {
 	}
 
 	return m, cmd
+}
+
+
+func (m *Model) handleResponse(msg response) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	if m.chatCentre.sendingPrompt {
+		m.chatCentre.sendingPrompt = false
+		m.chatCentre.isAgentWorking = true
+		m.chatCentre.currentUserPrompt.sent()
+		m.chatCentre.history = append(m.chatCentre.history, m.chatCentre.currentUserPrompt)
+		cmd = doTick50()
+	}
+
+	if msg.chunk.EOS {
+		m.chatCentre.isAgentWorking = false
+		m.chatCentre.currentAgentRes.agentBgActivity.done(false)
+		sendPromptState = sendPromptBtnStates[0]
+		m.chatCentre.currentAgentRes.responseBuffer, _ = config.Config.MdRenderer.Render(m.chatCentre.currentAgentRes.responseBuffer)
+		m.chatCentre.history = append(m.chatCentre.history, m.chatCentre.currentAgentRes)
+		return m, doTick50()
+	}
+
+	if msg.chunk.Reasoning {
+		if !m.chatCentre.currentAgentRes.showReasoning {
+			m.chatCentre.currentAgentRes.showReasoning = true
+		}
+
+		m.chatCentre.currentAgentRes.reasoningBuffer += msg.chunk.Data
+	} else {
+		if m.chatCentre.currentAgentRes.showReasoning {
+			m.chatCentre.currentAgentRes.showReasoning = false
+		}
+
+		if m.chatCentre.isAgentWorking {
+			m.chatCentre.currentAgentRes.agentBgActivity.done(false)
+		}
+		m.chatCentre.currentAgentRes.responseBuffer += msg.chunk.Data
+	}
+
+	m.viewport.SetContent(strings.Join(append(m.chatCentre.prettyHistory(), m.chatCentre.currentAgentRes.getPretty()), "\n"))
+
+	return m, tea.Batch(awaitResponse(CHandler.session.Ctx, msg.c), cmd)
 }
