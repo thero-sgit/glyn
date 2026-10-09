@@ -169,7 +169,6 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(taCmd, vpCmd, ciCmd, mniCmd, fvpCmd, ftiCmd, cmd)
 }
 
-
 func (m *Model) View() string {
 	if m.width == 0 || m.height == 0 {
 		return "Initializing screen..."
@@ -358,7 +357,6 @@ func (m *Model) handleSessionInfo(msg sessionInfo) (tea.Model, tea.Cmd) {
 	return m, awaitSessionInfo(CHandler.session.Ctx, msg.c)
 }
 
-
 func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	switch msg.String() {
@@ -367,29 +365,7 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 
 	case "esc":
-		if m.slashCmdCon.acceptingCmd || m.slashCmdCon.openCmd != "" {
-			m.slashCmdCon.acceptingCmd = false
-			m.slashCmdCon.openCmd = ""
-
-			if len(m.chatCentre.prettyHistory()) == 0 {
-				m.viewport.SetContent(subtleStyle.Render("press 'ctrl+e' to start chat"))
-			} else {
-				m.viewport.SetContent(lipgloss.JoinVertical(
-					lipgloss.Top,
-					strings.Join(m.chatCentre.prettyHistory(), "\n"),
-				))
-			}
-
-			return m, nil
-		}
-
-		if m.chatCentre.fileInpBoxOpen {
-			m.chatCentre.fileInpBoxOpen = false
-			return m, nil
-		}
-
-		CHandler.session.Close()
-		return m, tea.Quit
+		return m.handleEscKey(msg)
 
 	case "ctrl+e":
 		if !m.textarea.Focused() {
@@ -400,36 +376,8 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 		return m, cmd
 
-	case "ctrl+x":
-		if m.chatCentre.isAgentWorking {
-			m.chatCentre.currentAgentRes.agentBgActivity.done(false)
-			m.viewport.GotoBottom()
-			m.chatCentre.isAgentWorking = false
-
-			return m, doTick50()
-		}
-
 	case "alt+enter":
-		if m.chatCentre.isAgentWorking {
-			return m, cmd
-		}
-
-		prompt := strings.Trim(strings.TrimSpace(m.textarea.Value()), "\n")
-
-		var animateCmd tea.Cmd
-		var cmds tea.Cmd
-
-		if prompt != "" {
-			m.chatCentre.currentUserPrompt = newUserPrompt(prompt, m.viewport.Width)
-			m.chatCentre.currentAgentRes = newAgentResponse(m.viewport.Width)
-			m.chatCentre.currentAgentRes.index = max(0, len(m.chatCentre.history)-1)
-			m, cmds = CHandler.handlePrompt(m)
-			m.viewport.GotoBottom()
-
-			animateCmd = doTick20()
-		}
-
-		return m, tea.Batch(cmds, animateCmd)
+		return m.handleAltEnter(msg)
 
 	case "pgup", "pgdown", "up", "down":
 		if !m.textarea.Focused() {
@@ -443,19 +391,7 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 
 	case "left", "right":
-		if m.slashCmdCon.openCmd == "/help" {
-			switch msg.String() {
-			case "left":
-				helpCmdTabState = 0
-				m.viewport.SetContent(helpCmdComponent())
-				return m, nil
-
-			case "right":
-				helpCmdTabState = 1
-				m.viewport.SetContent(helpCmdComponent())
-				return m, nil
-			}
-		}
+		return m.handleLeftRightArrows(msg)
 
 	case "/":
 		if !m.textarea.Focused() && !m.chatCentre.fileInpBoxOpen {
@@ -539,4 +475,71 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 	}
+}
+
+func (m *Model) handleLeftRightArrows(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.slashCmdCon.openCmd == "/help" {
+		switch msg.String() {
+		case "left":
+			helpCmdTabState = 0
+			m.viewport.SetContent(helpCmdComponent())
+			return m, nil
+
+		case "right":
+			helpCmdTabState = 1
+			m.viewport.SetContent(helpCmdComponent())
+			return m, nil
+		}
+	}
+
+	return m, nil
+}
+
+func (m *Model) handleAltEnter(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.chatCentre.isAgentWorking {
+		return m, nil
+	}
+
+	prompt := strings.Trim(strings.TrimSpace(m.textarea.Value()), "\n")
+
+	var animateCmd tea.Cmd
+	var cmds tea.Cmd
+
+	if prompt != "" {
+		m.chatCentre.currentUserPrompt = newUserPrompt(prompt, m.viewport.Width)
+		m.chatCentre.currentAgentRes = newAgentResponse(m.viewport.Width)
+		m.chatCentre.currentAgentRes.index = max(0, len(m.chatCentre.history)-1)
+		m, cmds = CHandler.handlePrompt(m)
+		m.viewport.GotoBottom()
+
+		animateCmd = doTick20()
+	}
+
+	return m, tea.Batch(cmds, animateCmd)
+}
+
+func (m *Model) handleEscKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.slashCmdCon.acceptingCmd || m.slashCmdCon.openCmd != "" {
+		m.slashCmdCon.acceptingCmd = false
+		m.slashCmdCon.openCmd = ""
+
+		if len(m.chatCentre.prettyHistory()) == 0 {
+			m.viewport.SetContent(subtleStyle.Render("press 'ctrl+e' to start chat"))
+		} else {
+			m.viewport.SetContent(lipgloss.JoinVertical(
+				lipgloss.Top,
+				strings.Join(m.chatCentre.prettyHistory(), "\n"),
+			))
+		}
+
+		return m, nil
+	}
+
+	if m.chatCentre.fileInpBoxOpen {
+		m.chatCentre.fileInpBoxOpen = false
+		return m, nil
+	}
+
+	CHandler.session.Close()
+	return m, tea.Quit
 }
