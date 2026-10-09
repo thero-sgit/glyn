@@ -74,7 +74,7 @@ func awaitSessionInfo(ctx context.Context, c chan ai.Chunk) tea.Cmd {
     }
 }
 
-func (h *Handler) handlePrompt(m Model) (Model, tea.Cmd) {
+func (h *Handler) handlePrompt(m *Model) (*Model, tea.Cmd) {
     responseChan := make(chan ai.Chunk)
     sessionInfoChan := make(chan ai.Chunk)
     errChan := make(chan error, 2)
@@ -126,7 +126,7 @@ func awaitModels(ctx context.Context, c chan []ai.GroqModelInfo) tea.Cmd {
     }
 }
 
-func (h *Handler) handleGetModels(m Model) (Model, tea.Cmd) {
+func (h *Handler) handleGetModels(m *Model) (*Model, tea.Cmd) {
     responseChan := make(chan []ai.GroqModelInfo)
     errChan := make(chan error, 2)
 

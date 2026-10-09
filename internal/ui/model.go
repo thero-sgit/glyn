@@ -50,7 +50,7 @@ type Model struct {
 	slashCmdCon    slashCmdCtrl
 }
 
-func InitialModel() Model {
+func InitialModel() *Model {
 	vp := viewport.New(0, 0)
 
 	vp.KeyMap = viewport.KeyMap{
@@ -73,14 +73,14 @@ func InitialModel() Model {
 
 	InitHandler()
 
-	return model
+	return &model
 }
 
-func (m Model) Init() tea.Cmd {
+func (m *Model) Init() tea.Cmd {
 	return tea.Batch(textarea.Blink)
 }
 
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var (
 		cmd    tea.Cmd
 		vpCmd  tea.Cmd
@@ -93,27 +93,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
-		
-		taHeight := 2
-		if m.textarea.Length() > 0 {
-			taHeight = 6
-		}
-
-		m.textarea = createTextArea(msg.Width, taHeight, m.textarea.Value())
-
-        headerHeight := 2
-        footerHeight := 2
-        middleHeight := m.height - headerHeight - footerHeight
-        promptBoxHeight := taHeight + 1
-
-		m.viewport.Height = max(middleHeight - promptBoxHeight, 1)
-		m.viewport.Width  = m.width - 4
-
-		config.Config.SetRenderer(m.viewport.Width-2)
-
-		m.chatCentre.updatedWidths(m.viewport.Width)
+		return m.handleWindowSize(msg)
 
 	case tea.MouseMsg:
         if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
@@ -505,7 +485,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(taCmd, vpCmd, ciCmd, mniCmd, fvpCmd, ftiCmd, cmd)
 }
 
-func (m Model) View() string {
+func (m *Model) View() string {
 	if m.width == 0 || m.height == 0 {
 		return "Initializing screen..."
 	}
@@ -521,4 +501,29 @@ func (m Model) View() string {
 	screen := lipgloss.JoinVertical(lipgloss.Left, m.headerBar(headerHeight), middle, m.footerBar(footerHeight))
 
 	return zone.Scan(screen)
+}
+
+func (m *Model) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
+	m.width = msg.Width
+	m.height = msg.Height
+	
+	taHeight := 2
+	if m.textarea.Length() > 0 {
+		taHeight = 6
+	}
+
+	m.textarea = createTextArea(msg.Width, taHeight, m.textarea.Value())
+
+	headerHeight := 2
+	footerHeight := 2
+	middleHeight := m.height - headerHeight - footerHeight
+	promptBoxHeight := taHeight + 1
+
+	m.viewport.Height = max(middleHeight - promptBoxHeight, 1)
+	m.viewport.Width  = m.width - 4
+
+	config.Config.SetRenderer(m.viewport.Width-2)
+	m.chatCentre.updatedWidths(m.viewport.Width)
+
+	return m, nil
 }

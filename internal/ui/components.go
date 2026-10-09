@@ -67,9 +67,9 @@ var (
 		)
 
 	slashCommands = []slashCommand {
-		slashCommand{ name: "/help", pretty: "/help  ", comp: helpCmdComponent},
-		slashCommand{ name: "/status", pretty: "/status", comp: statusCmdComponent},
-		slashCommand{ name: "/model", pretty: "/model"},
+		{ name: "/help", pretty: "/help  ", comp: helpCmdComponent},
+		{ name: "/status", pretty: "/status", comp: statusCmdComponent},
+		{ name: "/model", pretty: "/model"},
 	}
 	slashCmdNames = func() []string {
 		var names []string
