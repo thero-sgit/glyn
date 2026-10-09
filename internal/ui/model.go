@@ -423,6 +423,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				c.fileInpBox.vp.GotoTop()
 			}
 
+			if m.slashCmdCon.acceptingCmd && len(m.slashCmdCon.matches) > 0 {
+				if m.slashCmdCon.topMatch.name == "" {
+					return m, nil
+				}
+
+				if m.slashCmdCon.topMatch.comp != nil {
+					m.slashCmdCon.ti.SetValue(m.slashCmdCon.topMatch.name)
+					m.slashCmdCon.ti.CursorEnd()
+				}
+				return m, nil
+			}
+
 			m.chatCentre = c
 
 		case "@":
