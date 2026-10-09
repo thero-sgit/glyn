@@ -107,186 +107,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleResponse(msg)
 	case sessionInfo:
 		return m.handleSessionInfo(msg)
-
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c":
-			CHandler.session.Close()
-			return m, tea.Quit
-
-		case "esc":
-			if m.slashCmdCon.acceptingCmd || m.slashCmdCon.openCmd != "" {
-				m.slashCmdCon.acceptingCmd = false
-				m.slashCmdCon.openCmd = ""
-
-				if len(m.chatCentre.prettyHistory()) == 0 {
-					m.viewport.SetContent(subtleStyle.Render("press 'ctrl+e' to start chat"))
-				} else {
-					m.viewport.SetContent(lipgloss.JoinVertical(
-						lipgloss.Top,
-						strings.Join(m.chatCentre.prettyHistory(), "\n"),
-					))
-				}
-
-				return m, nil
-			}
-
-			if m.chatCentre.fileInpBoxOpen {
-				m.chatCentre.fileInpBoxOpen = false
-				return m, nil
-			}
-
-			CHandler.session.Close()
-			return m, tea.Quit
-
-		case "ctrl+e":
-			if !m.textarea.Focused() {
-				m.textarea.Focus()
-			} else {
-				m.textarea.Blur()
-			}
-
-			return m, cmd
-
-		case "ctrl+x":
-			if m.chatCentre.isAgentWorking {
-				m.chatCentre.currentAgentRes.agentBgActivity.done(false)
-				m.viewport.GotoBottom()
-				m.chatCentre.isAgentWorking = false
-
-				return m, doTick50()
-			}
-
-		case "alt+enter":
-			if m.chatCentre.isAgentWorking {
-				return m, cmd
-			}
-
-			prompt := strings.Trim(strings.TrimSpace(m.textarea.Value()), "\n")
-
-			var animateCmd tea.Cmd
-			var cmds tea.Cmd
-
-			if prompt != "" {
-				m.chatCentre.currentUserPrompt = newUserPrompt(prompt, m.viewport.Width)
-				m.chatCentre.currentAgentRes = newAgentResponse(m.viewport.Width)
-				m.chatCentre.currentAgentRes.index = max(0, len(m.chatCentre.history)-1)
-				m, cmds = CHandler.handlePrompt(m)
-				m.viewport.GotoBottom()
-
-				animateCmd = doTick20()
-			}
-
-			return m, tea.Batch(cmds, animateCmd)
-
-		case "pgup", "pgdown", "up", "down":
-			if !m.textarea.Focused() {
-				m.viewport, vpCmd = m.viewport.Update(msg)
-			} else {
-				m.textarea, taCmd = m.textarea.Update(msg)
-			}
-
-			if m.chatCentre.fileInpBoxOpen {
-				m.chatCentre.fileInpBox.vp, fvpCmd = m.chatCentre.fileInpBox.vp.Update(msg)
-			}
-
-		case "left", "right":
-			if m.slashCmdCon.openCmd == "/help" {
-				switch msg.String() {
-				case "left":
-					helpCmdTabState = 0
-					m.viewport.SetContent(helpCmdComponent())
-					return m, nil
-
-				case "right":
-					helpCmdTabState = 1
-					m.viewport.SetContent(helpCmdComponent())
-					return m, nil
-				}
-			}
-
-		case "/":
-			if !m.textarea.Focused() && !m.chatCentre.fileInpBoxOpen {
-				m.slashCmdCon = newSlashCmdCtrl(0, 0)
-				m.slashCmdCon.acceptingCmd = true
-				m.slashCmdCon.updateMatches()
-
-				return m, nil
-			}
-
-		case "enter":
-			if m.chatCentre.fileInpBoxOpen {
-				if len(m.chatCentre.fileInpBox.matches) > 0 {
-					file := m.chatCentre.fileInpBox.matches[0]
-					if m.chatCentre.fileInpBox.prompt == "rm " {
-						m.chatCentre.removeFileForContext(file.Path)
-						m.chatCentre.fileInpBoxOpen = false
-
-						return m, cmd
-					}
-
-					if !file.IsDir {
-						m.chatCentre.addFileForContext(file.Path)
-						m.chatCentre.fileInpBoxOpen = false
-					}
-				}
-
-			}
-
-			if m.slashCmdCon.acceptingCmd {
-				if m.slashCmdCon.topMatch.name == "" {
-					return m, nil
-				}
-
-				m.slashCmdCon.acceptingCmd = false
-
-				if m.slashCmdCon.topMatch.name == "/model" {
-					m, cmds := CHandler.handleGetModels(m)
-					return m, cmds
-				}
-
-				if m.slashCmdCon.topMatch.comp != nil {
-					m.viewport.SetContent(m.slashCmdCon.topMatch.comp())
-				}
-				return m, nil
-			}
-
-		case "?":
-			if !m.textarea.Focused() {
-				m.slashCmdCon.openCmd = "/help"
-				m.viewport.SetContent(helpCmdComponent())
-			}
-
-		case "tab":
-			c := m.chatCentre
-			if c.fileInpBoxOpen && len(c.fileInpBox.matches) > 0 {
-				c.fileInpBox.ti.SetValue(c.fileInpBox.matches[0].Path)
-				c.fileInpBox.ti.CursorEnd()
-				c.fileInpBox.vp.GotoTop()
-			}
-
-			if m.slashCmdCon.acceptingCmd && len(m.slashCmdCon.matches) > 0 {
-				if m.slashCmdCon.topMatch.name == "" {
-					return m, nil
-				}
-
-				if m.slashCmdCon.topMatch.comp != nil {
-					m.slashCmdCon.ti.SetValue(m.slashCmdCon.topMatch.name)
-					m.slashCmdCon.ti.CursorEnd()
-				}
-				return m, nil
-			}
-
-			m.chatCentre = c
-
-		case "@":
-			if !m.textarea.Focused() && !m.slashCmdCon.acceptingCmd {
-				m.chatCentre.fileInpBox = newFileInputBox(0, 0)
-				m.chatCentre.fileInpBoxOpen = true
-
-				return m, nil
-			}
-		}
+		return m.handleKeyMsg(msg)
 	}
 
 	if m.slashCmdCon.acceptingCmd && !strings.HasPrefix(m.slashCmdCon.ti.Value(), "/") {
@@ -527,7 +349,6 @@ func (m *Model) handleResponse(msg response) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(awaitResponse(CHandler.session.Ctx, msg.c), cmd)
 }
 
-
 func (m *Model) handleSessionInfo(msg sessionInfo) (tea.Model, tea.Cmd) {
 	m.chatCentre.sessionName += msg.chunk.Data
 	if msg.chunk.EOS {
@@ -535,4 +356,187 @@ func (m *Model) handleSessionInfo(msg sessionInfo) (tea.Model, tea.Cmd) {
 	}
 
 	return m, awaitSessionInfo(CHandler.session.Ctx, msg.c)
+}
+
+
+func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	switch msg.String() {
+	case "ctrl+c":
+		CHandler.session.Close()
+		return m, tea.Quit
+
+	case "esc":
+		if m.slashCmdCon.acceptingCmd || m.slashCmdCon.openCmd != "" {
+			m.slashCmdCon.acceptingCmd = false
+			m.slashCmdCon.openCmd = ""
+
+			if len(m.chatCentre.prettyHistory()) == 0 {
+				m.viewport.SetContent(subtleStyle.Render("press 'ctrl+e' to start chat"))
+			} else {
+				m.viewport.SetContent(lipgloss.JoinVertical(
+					lipgloss.Top,
+					strings.Join(m.chatCentre.prettyHistory(), "\n"),
+				))
+			}
+
+			return m, nil
+		}
+
+		if m.chatCentre.fileInpBoxOpen {
+			m.chatCentre.fileInpBoxOpen = false
+			return m, nil
+		}
+
+		CHandler.session.Close()
+		return m, tea.Quit
+
+	case "ctrl+e":
+		if !m.textarea.Focused() {
+			m.textarea.Focus()
+		} else {
+			m.textarea.Blur()
+		}
+
+		return m, cmd
+
+	case "ctrl+x":
+		if m.chatCentre.isAgentWorking {
+			m.chatCentre.currentAgentRes.agentBgActivity.done(false)
+			m.viewport.GotoBottom()
+			m.chatCentre.isAgentWorking = false
+
+			return m, doTick50()
+		}
+
+	case "alt+enter":
+		if m.chatCentre.isAgentWorking {
+			return m, cmd
+		}
+
+		prompt := strings.Trim(strings.TrimSpace(m.textarea.Value()), "\n")
+
+		var animateCmd tea.Cmd
+		var cmds tea.Cmd
+
+		if prompt != "" {
+			m.chatCentre.currentUserPrompt = newUserPrompt(prompt, m.viewport.Width)
+			m.chatCentre.currentAgentRes = newAgentResponse(m.viewport.Width)
+			m.chatCentre.currentAgentRes.index = max(0, len(m.chatCentre.history)-1)
+			m, cmds = CHandler.handlePrompt(m)
+			m.viewport.GotoBottom()
+
+			animateCmd = doTick20()
+		}
+
+		return m, tea.Batch(cmds, animateCmd)
+
+	case "pgup", "pgdown", "up", "down":
+		if !m.textarea.Focused() {
+			m.viewport, vpCmd = m.viewport.Update(msg)
+		} else {
+			m.textarea, taCmd = m.textarea.Update(msg)
+		}
+
+		if m.chatCentre.fileInpBoxOpen {
+			m.chatCentre.fileInpBox.vp, fvpCmd = m.chatCentre.fileInpBox.vp.Update(msg)
+		}
+
+	case "left", "right":
+		if m.slashCmdCon.openCmd == "/help" {
+			switch msg.String() {
+			case "left":
+				helpCmdTabState = 0
+				m.viewport.SetContent(helpCmdComponent())
+				return m, nil
+
+			case "right":
+				helpCmdTabState = 1
+				m.viewport.SetContent(helpCmdComponent())
+				return m, nil
+			}
+		}
+
+	case "/":
+		if !m.textarea.Focused() && !m.chatCentre.fileInpBoxOpen {
+			m.slashCmdCon = newSlashCmdCtrl(0, 0)
+			m.slashCmdCon.acceptingCmd = true
+			m.slashCmdCon.updateMatches()
+
+			return m, nil
+		}
+
+	case "enter":
+		if m.chatCentre.fileInpBoxOpen {
+			if len(m.chatCentre.fileInpBox.matches) > 0 {
+				file := m.chatCentre.fileInpBox.matches[0]
+				if m.chatCentre.fileInpBox.prompt == "rm " {
+					m.chatCentre.removeFileForContext(file.Path)
+					m.chatCentre.fileInpBoxOpen = false
+
+					return m, cmd
+				}
+
+				if !file.IsDir {
+					m.chatCentre.addFileForContext(file.Path)
+					m.chatCentre.fileInpBoxOpen = false
+				}
+			}
+
+		}
+
+		if m.slashCmdCon.acceptingCmd {
+			if m.slashCmdCon.topMatch.name == "" {
+				return m, nil
+			}
+
+			m.slashCmdCon.acceptingCmd = false
+
+			if m.slashCmdCon.topMatch.name == "/model" {
+				m, cmds := CHandler.handleGetModels(m)
+				return m, cmds
+			}
+
+			if m.slashCmdCon.topMatch.comp != nil {
+				m.viewport.SetContent(m.slashCmdCon.topMatch.comp())
+			}
+			return m, nil
+		}
+
+	case "?":
+		if !m.textarea.Focused() {
+			m.slashCmdCon.openCmd = "/help"
+			m.viewport.SetContent(helpCmdComponent())
+		}
+
+	case "tab":
+		c := m.chatCentre
+		if c.fileInpBoxOpen && len(c.fileInpBox.matches) > 0 {
+			c.fileInpBox.ti.SetValue(c.fileInpBox.matches[0].Path)
+			c.fileInpBox.ti.CursorEnd()
+			c.fileInpBox.vp.GotoTop()
+		}
+
+		if m.slashCmdCon.acceptingCmd && len(m.slashCmdCon.matches) > 0 {
+			if m.slashCmdCon.topMatch.name == "" {
+				return m, nil
+			}
+
+			if m.slashCmdCon.topMatch.comp != nil {
+				m.slashCmdCon.ti.SetValue(m.slashCmdCon.topMatch.name)
+				m.slashCmdCon.ti.CursorEnd()
+			}
+			return m, nil
+		}
+
+		m.chatCentre = c
+
+	case "@":
+		if !m.textarea.Focused() && !m.slashCmdCon.acceptingCmd {
+			m.chatCentre.fileInpBox = newFileInputBox(0, 0)
+			m.chatCentre.fileInpBoxOpen = true
+
+			return m, nil
+		}
+	}
 }
