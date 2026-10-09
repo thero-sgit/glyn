@@ -358,7 +358,6 @@ func (m *Model) handleSessionInfo(msg sessionInfo) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
 	switch msg.String() {
 	case "ctrl+c":
 		CHandler.session.Close()
@@ -368,13 +367,7 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleEscKey(msg)
 
 	case "ctrl+e":
-		if !m.textarea.Focused() {
-			m.textarea.Focus()
-		} else {
-			m.textarea.Blur()
-		}
-
-		return m, cmd
+		return m.handleCtrlE(msg)
 
 	case "alt+enter":
 		return m.handleAltEnter(msg)
@@ -394,78 +387,16 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleLeftRightArrows(msg)
 
 	case "/":
-		if !m.textarea.Focused() && !m.chatCentre.fileInpBoxOpen {
-			m.slashCmdCon = newSlashCmdCtrl(0, 0)
-			m.slashCmdCon.acceptingCmd = true
-			m.slashCmdCon.updateMatches()
-
-			return m, nil
-		}
+		return m.handleSlash()
 
 	case "enter":
-		if m.chatCentre.fileInpBoxOpen {
-			if len(m.chatCentre.fileInpBox.matches) > 0 {
-				file := m.chatCentre.fileInpBox.matches[0]
-				if m.chatCentre.fileInpBox.prompt == "rm " {
-					m.chatCentre.removeFileForContext(file.Path)
-					m.chatCentre.fileInpBoxOpen = false
-
-					return m, cmd
-				}
-
-				if !file.IsDir {
-					m.chatCentre.addFileForContext(file.Path)
-					m.chatCentre.fileInpBoxOpen = false
-				}
-			}
-
-		}
-
-		if m.slashCmdCon.acceptingCmd {
-			if m.slashCmdCon.topMatch.name == "" {
-				return m, nil
-			}
-
-			m.slashCmdCon.acceptingCmd = false
-
-			if m.slashCmdCon.topMatch.name == "/model" {
-				m, cmds := CHandler.handleGetModels(m)
-				return m, cmds
-			}
-
-			if m.slashCmdCon.topMatch.comp != nil {
-				m.viewport.SetContent(m.slashCmdCon.topMatch.comp())
-			}
-			return m, nil
-		}
+		return m.handleEnterKey(msg)
 
 	case "?":
-		if !m.textarea.Focused() {
-			m.slashCmdCon.openCmd = "/help"
-			m.viewport.SetContent(helpCmdComponent())
-		}
+		return m.handleHelpKey()
 
 	case "tab":
-		c := m.chatCentre
-		if c.fileInpBoxOpen && len(c.fileInpBox.matches) > 0 {
-			c.fileInpBox.ti.SetValue(c.fileInpBox.matches[0].Path)
-			c.fileInpBox.ti.CursorEnd()
-			c.fileInpBox.vp.GotoTop()
-		}
-
-		if m.slashCmdCon.acceptingCmd && len(m.slashCmdCon.matches) > 0 {
-			if m.slashCmdCon.topMatch.name == "" {
-				return m, nil
-			}
-
-			if m.slashCmdCon.topMatch.comp != nil {
-				m.slashCmdCon.ti.SetValue(m.slashCmdCon.topMatch.name)
-				m.slashCmdCon.ti.CursorEnd()
-			}
-			return m, nil
-		}
-
-		m.chatCentre = c
+		return m.handleTabKey()
 
 	case "@":
 		if !m.textarea.Focused() && !m.slashCmdCon.acceptingCmd {
@@ -475,6 +406,99 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 	}
+}
+
+func (m *Model) handleHelpKey() (tea.Model, tea.Cmd) {
+	if !m.textarea.Focused() {
+		m.slashCmdCon.openCmd = "/help"
+		m.viewport.SetContent(helpCmdComponent())
+	}
+
+	return m, nil
+}
+
+func (m *Model) handleSlash() (tea.Model, tea.Cmd) {
+	if !m.textarea.Focused() && !m.chatCentre.fileInpBoxOpen {
+		m.slashCmdCon = newSlashCmdCtrl(0, 0)
+		m.slashCmdCon.acceptingCmd = true
+		m.slashCmdCon.updateMatches()
+	}
+	return m, nil
+}
+
+func (m *Model) handleCtrlE(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if !m.textarea.Focused() {
+		m.textarea.Focus()
+	} else {
+		m.textarea.Blur()
+	}
+
+	return m, nil
+}
+
+func (m *Model) handleTabKey() (tea.Model, tea.Cmd) {
+	c := m.chatCentre
+	if c.fileInpBoxOpen && len(c.fileInpBox.matches) > 0 {
+		c.fileInpBox.ti.SetValue(c.fileInpBox.matches[0].Path)
+		c.fileInpBox.ti.CursorEnd()
+		c.fileInpBox.vp.GotoTop()
+	}
+
+	if m.slashCmdCon.acceptingCmd && len(m.slashCmdCon.matches) > 0 {
+		if m.slashCmdCon.topMatch.name == "" {
+			return m, nil
+		}
+
+		if m.slashCmdCon.topMatch.comp != nil {
+			m.slashCmdCon.ti.SetValue(m.slashCmdCon.topMatch.name)
+			m.slashCmdCon.ti.CursorEnd()
+		}
+		return m, nil
+	}
+
+	m.chatCentre = c
+	return m, nil
+}
+
+func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.chatCentre.fileInpBoxOpen {
+		if len(m.chatCentre.fileInpBox.matches) > 0 {
+			file := m.chatCentre.fileInpBox.matches[0]
+			if m.chatCentre.fileInpBox.prompt == "rm " {
+				m.chatCentre.removeFileForContext(file.Path)
+				m.chatCentre.fileInpBoxOpen = false
+
+				return m, nil
+			}
+
+			if !file.IsDir {
+				m.chatCentre.addFileForContext(file.Path)
+				m.chatCentre.fileInpBoxOpen = false
+			}
+		}
+
+	}
+
+	if m.slashCmdCon.acceptingCmd {
+		if m.slashCmdCon.topMatch.name == "" {
+			return m, nil
+		}
+
+		m.slashCmdCon.acceptingCmd = false
+
+		if m.slashCmdCon.topMatch.name == "/model" {
+			m, cmds := CHandler.handleGetModels(m)
+			return m, cmds
+		}
+
+		if m.slashCmdCon.topMatch.comp != nil {
+			m.viewport.SetContent(m.slashCmdCon.topMatch.comp())
+		}
+
+		return m, nil
+	}
+
+	return m, nil
 }
 
 func (m *Model) handleLeftRightArrows(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
