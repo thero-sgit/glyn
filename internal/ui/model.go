@@ -101,15 +101,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleErrMsg(msg)
 	case tickMsg50:
 		return m.handleTick50()
-
 	case tickMsg20:
-		if m.chatCentre.sendingPrompt {
-			m.viewport.SetContent(strings.Join(append(m.chatCentre.prettyHistory(), m.chatCentre.currentUserPrompt.getPretty()), "\n"))
-			m.chatCentre.currentUserPrompt.animate()
-			cmd = doTick20()
-		}
-
-		return m, cmd
+		return m.handleTick20()
 
 	case response:
 		var c tea.Cmd
@@ -429,8 +422,6 @@ func (m *Model) View() string {
 	return zone.Scan(screen)
 }
 
-
-
 func (m *Model) handleErrMsg(msg errMsg) (tea.Model, tea.Cmd) {
 	m.chatCentre.isAgentWorking = false
 	m.chatCentre.sendingPrompt = false
@@ -536,6 +527,18 @@ func (m *Model) handleTick50() (tea.Model, tea.Cmd) {
 		cmd = doTick50()
 	} else {
 		m.viewport.SetContent(strings.Join(m.chatCentre.prettyHistory(), "\n"))
+	}
+
+	return m, cmd
+}
+
+
+func (m *Model) handleTick20() (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	if m.chatCentre.sendingPrompt {
+		m.viewport.SetContent(strings.Join(append(m.chatCentre.prettyHistory(), m.chatCentre.currentUserPrompt.getPretty()), "\n"))
+		m.chatCentre.currentUserPrompt.animate()
+		cmd = doTick20()
 	}
 
 	return m, cmd
