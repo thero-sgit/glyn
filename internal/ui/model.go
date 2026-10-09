@@ -15,6 +15,7 @@ import (
 )
 
 type tickMsg50 time.Time
+
 func doTick50() tea.Cmd {
 	return tea.Tick(50*time.Millisecond, func(t time.Time) tea.Msg {
 		return tickMsg50(t)
@@ -22,6 +23,7 @@ func doTick50() tea.Cmd {
 }
 
 type tickMsg20 time.Time
+
 func doTick20() tea.Cmd {
 	return tea.Tick(20*time.Millisecond, func(t time.Time) tea.Msg {
 		return tickMsg20(t)
@@ -30,43 +32,42 @@ func doTick20() tea.Cmd {
 
 func sendPromptKeyMsg() tea.Cmd {
 	return func() tea.Msg {
-		return tea.KeyMsg {
+		return tea.KeyMsg{
 			Type: tea.KeyEnter,
-			Alt: true,
+			Alt:  true,
 		}
 	}
 }
 
 type Model struct {
-	width  		   int
-	height 		   int
-	textarea 	   textarea.Model
-	viewport       viewport.Model
+	width    int
+	height   int
+	textarea textarea.Model
+	viewport viewport.Model
 
 	//
-	chatCentre     chatCentre
+	chatCentre chatCentre
 
 	//
-	slashCmdCon    slashCmdCtrl
+	slashCmdCon slashCmdCtrl
 }
 
 func InitialModel() *Model {
 	vp := viewport.New(0, 0)
 
 	vp.KeyMap = viewport.KeyMap{
-		Up:   key.NewBinding(key.WithKeys("up")),                                                                                                                                                                       
-		Down: key.NewBinding(key.WithKeys("down")),                                                                                                                                                                         
-		PageUp:  key.NewBinding(key.WithKeys("pgup")),                                                                                                                                                                                 
-		PageDown: key.NewBinding(key.WithKeys("pgdn")),                                                                                                                                                                                                
-		HalfPageUp:    key.NewBinding(),                                                                                                                                                                                                  
-		HalfPageDown:  key.NewBinding(),
+		Up:           key.NewBinding(key.WithKeys("up")),
+		Down:         key.NewBinding(key.WithKeys("down")),
+		PageUp:       key.NewBinding(key.WithKeys("pgup")),
+		PageDown:     key.NewBinding(key.WithKeys("pgdn")),
+		HalfPageUp:   key.NewBinding(),
+		HalfPageDown: key.NewBinding(),
 	}
 
-
 	model := Model{
-		chatCentre: newChatCentre(),
+		chatCentre:  newChatCentre(),
 		slashCmdCon: newSlashCmdCtrl(0, 0),
-		viewport: vp,
+		viewport:    vp,
 	}
 
 	model.viewport.SetContent(strings.Join(model.chatCentre.prettyHistory(), "\n"))
@@ -86,7 +87,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		vpCmd  tea.Cmd
 		taCmd  tea.Cmd
 		ciCmd  tea.Cmd
-		mniCmd tea.Cmd	
+		mniCmd tea.Cmd
 		fvpCmd tea.Cmd
 		ftiCmd tea.Cmd
 	)
@@ -95,60 +96,39 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		return m.handleWindowSize(msg)
 	case tea.MouseMsg:
-       return m.handleMouseAction(msg)
-
+		return m.handleMouseAction(msg)
 	case errMsg:
-		if m.slashCmdCon.openCmd == "/model" {
-			m.viewport.SetContent(msg.err.Error())
+		return m.handleErrMsg(msg)
+	case tickMsg50:
+		return m.handleTick50()
 
-			return m, nil
+	case tickMsg20:
+		if m.chatCentre.sendingPrompt {
+			m.viewport.SetContent(strings.Join(append(m.chatCentre.prettyHistory(), m.chatCentre.currentUserPrompt.getPretty()), "\n"))
+			m.chatCentre.currentUserPrompt.animate()
+			cmd = doTick20()
 		}
 
-        m.chatCentre.isAgentWorking = false
-        m.chatCentre.sendingPrompt  = false
-        sendPromptState = sendPromptBtnStates[0]
-        m.chatCentre.currentUserPrompt.err()
-        m.viewport.SetContent(strings.Join(append(m.chatCentre.prettyHistory(), m.chatCentre.currentUserPrompt.getPretty()), "\n"))
+		return m, cmd
 
-        return m, nil
+	case response:
+		var c tea.Cmd
+		if m.chatCentre.sendingPrompt {
+			m.chatCentre.sendingPrompt = false
+			m.chatCentre.isAgentWorking = true
+			m.chatCentre.currentUserPrompt.sent()
+			m.chatCentre.history = append(m.chatCentre.history, m.chatCentre.currentUserPrompt)
+			c = doTick50()
+		}
 
-    case tickMsg50:
-        if m.chatCentre.isAgentWorking {
-            m.chatCentre.currentAgentRes.agentBgActivity.animate()
-            cmd = doTick50()
-        } else {
-            m.viewport.SetContent(strings.Join(m.chatCentre.prettyHistory(), "\n"))
-        }
-
-        return m, cmd
-
-    case tickMsg20:
-        if m.chatCentre.sendingPrompt {
-			m.viewport.SetContent(strings.Join(append(m.chatCentre.prettyHistory(), m.chatCentre.currentUserPrompt.getPretty()), "\n"))
-            m.chatCentre.currentUserPrompt.animate()
-            cmd = doTick20()
-        }
-
-        return m, cmd
-
-    case response:
-        var c tea.Cmd
-        if m.chatCentre.sendingPrompt {
-            m.chatCentre.sendingPrompt = false
-            m.chatCentre.isAgentWorking = true
-            m.chatCentre.currentUserPrompt.sent()
-            m.chatCentre.history = append(m.chatCentre.history, m.chatCentre.currentUserPrompt)
-            c = doTick50()
-        }
-
-        if msg.chunk.EOS {
-            m.chatCentre.isAgentWorking = false
-            m.chatCentre.currentAgentRes.agentBgActivity.done(false)
-            sendPromptState = sendPromptBtnStates[0]
+		if msg.chunk.EOS {
+			m.chatCentre.isAgentWorking = false
+			m.chatCentre.currentAgentRes.agentBgActivity.done(false)
+			sendPromptState = sendPromptBtnStates[0]
 			m.chatCentre.currentAgentRes.responseBuffer, _ = config.Config.MdRenderer.Render(m.chatCentre.currentAgentRes.responseBuffer)
 			m.chatCentre.history = append(m.chatCentre.history, m.chatCentre.currentAgentRes)
-            return m, doTick50()
-        }
+			return m, doTick50()
+		}
 
 		if msg.chunk.Reasoning {
 			if !m.chatCentre.currentAgentRes.showReasoning {
@@ -166,20 +146,19 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.chatCentre.currentAgentRes.responseBuffer += msg.chunk.Data
 		}
-        
-        m.viewport.SetContent(strings.Join(append(m.chatCentre.prettyHistory(), m.chatCentre.currentAgentRes.getPretty()), "\n"))
 
-        return m, tea.Batch(awaitResponse(CHandler.session.Ctx, msg.c), c)
+		m.viewport.SetContent(strings.Join(append(m.chatCentre.prettyHistory(), m.chatCentre.currentAgentRes.getPretty()), "\n"))
 
-    case sessionInfo:
-        m.chatCentre.sessionName += msg.chunk.Data
+		return m, tea.Batch(awaitResponse(CHandler.session.Ctx, msg.c), c)
 
-        if msg.chunk.EOS {
-            return m, nil
-        }
+	case sessionInfo:
+		m.chatCentre.sessionName += msg.chunk.Data
 
-        return m, awaitSessionInfo(CHandler.session.Ctx, msg.c)
+		if msg.chunk.EOS {
+			return m, nil
+		}
 
+		return m, awaitSessionInfo(CHandler.session.Ctx, msg.c)
 
 	// case models:
 	// 	models := msg.m
@@ -194,13 +173,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c" :
+		case "ctrl+c":
 			CHandler.session.Close()
 			return m, tea.Quit
 
 		case "esc":
 			if m.slashCmdCon.acceptingCmd || m.slashCmdCon.openCmd != "" {
-				m.slashCmdCon.acceptingCmd  = false
+				m.slashCmdCon.acceptingCmd = false
 				m.slashCmdCon.openCmd = ""
 
 				if len(m.chatCentre.prettyHistory()) == 0 {
@@ -228,14 +207,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.textarea.Focus()
 			} else {
 				m.textarea.Blur()
-			}				
+			}
 
 			return m, cmd
 
 		case "ctrl+x":
 			if m.chatCentre.isAgentWorking {
 				m.chatCentre.currentAgentRes.agentBgActivity.done(false)
-				m.viewport.GotoBottom()				
+				m.viewport.GotoBottom()
 				m.chatCentre.isAgentWorking = false
 
 				return m, doTick50()
@@ -252,9 +231,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			var cmds tea.Cmd
 
 			if prompt != "" {
-				m.chatCentre.currentUserPrompt       = newUserPrompt(prompt, m.viewport.Width)
-				m.chatCentre.currentAgentRes   		 = newAgentResponse(m.viewport.Width)
-				m.chatCentre.currentAgentRes.index   = max(0, len(m.chatCentre.history)-1)
+				m.chatCentre.currentUserPrompt = newUserPrompt(prompt, m.viewport.Width)
+				m.chatCentre.currentAgentRes = newAgentResponse(m.viewport.Width)
+				m.chatCentre.currentAgentRes.index = max(0, len(m.chatCentre.history)-1)
 				m, cmds = CHandler.handlePrompt(m)
 				m.viewport.GotoBottom()
 
@@ -270,7 +249,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.textarea, taCmd = m.textarea.Update(msg)
 			}
 
-			if m.chatCentre.fileInpBoxOpen { m.chatCentre.fileInpBox.vp, fvpCmd = m.chatCentre.fileInpBox.vp.Update(msg) }
+			if m.chatCentre.fileInpBoxOpen {
+				m.chatCentre.fileInpBox.vp, fvpCmd = m.chatCentre.fileInpBox.vp.Update(msg)
+			}
 
 		case "left", "right":
 			if m.slashCmdCon.openCmd == "/help" {
@@ -362,8 +343,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.chatCentre = c
 
 		case "@":
-			if !m.textarea.Focused() && !m.slashCmdCon.acceptingCmd  {
-				m.chatCentre.fileInpBox 	= newFileInputBox(0, 0)
+			if !m.textarea.Focused() && !m.slashCmdCon.acceptingCmd {
+				m.chatCentre.fileInpBox = newFileInputBox(0, 0)
 				m.chatCentre.fileInpBoxOpen = true
 
 				return m, nil
@@ -400,7 +381,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 			vp.SetContent(strings.Join(mList, "\n"))
-		}		
+		}
 
 		m.chatCentre.fileInpBox.ti = ti
 		m.chatCentre.fileInpBox.vp = vp
@@ -413,14 +394,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		sendPromptState = sendPromptBtnStates[0]
 	}
 
-	m.textarea, taCmd       	   = m.textarea.Update(msg)
-	m.viewport, vpCmd       	   = m.viewport.Update(msg)
+	m.textarea, taCmd = m.textarea.Update(msg)
+	m.viewport, vpCmd = m.viewport.Update(msg)
 
 	if m.chatCentre.fileInpBoxOpen {
 		m.chatCentre.fileInpBox.vp, fvpCmd = m.chatCentre.fileInpBox.vp.Update(msg)
 		m.chatCentre.fileInpBox.ti, ftiCmd = m.chatCentre.fileInpBox.ti.Update(msg)
-	}	
-	
+	}
+
 	if m.slashCmdCon.acceptingCmd && !m.textarea.Focused() && !m.chatCentre.fileInpBoxOpen {
 		m.slashCmdCon.ti, ciCmd = m.slashCmdCon.ti.Update(msg)
 		m.slashCmdCon.updateMatches()
@@ -428,6 +409,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	return m, tea.Batch(taCmd, vpCmd, ciCmd, mniCmd, fvpCmd, ftiCmd, cmd)
 }
+
 
 func (m *Model) View() string {
 	if m.width == 0 || m.height == 0 {
@@ -441,16 +423,28 @@ func (m *Model) View() string {
 
 	// Assemble rows
 	middle := lipgloss.JoinHorizontal(lipgloss.Top, m.chatUi(middleHeight))
-	
+
 	screen := lipgloss.JoinVertical(lipgloss.Left, m.headerBar(headerHeight), middle, m.footerBar(footerHeight))
 
 	return zone.Scan(screen)
 }
 
+
+
+func (m *Model) handleErrMsg(msg errMsg) (tea.Model, tea.Cmd) {
+	m.chatCentre.isAgentWorking = false
+	m.chatCentre.sendingPrompt = false
+	sendPromptState = sendPromptBtnStates[0]
+	m.chatCentre.currentUserPrompt.err()
+	m.viewport.SetContent(strings.Join(append(m.chatCentre.prettyHistory(), m.chatCentre.currentUserPrompt.getPretty()), "\n"))
+
+	return m, nil
+}
+
 func (m *Model) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 	m.width = msg.Width
 	m.height = msg.Height
-	
+
 	taHeight := 2
 	if m.textarea.Length() > 0 {
 		taHeight = 6
@@ -463,33 +457,33 @@ func (m *Model) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 	middleHeight := m.height - headerHeight - footerHeight
 	promptBoxHeight := taHeight + 1
 
-	m.viewport.Height = max(middleHeight - promptBoxHeight, 1)
-	m.viewport.Width  = m.width - 4
+	m.viewport.Height = max(middleHeight-promptBoxHeight, 1)
+	m.viewport.Width = m.width - 4
 
-	config.Config.SetRenderer(m.viewport.Width-2)
+	config.Config.SetRenderer(m.viewport.Width - 2)
 	m.chatCentre.updatedWidths(m.viewport.Width)
 
 	return m, nil
 }
 
 func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
-	 if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
+	if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
 		m.textarea.Blur()
 
-		switch{
+		switch {
 		case zone.Get("text-area").InBounds(msg):
 			m.textarea.Focus()
 			return m, nil
 
 		case zone.Get("add-file-btn").InBounds(msg):
-			m.slashCmdCon.acceptingCmd  = false
-			
-			m.chatCentre.fileInpBox 	= newFileInputBox(0, 0)
+			m.slashCmdCon.acceptingCmd = false
+
+			m.chatCentre.fileInpBox = newFileInputBox(0, 0)
 			m.chatCentre.fileInpBoxOpen = true
 			return m, nil
 
 		case zone.Get("model-selector-btn").InBounds(msg):
-			m.slashCmdCon.acceptingCmd  = false
+			m.slashCmdCon.acceptingCmd = false
 			m.chatCentre.fileInpBoxOpen = false
 			m.slashCmdCon.openCmd = "/model"
 			return m, nil
@@ -528,8 +522,21 @@ func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			tempPrettyHistory[len(tempPrettyHistory)-1] = m.chatCentre.currentAgentRes.getPretty()
 			m.viewport.SetContent(strings.Join(tempPrettyHistory, "\n"))
 			return m, nil
-		}			
+		}
 	}
 
 	return m, nil
+}
+
+
+func (m *Model) handleTick50() (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	if m.chatCentre.isAgentWorking {
+		m.chatCentre.currentAgentRes.agentBgActivity.animate()
+		cmd = doTick50()
+	} else {
+		m.viewport.SetContent(strings.Join(m.chatCentre.prettyHistory(), "\n"))
+	}
+
+	return m, cmd
 }

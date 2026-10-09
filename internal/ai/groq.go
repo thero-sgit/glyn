@@ -120,7 +120,7 @@ func (g groq) handlePrompt(ctx context.Context, messages []GroqChatCompletionMes
 	req := GroqStreamRequest{
 		Model: config.Config.Model,
 		Messages:  messages,
-		ReasoningEffort: "low",
+		ReasoningEffort: "medium",
 		ReasoningFormat: "parsed",
 		Stream: true,
 	}
