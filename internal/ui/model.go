@@ -94,64 +94,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		return m.handleWindowSize(msg)
-
 	case tea.MouseMsg:
-        if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
-			m.textarea.Blur()
-			switch{
-			case zone.Get("text-area").InBounds(msg):
-				m.textarea.Focus()
-                return m, nil
-
-			case zone.Get("add-file-btn").InBounds(msg):
-				m.slashCmdCon.acceptingCmd  = false
-				
-				m.chatCentre.fileInpBox 	= newFileInputBox(0, 0)
-				m.chatCentre.fileInpBoxOpen = true
-                return m, nil
-
-			case zone.Get("model-selector-btn").InBounds(msg):
-				m.slashCmdCon.acceptingCmd  = false
-				m.chatCentre.fileInpBoxOpen = false
-				m.slashCmdCon.openCmd = "/model"
-                return m, nil
-
-			case zone.Get("mode-toggle-btn").InBounds(msg):
-				config.Config.Mode.Toggle()
-                return m, nil
-
-			case zone.Get("send-prompt-btn").InBounds(msg):
-                return m, sendPromptKeyMsg()
-
-			case zone.Get("retry-button").InBounds(msg):
-				m, cmds := CHandler.handlePrompt(m)
-
-                return m, tea.Batch(cmds, doTick20())
-
-			case zone.Get("helpCmd-general-btn").InBounds(msg):
-				helpCmdTabState = 0
-				m.viewport.SetContent(helpCmdComponent())
-                return m, nil
-
-			case zone.Get("helpCmd-commands-btn").InBounds(msg):
-				helpCmdTabState = 1
-				m.viewport.SetContent(helpCmdComponent())
-                return m, nil
-
-			case zone.Get("thought-process-btn").InBounds(msg):
-				tempPrettyHistory := m.chatCentre.prettyHistory()
-
-				if !m.chatCentre.currentAgentRes.showReasoning {
-					m.chatCentre.currentAgentRes.showReasoning = true
-				} else {
-					m.chatCentre.currentAgentRes.showReasoning = false
-				}
-
-				tempPrettyHistory[len(tempPrettyHistory)-1] = m.chatCentre.currentAgentRes.getPretty()
-				m.viewport.SetContent(strings.Join(tempPrettyHistory, "\n"))
-				return m, nil
-			}			
-        }
+       return m.handleMouseAction(msg)
 
 	case errMsg:
 		if m.slashCmdCon.openCmd == "/model" {
@@ -524,6 +468,68 @@ func (m *Model) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 
 	config.Config.SetRenderer(m.viewport.Width-2)
 	m.chatCentre.updatedWidths(m.viewport.Width)
+
+	return m, nil
+}
+
+func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	 if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
+		m.textarea.Blur()
+
+		switch{
+		case zone.Get("text-area").InBounds(msg):
+			m.textarea.Focus()
+			return m, nil
+
+		case zone.Get("add-file-btn").InBounds(msg):
+			m.slashCmdCon.acceptingCmd  = false
+			
+			m.chatCentre.fileInpBox 	= newFileInputBox(0, 0)
+			m.chatCentre.fileInpBoxOpen = true
+			return m, nil
+
+		case zone.Get("model-selector-btn").InBounds(msg):
+			m.slashCmdCon.acceptingCmd  = false
+			m.chatCentre.fileInpBoxOpen = false
+			m.slashCmdCon.openCmd = "/model"
+			return m, nil
+
+		case zone.Get("mode-toggle-btn").InBounds(msg):
+			config.Config.Mode.Toggle()
+			return m, nil
+
+		case zone.Get("send-prompt-btn").InBounds(msg):
+			return m, sendPromptKeyMsg()
+
+		case zone.Get("retry-button").InBounds(msg):
+			m, cmds := CHandler.handlePrompt(m)
+
+			return m, tea.Batch(cmds, doTick20())
+
+		case zone.Get("helpCmd-general-btn").InBounds(msg):
+			helpCmdTabState = 0
+			m.viewport.SetContent(helpCmdComponent())
+			return m, nil
+
+		case zone.Get("helpCmd-commands-btn").InBounds(msg):
+			helpCmdTabState = 1
+			m.viewport.SetContent(helpCmdComponent())
+			return m, nil
+
+		case zone.Get("thought-process-btn").InBounds(msg):
+			tempPrettyHistory := m.chatCentre.prettyHistory()
+
+			if !m.chatCentre.currentAgentRes.showReasoning {
+				m.chatCentre.currentAgentRes.showReasoning = true
+			} else {
+				m.chatCentre.currentAgentRes.showReasoning = false
+			}
+
+			tempPrettyHistory[len(tempPrettyHistory)-1] = m.chatCentre.currentAgentRes.getPretty()
+			m.viewport.SetContent(strings.Join(tempPrettyHistory, "\n"))
+			return m, nil
+		}			
+	}
 
 	return m, nil
 }
