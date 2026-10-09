@@ -105,26 +105,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleTick20()
 	case response:
 		return m.handleResponse(msg)
-
 	case sessionInfo:
-		m.chatCentre.sessionName += msg.chunk.Data
-
-		if msg.chunk.EOS {
-			return m, nil
-		}
-
-		return m, awaitSessionInfo(CHandler.session.Ctx, msg.c)
-
-	// case models:
-	// 	models := msg.m
-	// 	info, content := modelsCmdComponent(m.modelsSelCon, "", models)
-	// 	m.modelsSelCon.info = info
-	// 	m.modelsSelCon.info.acceptingCmd = true
-	// 	m.modelsSelCon.info.ti.Focus()
-
-	// 	m.viewport.SetContent(content)
-
-	// 	return m, nil
+		return m.handleSessionInfo(msg)
 
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -504,7 +486,6 @@ func (m *Model) handleTick20() (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-
 func (m *Model) handleResponse(msg response) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	if m.chatCentre.sendingPrompt {
@@ -544,4 +525,14 @@ func (m *Model) handleResponse(msg response) (tea.Model, tea.Cmd) {
 	m.viewport.SetContent(strings.Join(append(m.chatCentre.prettyHistory(), m.chatCentre.currentAgentRes.getPretty()), "\n"))
 
 	return m, tea.Batch(awaitResponse(CHandler.session.Ctx, msg.c), cmd)
+}
+
+
+func (m *Model) handleSessionInfo(msg sessionInfo) (tea.Model, tea.Cmd) {
+	m.chatCentre.sessionName += msg.chunk.Data
+	if msg.chunk.EOS {
+		return m, nil
+	}
+
+	return m, awaitSessionInfo(CHandler.session.Ctx, msg.c)
 }
