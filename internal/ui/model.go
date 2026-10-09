@@ -307,31 +307,22 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "esc":
 		return m.handleEscKey(msg)
-
 	case "ctrl+e":
 		return m.handleCtrlE()
-
 	case "alt+enter":
 		return m.handleAltEnter(msg)
-
 	case "pgup", "pgdown", "up", "down":
 		return m.handleUpDownArrows(msg)
-
 	case "left", "right":
 		return m.handleLeftRightArrows(msg)
-
 	case "/":
 		return m.handleSlash()
-
 	case "enter":
 		return m.handleEnterKey(msg)
-
 	case "?":
 		return m.handleHelpKey()
-
 	case "tab":
 		return m.handleTabKey()
-
 	case "@":
 		return m.handleAtKey()
 	}
