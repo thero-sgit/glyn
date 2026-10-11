@@ -3,12 +3,13 @@ package ui
 import (
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
+	"github.com/thero-sgit/xyn/internal/common"
 	"github.com/thero-sgit/xyn/internal/config"
-	"github.com/thero-sgit/xyn/internal/utils"
+	"github.com/thero-sgit/xyn/internal/ui/stylesandcomponents"
 )
 
 func (m Model) headerBar(headerHeight int) string {
-	version := utils.SubtleStyle.Render(config.Config.Version)
+	version := stylesandcomponents.SubtleStyle.Render(config.Config.Version)
 
 	return lipgloss.NewStyle().
 		Width(m.width).
@@ -22,7 +23,7 @@ func (m Model) headerBar(headerHeight int) string {
 
 func (m Model) chatUi(middleHeight int) string {
 	taHeight := 3
-	if m.textarea.Length() > 0 || m.chatCentre.fileInpBoxOpen || m.slashCmdCon.acceptingCmd {
+	if m.textarea.Length() > 0 || m.chatCentre.fileInpBoxOpen || m.slashCmdCon.Focused {
 		taHeight = 7
 	}
 
@@ -30,9 +31,9 @@ func (m Model) chatUi(middleHeight int) string {
 		m.chatCentre.fileInpBox.vp.Height = taHeight - 2
 		m.chatCentre.fileInpBox.vp.Width  = m.width - 8
 
-	} else if m.slashCmdCon.acceptingCmd {
-		m.slashCmdCon.vp.Height = taHeight - 2
-		m.slashCmdCon.vp.Width  = m.width - 8
+	} else if m.slashCmdCon.Focused {
+		m.slashCmdCon.Viewport.Height = taHeight - 1
+		m.slashCmdCon.Viewport.Width  = m.width - 8
 		
 	} else {
 		m.textarea.SetHeight(taHeight-1)
@@ -48,15 +49,15 @@ func (m Model) chatUi(middleHeight int) string {
 
 	textArea := lipgloss.JoinHorizontal(lipgloss.Left, prompt, m.textarea.View())
 	textArea = zone.Mark("text-area", textArea)
-	sendStopBtn := zone.Mark("send-prompt-btn", sendPromptState)
+	sendStopBtn := zone.Mark("send-prompt-btn", stylesandcomponents.SendPromptState)
 
 	var inputBoxContent string
 	if m.chatCentre.fileInpBoxOpen {
 		inputBoxContent = m.chatCentre.fileInpBox.view()
-	} else if m.slashCmdCon.acceptingCmd {
-		inputBoxContent = m.slashCmdCon.view()
+	} else if m.slashCmdCon.Focused {
+		inputBoxContent = m.slashCmdCon.View()
 	} else {
-		inputBoxContent = lipgloss.JoinVertical(lipgloss.Top, filesForContextLabel(m.chatCentre.filesForContext), lipgloss.NewStyle().Render(textArea, sendStopBtn))
+		inputBoxContent = lipgloss.JoinVertical(lipgloss.Top, stylesandcomponents.FilesForContextLabel(m.chatCentre.filesForContext), lipgloss.NewStyle().Render(textArea, sendStopBtn))
 	}	
 
 	boxStyle := lipgloss.NewStyle().
@@ -104,7 +105,7 @@ func (m Model) chatUi(middleHeight int) string {
 }
 
 func (m Model) footerBar(footerHeight int) string {
-	joined := utils.SubtleStyle.Render("ctrl+e to write prompt   ? for help   esc/ctrl+c to quit")
+	joined := common.SubtleStyle.Render("ctrl+e to write prompt   ? for help   esc/ctrl+c to quit")
 
 	return lipgloss.NewStyle().
 		PaddingRight(2).

@@ -8,7 +8,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
-	"github.com/thero-sgit/xyn/internal/utils"
+	"github.com/thero-sgit/xyn/internal/common"
 )
 
 // -- CHAT CENTRE CONTROL
@@ -98,7 +98,7 @@ func newUserPrompt(prompt string, width int) userPrompt {
 		Render(
 			lipgloss.JoinHorizontal(
 				lipgloss.Left,
-				utils.HighlighedStyle.Render(" you $ "),
+				common.HighlighedStyle.Render(" you $ "),
 				lipgloss.NewStyle().PaddingLeft(1).Render(prompt),
 			),
 		)
@@ -128,12 +128,12 @@ func (up *userPrompt) animate() {
 		Width(up.width).
 		PaddingRight(1).
 		Render(
-			utils.HighlighedStyle.Render(" you $ ") + lipgloss.NewStyle().PaddingLeft(1).Render(newPretty.String()),
+			common.HighlighedStyle.Render(" you $ ") + lipgloss.NewStyle().PaddingLeft(1).Render(newPretty.String()),
 		)
 }
 
 func (up *userPrompt) sent() {
-	p := utils.HighlighedStyle.Render(" you $ ") + lipgloss.NewStyle().PaddingLeft(1).Render(up.message)
+	p := common.HighlighedStyle.Render(" you $ ") + lipgloss.NewStyle().PaddingLeft(1).Render(up.message)
 
 	up.pretty = lipgloss.NewStyle().
 		MarginBottom(1).
@@ -149,12 +149,12 @@ func (up *userPrompt) sent() {
 }
 
 func (up *userPrompt) err() {
-	p := utils.HighlighedStyle.Render(" you $ ") + lipgloss.NewStyle().Strikethrough(true).PaddingLeft(1).Render(up.message)
+	p := common.HighlighedStyle.Render(" you $ ") + lipgloss.NewStyle().Strikethrough(true).PaddingLeft(1).Render(up.message)
 
 	ed := lipgloss.JoinHorizontal(
 		lipgloss.Left,
 		lipgloss.NewStyle().MarginRight(4).Render(
-			utils.SubtleStyle.Render("failed to send"),
+			common.SubtleStyle.Render("failed to send"),
 		),
 		retryButton(),
 	)
@@ -202,7 +202,7 @@ func (a agentResponse) updated(width int) chatItem {
 func (a agentResponse) getPretty() string {
 	content := a.responseBuffer
 	if a.showReasoning {
-		reasoningContent := utils.SubtleStyle.Width(a.width-2).Render(a.reasoningBuffer)
+		reasoningContent := common.SubtleStyle.Width(a.width-2).Render(a.reasoningBuffer)
 		content = lipgloss.JoinVertical(
 			lipgloss.Top,
 			reasoningContent,
@@ -252,7 +252,7 @@ type agentBackgroundActivityLabel struct {
 }
 
 func newAgentBackgroundActivity(activity string) agentBackgroundActivityLabel {
-	prefixLabel := utils.BwLabelStyle.Render(" xyn $ ")
+	prefixLabel := common.BwLabelStyle.Render(" xyn $ ")
 
 	frames := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 	loader := frames[0]

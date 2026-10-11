@@ -71,9 +71,3 @@ func ListMatches(token string) ([]FileEntry, error) {
 
 	return entries, nil
 }
-
-
-//
-func callUpdate(on tea.Model) tea.Model {
-	
-}

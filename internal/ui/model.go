@@ -12,8 +12,8 @@ import (
 	zone "github.com/lrstanley/bubblezone"
 	"github.com/thero-sgit/xyn/internal/common"
 	"github.com/thero-sgit/xyn/internal/config"
+	"github.com/thero-sgit/xyn/internal/ui/stylesandcomponents"
 	"github.com/thero-sgit/xyn/internal/ui/submodels"
-	"github.com/thero-sgit/xyn/internal/utils"
 )
 
 type tickMsg50 time.Time
@@ -70,7 +70,7 @@ func InitialModel() *Model {
 
 	model := Model{
 		chatCentre:  newChatCentre(),
-		slashCmdCon: submodels.NewSelector("Command", "/<command>", common.SlashCommands, common.ListCmdMatches),
+		slashCmdCon: submodels.NewSelector("Command", "/", "/", "<command>", common.SlashCommands, common.ListCmdMatches),
 		viewport:    vp,
 	}
 
@@ -129,7 +129,7 @@ func (m *Model) View() string {
 func (m *Model) handleErrMsg() (tea.Model, tea.Cmd) {
 	m.chatCentre.isAgentWorking = false
 	m.chatCentre.sendingPrompt = false
-	sendPromptState = sendPromptBtnStates[0]
+	stylesandcomponents.SendPromptState = stylesandcomponents.SendPromptBtnStates[0]
 	m.chatCentre.currentUserPrompt.err()
 	m.viewport.SetContent(strings.Join(append(m.chatCentre.prettyHistory(), m.chatCentre.currentUserPrompt.getPretty()), "\n"))
 
@@ -145,7 +145,7 @@ func (m *Model) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 		taHeight = 6
 	}
 
-	m.textarea = createTextArea(msg.Width, taHeight, m.textarea.Value())
+	m.textarea = stylesandcomponents.CreateTextArea(msg.Width, taHeight, m.textarea.Value())
 
 	headerHeight := 2
 	footerHeight := 2
@@ -174,7 +174,7 @@ func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		case zone.Get("add-file-btn").InBounds(msg):
 			m.slashCmdCon.Focused = false
 
-			m.chatCentre.fileInpBox = newFileInputBox(0, 0)
+			m.chatCentre.fileInpBox = stylesandcomponents.NewFileInputBox(0, 0)
 			m.chatCentre.fileInpBoxOpen = true
 			return m, nil
 
@@ -194,16 +194,6 @@ func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			m, cmds := CHandler.handlePrompt(m)
 
 			return m, tea.Batch(cmds, doTick20())
-
-		case zone.Get("helpCmd-general-btn").InBounds(msg):
-			helpCmdTabState = 0
-			m.viewport.SetContent(helpCmdComponent())
-			return m, nil
-
-		case zone.Get("helpCmd-commands-btn").InBounds(msg):
-			helpCmdTabState = 1
-			m.viewport.SetContent(helpCmdComponent())
-			return m, nil
 
 		case zone.Get("thought-process-btn").InBounds(msg):
 			tempPrettyHistory := m.chatCentre.prettyHistory()
@@ -262,7 +252,7 @@ func (m *Model) handleResponse(msg response) (tea.Model, tea.Cmd) {
 	if msg.chunk.EOS {
 		m.chatCentre.isAgentWorking = false
 		m.chatCentre.currentAgentRes.agentBgActivity.done(false)
-		sendPromptState = sendPromptBtnStates[0]
+		stylesandcomponents.SendPromptState = stylesandcomponents.SendPromptBtnStates[0]
 		m.chatCentre.currentAgentRes.responseBuffer, _ = config.Config.MdRenderer.Render(m.chatCentre.currentAgentRes.responseBuffer)
 		m.chatCentre.history = append(m.chatCentre.history, m.chatCentre.currentAgentRes)
 		return m, doTick50()
@@ -346,7 +336,9 @@ func (m *Model) handleUpDownArrows(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	if m.slashCmdCon.Focused {
-		m.slashCmdCon, slConCmd = m.slashCmdCon.Update(msg)
+		updatedModel, cmd := m.slashCmdCon.Update(msg)
+		m.slashCmdCon = updatedModel.(submodels.Selector)
+		slConCmd = cmd
 	}
 
 	return m, tea.Batch(vpCmd, taCmd, fvpCmd, slConCmd)
@@ -354,24 +346,18 @@ func (m *Model) handleUpDownArrows(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (m *Model) handleAtKey() (tea.Model, tea.Cmd) {
 	if !m.textarea.Focused() && !m.slashCmdCon.Focused {
-		m.chatCentre.fileInpBox = newFileInputBox(0, 0)
+		m.chatCentre.fileInpBox = stylesandcomponents.NewFileInputBox(0, 0)
 		m.chatCentre.fileInpBoxOpen = true
 	}
 	return m, nil
 }
 
 func (m *Model) handleHelpKey() (tea.Model, tea.Cmd) {
-	if !m.textarea.Focused() {
-		m.slashCmdCon.openCmd = "/help"
-		m.viewport.SetContent(helpCmdComponent())
-	}
-
 	return m, nil
 }
 
 func (m *Model) handleSlash() (tea.Model, tea.Cmd) {
 	if !m.textarea.Focused() && !m.chatCentre.fileInpBoxOpen {
-		m.slashCmdCon = newSlashCmdCtrl(0, 0)
 		m.slashCmdCon.Focused = true
 	}
 	return m, nil
@@ -393,18 +379,6 @@ func (m *Model) handleTabKey() (tea.Model, tea.Cmd) {
 		c.fileInpBox.ti.SetValue(c.fileInpBox.matches[0].Path)
 		c.fileInpBox.ti.CursorEnd()
 		c.fileInpBox.vp.GotoTop()
-	}
-
-	if m.slashCmdCon.Focused && len(m.slashCmdCon.matches) > 0 {
-		if m.slashCmdCon.topMatch.name == "" {
-			return m, nil
-		}
-
-		if m.slashCmdCon.topMatch.comp != nil {
-			m.slashCmdCon.ti.SetValue(m.slashCmdCon.topMatch.name)
-			m.slashCmdCon.ti.CursorEnd()
-		}
-		return m, nil
 	}
 
 	m.chatCentre = c
@@ -430,44 +404,11 @@ func (m *Model) handleEnterKey() (tea.Model, tea.Cmd) {
 
 	}
 
-	if m.slashCmdCon.Focused {
-		if m.slashCmdCon.topMatch.name == "" {
-			return m, nil
-		}
-
-		m.slashCmdCon.Focused = false
-
-		if m.slashCmdCon.topMatch.name == "/model" {
-			m.Focused = submodels.NewDropdown([]string{"gemini", "gpt"})
-			m.viewport.SetContent(m.Focused.View())
-			return m, nil
-		}
-
-		if m.slashCmdCon.topMatch.comp != nil {
-			m.viewport.SetContent(m.slashCmdCon.topMatch.comp())
-		}
-
-		return m, nil
-	}
 
 	return m, nil
 }
 
 func (m *Model) handleLeftRightArrows(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if m.slashCmdCon.openCmd == "/help" {
-		switch msg.String() {
-		case "left":
-			helpCmdTabState = 0
-			m.viewport.SetContent(helpCmdComponent())
-			return m, nil
-
-		case "right":
-			helpCmdTabState = 1
-			m.viewport.SetContent(helpCmdComponent())
-			return m, nil
-		}
-	}
-
 	return m, nil
 }
 
@@ -495,22 +436,6 @@ func (m *Model) handleAltEnter(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) handleEscKey() (tea.Model, tea.Cmd) {
-	if m.slashCmdCon.Focused || m.slashCmdCon.openCmd != "" {
-		m.slashCmdCon.Focused = false
-		m.slashCmdCon.openCmd = ""
-
-		if len(m.chatCentre.prettyHistory()) == 0 {
-			m.viewport.SetContent(utils.SubtleStyle.Render("press 'ctrl+e' to start chat"))
-		} else {
-			m.viewport.SetContent(lipgloss.JoinVertical(
-				lipgloss.Top,
-				strings.Join(m.chatCentre.prettyHistory(), "\n"),
-			))
-		}
-
-		return m, nil
-	}
-
 	if m.chatCentre.fileInpBoxOpen {
 		m.chatCentre.fileInpBoxOpen = false
 		return m, nil
@@ -522,14 +447,12 @@ func (m *Model) handleEscKey() (tea.Model, tea.Cmd) {
 
 
 func (m *Model) handleGenericKey(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var taCmd, ciCmd, vpCmd, fvpCmd, ftiCmd tea.Cmd
-	if m.slashCmdCon.Focused && !strings.HasPrefix(m.slashCmdCon.ti.Value(), "/") {
-		m.slashCmdCon.ti.SetValue("/" + m.slashCmdCon.ti.Value())
-	}
-
-	if m.slashCmdCon.Focused && !m.textarea.Focused() && !m.chatCentre.fileInpBoxOpen {
-		m.slashCmdCon.ti, ciCmd = m.slashCmdCon.ti.Update(msg)
-		m.slashCmdCon.updateMatches()
+	var taCmd, ciCmd, vpCmd, fvpCmd, ftiCmd, slConCmd tea.Cmd
+	if m.slashCmdCon.Focused {
+		updatedModel, cmd := m.slashCmdCon.Update(msg)
+		m.slashCmdCon = updatedModel.(submodels.Selector)
+		
+		return m, cmd
 	}
 
 	if m.chatCentre.fileInpBoxOpen {
@@ -541,7 +464,7 @@ func (m *Model) handleGenericKey(msg tea.Msg) (tea.Model, tea.Cmd) {
 			ti.Reset()
 		}
 
-		matches, err := utils.ListMatches(ti.Value())
+		matches, err := common.ListMatches(ti.Value())
 
 		if err != nil {
 			vp.GotoTop()
@@ -551,7 +474,7 @@ func (m *Model) handleGenericKey(msg tea.Msg) (tea.Model, tea.Cmd) {
 			var mList []string
 			for _, e := range matches {
 				if e.IsDir {
-					mList = append(mList, listItemStyle.Bold(true).Foreground(utils.AccentColor).Render(e.Name))
+					mList = append(mList, listItemStyle.Bold(true).Foreground(stylesandcomponents.AccentColor).Render(e.Name))
 				} else {
 					mList = append(mList, listItemStyle.Render(e.Name))
 				}
@@ -565,9 +488,9 @@ func (m *Model) handleGenericKey(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	if m.chatCentre.sendingPrompt {
-		sendPromptState = sendPromptBtnStates[1]
+		stylesandcomponents.SendPromptState = stylesandcomponents.SendPromptBtnStates[1]
 	} else {
-		sendPromptState = sendPromptBtnStates[0]
+		stylesandcomponents.SendPromptState = stylesandcomponents.SendPromptBtnStates[0]
 	}
 
 	m.textarea, taCmd = m.textarea.Update(msg)
@@ -578,5 +501,5 @@ func (m *Model) handleGenericKey(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.chatCentre.fileInpBox.ti, ftiCmd = m.chatCentre.fileInpBox.ti.Update(msg)
 	}
 
-	return m, tea.Batch(taCmd, ciCmd, vpCmd, fvpCmd, ftiCmd)
+	return m, tea.Batch(taCmd, ciCmd, vpCmd, fvpCmd, ftiCmd, slConCmd)
 }

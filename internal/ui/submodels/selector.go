@@ -1,17 +1,20 @@
 package submodels
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/thero-sgit/xyn/internal/common"
+	"github.com/thero-sgit/xyn/internal/ui/stylesandcomponents"
 )
 
 type Selector struct {
 	ti 			textinput.Model
+	tiPrefix    string
+	Viewport    viewport.Model
 
 	//
 	Options     []common.Match
@@ -28,14 +31,15 @@ func (s Selector) Init() tea.Cmd {
 	return nil
 }
 
-func NewSelector(prompt, placeholder string, options []common.Match, matchfunc func(string) []common.Match) Selector {
+func NewSelector(prompt, tiPrefix, subprompt, placeholder string, options []common.Match, matchfunc func(string) []common.Match) Selector {
 	ti := textinput.New()
 	ti.Focus()
 	ti.Placeholder = placeholder
-	ti.Prompt = common.BwLabelStyle.Bold(true).Render(" " + prompt + " ") 
+	ti.Prompt = stylesandcomponents.BwLabelStyle.Bold(true).Render(" " + prompt + ": ") + " " + stylesandcomponents.BoldStyle.Foreground(stylesandcomponents.AccentColor).Render(subprompt)
 
 	return Selector{
 		ti:        ti,
+		tiPrefix:  tiPrefix,
 		Options:   options,
 		matchFunc: matchfunc,
 	}
@@ -50,7 +54,7 @@ func (s Selector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch key.String() {
-	case "enter", " ":
+	case "enter":
 		s.Selected = s.cursor
 
 	case "up":
@@ -65,23 +69,27 @@ func (s Selector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	default:
 		s.ti, cmd = s.ti.Update(msg)
-		s.Options = s.matchFunc(s.ti.Value())
+
+		s.ti.CursorEnd()
+		s.Options = s.matchFunc(s.tiPrefix + s.ti.Value())
+		s.cursor = 0
 	}
 
 	return s, cmd
 }
 
 func (s Selector) View() string {
-
 	var rows []string
 	for i, option := range s.Options {
 		switch {
 		case i == s.cursor:
-			rows = append(rows, common.HighlighedStyle.Render(fmt.Sprintf(" %s ", option.Name())))
+			rows = append(rows, stylesandcomponents.BoldStyle.Foreground(stylesandcomponents.AccentColor).Render("> ") + option.Name()) 
 		default:
 			rows = append(rows, option.Name())
 		}
 	}
 
-	return lipgloss.JoinVertical(lipgloss.Top, s.ti.View(), strings.Join(rows, "\n"))
+	s.Viewport.SetContent(strings.Join(rows, "\n"))
+
+	return lipgloss.JoinVertical(lipgloss.Top, s.ti.View(), s.Viewport.View())
 }
