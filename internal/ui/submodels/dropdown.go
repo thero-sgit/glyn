@@ -6,28 +6,27 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/thero-sgit/xyn/internal/utils"
+	"github.com/thero-sgit/xyn/internal/common"
 )
 
 type Dropdown struct {
-	options  []string
+	options   []string
 	selected int
 	cursor   int
-	Open     bool
 }
 
 
-func (d *Dropdown) Init() tea.Cmd {
+func (d Dropdown) Init() tea.Cmd {
 	return nil
 }
 
-func NewDropdown(options []string) Dropdown {
+func NewDropdown(options []string) tea.Model {
 	return Dropdown{
 		options: options,
 	}
 }
 
-func (d *Dropdown) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (d Dropdown) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	key, ok := msg.(tea.KeyMsg)
 	if !ok {
 		return d, nil
@@ -35,24 +34,15 @@ func (d *Dropdown) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch key.String() {
 	case "enter", " ":
-		if d.Open {
-			d.selected = d.cursor
-			d.Open = false
-		} else {
-			d.cursor = d.selected
-			d.Open = true
-		}
-
-	case "esc":
-		d.Open = false
+		d.selected = d.cursor
 
 	case "up":
-		if d.Open && d.cursor > 0 {
+		if d.cursor > 0 {
 			d.cursor--
 		}
 
 	case "down":
-		if d.Open && d.cursor < len(d.options)-1 {
+		if d.cursor < len(d.options)-1 {
 			d.cursor++
 		}
 	}
@@ -60,22 +50,16 @@ func (d *Dropdown) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return d, nil
 }
 
-func (d *Dropdown) View() string {
-	arrow := "<"
-	if d.Open {
-		arrow = ">"
-	}
+func (d Dropdown) View() string {
+	arrow := ">"
 
-	header := utils.HighlighedStyle.Bold(true).Render(fmt.Sprintf(" Header %s ", arrow))
-	if !d.Open {
-		return header
-	}
+	header := common.HighlighedStyle.Bold(true).Render(fmt.Sprintf(" Header %s ", arrow))
 
 	var rows []string
 	for i, option := range d.options {
 		switch {
 		case i == d.cursor:
-			rows = append(rows, utils.HighlighedStyle.Render(fmt.Sprintf(" %s ", option)))
+			rows = append(rows, common.HighlighedStyle.Render(fmt.Sprintf(" %s ", option)))
 		default:
 			rows = append(rows, " "+option)
 		}

@@ -2,7 +2,6 @@ package ui
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -61,17 +60,6 @@ var (
 			),
 		)
 
-	slashCommands = []slashCommand {
-		{ name: "/help", pretty: "/help  ", comp: helpCmdComponent},
-		{ name: "/status", pretty: "/status", comp: statusCmdComponent},
-		{ name: "/model", pretty: "/model"},
-	}
-	slashCmdNames = func() []string {
-		var names []string
-		for _, slashCmd := range slashCommands { names = append(names, slashCmd.name)}
-		return names
-	}()
-
 	sendPromptBtnStates = []string {
 		utils.HighlighedStyle.PaddingLeft(1).PaddingRight(1).Bold(true).Render("send " + "\u27A4"),
 		utils.BwLabelStyle.PaddingLeft(1).PaddingRight(1).Bold(true).Render("stop " + "\u25A0"),
@@ -97,11 +85,7 @@ func bunner() string {
 	)
 }
 
-type slashCommand struct {
-	name   string
-	pretty string
-	comp   func() string
-}
+
 
 func helpCmdComponent() string {
 	var generalTabBtn  string
@@ -391,7 +375,7 @@ type slashCmdCtrl struct {
 	ti 			     textinput.Model
 	vp               viewport.Model
 	matches          []string
-	topMatch         slashCommand
+	topMatch         utils.SlashCommand
 	prompt           string
 	acceptingCmd     bool
 	openCmd          string
@@ -406,21 +390,6 @@ func newSlashCmdCtrl(width, height int) slashCmdCtrl {
 	return slashCmdCtrl {
 		ti: ti,
 		vp: viewport.New(width, height),
-	}
-}
-
-func (s *slashCmdCtrl) updateMatches() {
-	s.matches = utils.ListCmdMatches(s.ti.Value(), slashCmdNames)
-	s.vp.SetContent(strings.Join(s.matches, "\n"))
-	s.topMatch = slashCommand{}
-
-	if len(s.matches) > 0 {
-		for _, slashCmd := range slashCommands {
-			if slashCmd.name == s.matches[0] {
-				s.topMatch = slashCmd
-				break
-			}
-		}
 	}
 }
 

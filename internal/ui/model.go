@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
+	"github.com/thero-sgit/xyn/internal/common"
 	"github.com/thero-sgit/xyn/internal/config"
 	"github.com/thero-sgit/xyn/internal/ui/submodels"
 	"github.com/thero-sgit/xyn/internal/utils"
@@ -50,10 +51,9 @@ type Model struct {
 	chatCentre  chatCentre
 
 	//
-	slashCmdCon slashCmdCtrl
 
 	// Sub Models
-	modelsDd    submodels.Dropdown
+	slashCmdCon submodels.Selector
 }
 
 func InitialModel() *Model {
@@ -70,7 +70,7 @@ func InitialModel() *Model {
 
 	model := Model{
 		chatCentre:  newChatCentre(),
-		slashCmdCon: newSlashCmdCtrl(0, 0),
+		slashCmdCon: submodels.NewSelector("Command", "/<command>", common.SlashCommands, common.ListCmdMatches),
 		viewport:    vp,
 	}
 
@@ -172,16 +172,15 @@ func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case zone.Get("add-file-btn").InBounds(msg):
-			m.slashCmdCon.acceptingCmd = false
+			m.slashCmdCon.Focused = false
 
 			m.chatCentre.fileInpBox = newFileInputBox(0, 0)
 			m.chatCentre.fileInpBoxOpen = true
 			return m, nil
 
 		case zone.Get("model-selector-btn").InBounds(msg):
-			m.slashCmdCon.acceptingCmd = false
+			m.slashCmdCon.Focused = false
 			m.chatCentre.fileInpBoxOpen = false
-			m.slashCmdCon.openCmd = "/model"
 			return m, nil
 
 		case zone.Get("mode-toggle-btn").InBounds(msg):
@@ -335,7 +334,7 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) handleUpDownArrows(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	var vpCmd, taCmd, fvpCmd, mDdCmd tea.Cmd
+	var vpCmd, taCmd, fvpCmd, slConCmd tea.Cmd
 	if !m.textarea.Focused() {
 		m.viewport, vpCmd = m.viewport.Update(msg)
 	} else {
@@ -346,19 +345,15 @@ func (m *Model) handleUpDownArrows(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.chatCentre.fileInpBox.vp, fvpCmd = m.chatCentre.fileInpBox.vp.Update(msg)
 	}
 
-	if m.modelsDd.Open {
-		updatedModel, cmd := m.modelsDd.Update(msg)
-		m.modelsDd = *updatedModel.(*submodels.Dropdown)
-		mDdCmd = cmd
-
-		m.viewport.SetContent(m.modelsDd.View())
+	if m.slashCmdCon.Focused {
+		m.slashCmdCon, slConCmd = m.slashCmdCon.Update(msg)
 	}
 
-	return m, tea.Batch(vpCmd, taCmd, fvpCmd, mDdCmd)
+	return m, tea.Batch(vpCmd, taCmd, fvpCmd, slConCmd)
 }
 
 func (m *Model) handleAtKey() (tea.Model, tea.Cmd) {
-	if !m.textarea.Focused() && !m.slashCmdCon.acceptingCmd {
+	if !m.textarea.Focused() && !m.slashCmdCon.Focused {
 		m.chatCentre.fileInpBox = newFileInputBox(0, 0)
 		m.chatCentre.fileInpBoxOpen = true
 	}
@@ -377,8 +372,7 @@ func (m *Model) handleHelpKey() (tea.Model, tea.Cmd) {
 func (m *Model) handleSlash() (tea.Model, tea.Cmd) {
 	if !m.textarea.Focused() && !m.chatCentre.fileInpBoxOpen {
 		m.slashCmdCon = newSlashCmdCtrl(0, 0)
-		m.slashCmdCon.acceptingCmd = true
-		m.slashCmdCon.updateMatches()
+		m.slashCmdCon.Focused = true
 	}
 	return m, nil
 }
@@ -401,7 +395,7 @@ func (m *Model) handleTabKey() (tea.Model, tea.Cmd) {
 		c.fileInpBox.vp.GotoTop()
 	}
 
-	if m.slashCmdCon.acceptingCmd && len(m.slashCmdCon.matches) > 0 {
+	if m.slashCmdCon.Focused && len(m.slashCmdCon.matches) > 0 {
 		if m.slashCmdCon.topMatch.name == "" {
 			return m, nil
 		}
@@ -436,17 +430,16 @@ func (m *Model) handleEnterKey() (tea.Model, tea.Cmd) {
 
 	}
 
-	if m.slashCmdCon.acceptingCmd {
+	if m.slashCmdCon.Focused {
 		if m.slashCmdCon.topMatch.name == "" {
 			return m, nil
 		}
 
-		m.slashCmdCon.acceptingCmd = false
+		m.slashCmdCon.Focused = false
 
 		if m.slashCmdCon.topMatch.name == "/model" {
-			m.modelsDd = submodels.NewDropdown([]string{"gemini", "gpt"})
-			m.modelsDd.Open = true
-			m.viewport.SetContent(m.modelsDd.View())
+			m.Focused = submodels.NewDropdown([]string{"gemini", "gpt"})
+			m.viewport.SetContent(m.Focused.View())
 			return m, nil
 		}
 
@@ -502,8 +495,8 @@ func (m *Model) handleAltEnter(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) handleEscKey() (tea.Model, tea.Cmd) {
-	if m.slashCmdCon.acceptingCmd || m.slashCmdCon.openCmd != "" {
-		m.slashCmdCon.acceptingCmd = false
+	if m.slashCmdCon.Focused || m.slashCmdCon.openCmd != "" {
+		m.slashCmdCon.Focused = false
 		m.slashCmdCon.openCmd = ""
 
 		if len(m.chatCentre.prettyHistory()) == 0 {
@@ -530,11 +523,11 @@ func (m *Model) handleEscKey() (tea.Model, tea.Cmd) {
 
 func (m *Model) handleGenericKey(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var taCmd, ciCmd, vpCmd, fvpCmd, ftiCmd tea.Cmd
-	if m.slashCmdCon.acceptingCmd && !strings.HasPrefix(m.slashCmdCon.ti.Value(), "/") {
+	if m.slashCmdCon.Focused && !strings.HasPrefix(m.slashCmdCon.ti.Value(), "/") {
 		m.slashCmdCon.ti.SetValue("/" + m.slashCmdCon.ti.Value())
 	}
 
-	if m.slashCmdCon.acceptingCmd && !m.textarea.Focused() && !m.chatCentre.fileInpBoxOpen {
+	if m.slashCmdCon.Focused && !m.textarea.Focused() && !m.chatCentre.fileInpBoxOpen {
 		m.slashCmdCon.ti, ciCmd = m.slashCmdCon.ti.Update(msg)
 		m.slashCmdCon.updateMatches()
 	}
