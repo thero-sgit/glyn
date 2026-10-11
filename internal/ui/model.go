@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 	"github.com/thero-sgit/xyn/internal/config"
+	"github.com/thero-sgit/xyn/internal/ui/submodels"
 	"github.com/thero-sgit/xyn/internal/utils"
 )
 
@@ -46,10 +47,13 @@ type Model struct {
 	viewport viewport.Model
 
 	//
-	chatCentre chatCentre
+	chatCentre  chatCentre
 
 	//
 	slashCmdCon slashCmdCtrl
+
+	// Sub Models
+	modelsDd    submodels.Dropdown
 }
 
 func InitialModel() *Model {
@@ -306,7 +310,7 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 
 	case "esc":
-		return m.handleEscKey(msg)
+		return m.handleEscKey()
 	case "ctrl+e":
 		return m.handleCtrlE()
 	case "alt+enter":
@@ -318,7 +322,7 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "/":
 		return m.handleSlash()
 	case "enter":
-		return m.handleEnterKey(msg)
+		return m.handleEnterKey()
 	case "?":
 		return m.handleHelpKey()
 	case "tab":
@@ -331,7 +335,7 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) handleUpDownArrows(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	var vpCmd, taCmd, fvpCmd tea.Cmd
+	var vpCmd, taCmd, fvpCmd, mDdCmd tea.Cmd
 	if !m.textarea.Focused() {
 		m.viewport, vpCmd = m.viewport.Update(msg)
 	} else {
@@ -342,7 +346,15 @@ func (m *Model) handleUpDownArrows(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.chatCentre.fileInpBox.vp, fvpCmd = m.chatCentre.fileInpBox.vp.Update(msg)
 	}
 
-	return m, tea.Batch(vpCmd, taCmd, fvpCmd)
+	if m.modelsDd.Open {
+		updatedModel, cmd := m.modelsDd.Update(msg)
+		m.modelsDd = *updatedModel.(*submodels.Dropdown)
+		mDdCmd = cmd
+
+		m.viewport.SetContent(m.modelsDd.View())
+	}
+
+	return m, tea.Batch(vpCmd, taCmd, fvpCmd, mDdCmd)
 }
 
 func (m *Model) handleAtKey() (tea.Model, tea.Cmd) {
@@ -405,7 +417,7 @@ func (m *Model) handleTabKey() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *Model) handleEnterKey() (tea.Model, tea.Cmd) {
 	if m.chatCentre.fileInpBoxOpen {
 		if len(m.chatCentre.fileInpBox.matches) > 0 {
 			file := m.chatCentre.fileInpBox.matches[0]
@@ -432,8 +444,10 @@ func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.slashCmdCon.acceptingCmd = false
 
 		if m.slashCmdCon.topMatch.name == "/model" {
-			m, cmds := CHandler.handleGetModels(m)
-			return m, cmds
+			m.modelsDd = submodels.NewDropdown([]string{"gemini", "gpt"})
+			m.modelsDd.Open = true
+			m.viewport.SetContent(m.modelsDd.View())
+			return m, nil
 		}
 
 		if m.slashCmdCon.topMatch.comp != nil {
@@ -487,13 +501,13 @@ func (m *Model) handleAltEnter(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds, animateCmd)
 }
 
-func (m *Model) handleEscKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *Model) handleEscKey() (tea.Model, tea.Cmd) {
 	if m.slashCmdCon.acceptingCmd || m.slashCmdCon.openCmd != "" {
 		m.slashCmdCon.acceptingCmd = false
 		m.slashCmdCon.openCmd = ""
 
 		if len(m.chatCentre.prettyHistory()) == 0 {
-			m.viewport.SetContent(subtleStyle.Render("press 'ctrl+e' to start chat"))
+			m.viewport.SetContent(utils.SubtleStyle.Render("press 'ctrl+e' to start chat"))
 		} else {
 			m.viewport.SetContent(lipgloss.JoinVertical(
 				lipgloss.Top,
@@ -544,7 +558,7 @@ func (m *Model) handleGenericKey(msg tea.Msg) (tea.Model, tea.Cmd) {
 			var mList []string
 			for _, e := range matches {
 				if e.IsDir {
-					mList = append(mList, listItemStyle.Bold(true).Foreground(accentColor).Render(e.Name))
+					mList = append(mList, listItemStyle.Bold(true).Foreground(utils.AccentColor).Render(e.Name))
 				} else {
 					mList = append(mList, listItemStyle.Render(e.Name))
 				}

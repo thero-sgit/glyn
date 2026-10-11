@@ -4,10 +4,11 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 	"github.com/thero-sgit/xyn/internal/config"
+	"github.com/thero-sgit/xyn/internal/utils"
 )
 
 func (m Model) headerBar(headerHeight int) string {
-	version := subtleStyle.Render(config.Config.Version)
+	version := utils.SubtleStyle.Render(config.Config.Version)
 
 	return lipgloss.NewStyle().
 		Width(m.width).
@@ -103,7 +104,7 @@ func (m Model) chatUi(middleHeight int) string {
 }
 
 func (m Model) footerBar(footerHeight int) string {
-	joined := subtleStyle.Render("ctrl+e to write prompt   ? for help   esc/ctrl+c to quit")
+	joined := utils.SubtleStyle.Render("ctrl+e to write prompt   ? for help   esc/ctrl+c to quit")
 
 	return lipgloss.NewStyle().
 		PaddingRight(2).

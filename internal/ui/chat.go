@@ -8,6 +8,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
+	"github.com/thero-sgit/xyn/internal/utils"
 )
 
 // -- CHAT CENTRE CONTROL
@@ -97,7 +98,7 @@ func newUserPrompt(prompt string, width int) userPrompt {
 		Render(
 			lipgloss.JoinHorizontal(
 				lipgloss.Left,
-				highlighedStyle.Render(" you $ "),
+				utils.HighlighedStyle.Render(" you $ "),
 				lipgloss.NewStyle().PaddingLeft(1).Render(prompt),
 			),
 		)
@@ -127,12 +128,12 @@ func (up *userPrompt) animate() {
 		Width(up.width).
 		PaddingRight(1).
 		Render(
-			highlighedStyle.Render(" you $ ") + lipgloss.NewStyle().PaddingLeft(1).Render(newPretty.String()),
+			utils.HighlighedStyle.Render(" you $ ") + lipgloss.NewStyle().PaddingLeft(1).Render(newPretty.String()),
 		)
 }
 
 func (up *userPrompt) sent() {
-	p := highlighedStyle.Render(" you $ ") + lipgloss.NewStyle().PaddingLeft(1).Render(up.message)
+	p := utils.HighlighedStyle.Render(" you $ ") + lipgloss.NewStyle().PaddingLeft(1).Render(up.message)
 
 	up.pretty = lipgloss.NewStyle().
 		MarginBottom(1).
@@ -148,12 +149,12 @@ func (up *userPrompt) sent() {
 }
 
 func (up *userPrompt) err() {
-	p := highlighedStyle.Render(" you $ ") + lipgloss.NewStyle().Strikethrough(true).PaddingLeft(1).Render(up.message)
+	p := utils.HighlighedStyle.Render(" you $ ") + lipgloss.NewStyle().Strikethrough(true).PaddingLeft(1).Render(up.message)
 
 	ed := lipgloss.JoinHorizontal(
 		lipgloss.Left,
 		lipgloss.NewStyle().MarginRight(4).Render(
-			subtleStyle.Render("failed to send"),
+			utils.SubtleStyle.Render("failed to send"),
 		),
 		retryButton(),
 	)
@@ -201,7 +202,7 @@ func (a agentResponse) updated(width int) chatItem {
 func (a agentResponse) getPretty() string {
 	content := a.responseBuffer
 	if a.showReasoning {
-		reasoningContent := subtleStyle.Width(a.width-2).Render(a.reasoningBuffer)
+		reasoningContent := utils.SubtleStyle.Width(a.width-2).Render(a.reasoningBuffer)
 		content = lipgloss.JoinVertical(
 			lipgloss.Top,
 			reasoningContent,
@@ -251,7 +252,7 @@ type agentBackgroundActivityLabel struct {
 }
 
 func newAgentBackgroundActivity(activity string) agentBackgroundActivityLabel {
-	prefixLabel := bwLabelStyle.Render(" xyn $ ")
+	prefixLabel := utils.BwLabelStyle.Render(" xyn $ ")
 
 	frames := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 	loader := frames[0]
