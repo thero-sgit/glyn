@@ -103,6 +103,7 @@ func (m Model) chatUi(middleHeight int) string {
 		Render(main)
 }
 
+
 func (m Model) footerBar(footerHeight int) string {
 	joined := stylesandcomponents.SubtleStyle.Render("ctrl+e to write prompt   ? for help   esc/ctrl+c to quit")
 

@@ -12,7 +12,6 @@ import (
 )
 
 // -- CHAT CENTRE CONTROL
-
 type chatCentre struct {
 	sessionName       string
 	isAgentWorking    bool

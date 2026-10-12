@@ -78,7 +78,6 @@ func InitialModel() *Model {
 	}
 
 	model.viewport.SetContent(strings.Join(model.chatCentre.prettyHistory(), "\n"))
-
 	InitHandler()
 
 	return &model
@@ -116,16 +115,12 @@ func (m *Model) View() string {
 		return "IniTializing screen..."
 	}
 
-	// VerTical height allocaTions
 	headerHeight := 2
 	footerHeight := 1
 	middleHeight := m.height - headerHeight - footerHeight
 
-	// Assemble rows
 	middle := lipgloss.JoinHorizontal(lipgloss.Top, m.chatUi(middleHeight))
-
 	screen := lipgloss.JoinVertical(lipgloss.Left, m.headerBar(headerHeight), middle, m.footerBar(footerHeight))
-
 	return zone.Scan(screen)
 }
 
@@ -185,7 +180,6 @@ func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 
 		case zone.Get("add-file-btn").InBounds(msg):
 			m.slashCmdCon.Focused = false
-
 			m.chatCentre.fileInpBox = stylesandcomponents.NewFileInputBox(0, 0)
 			m.chatCentre.fileInpBoxOpen = true
 			return m, nil
@@ -204,7 +198,6 @@ func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 
 		case zone.Get("retry-button").InBounds(msg):
 			m, cmds := CHandler.handlePrompt(m)
-
 			return m, tea.Batch(cmds, doTick20())
 
 		case zone.Get("thought-process-btn").InBounds(msg):
@@ -429,6 +422,7 @@ func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 
 		if slashCon.Options[slashCon.Cursor].Name() == "/sessions" {
+			m.sessionsScreen.Focused = true
 			m.viewport.SetContent(m.sessionsScreen.View())
 		}
 
@@ -436,7 +430,6 @@ func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.slashCmdCon = *updatedModel.(*submodels.Selector)
 		return m, cmd
 	}
-
 
 	return m, nil
 }
@@ -480,6 +473,21 @@ func (m *Model) handleAltEnter(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m *Model) handleEscKey() (tea.Model, tea.Cmd) {
 	if m.chatCentre.fileInpBoxOpen {
 		m.chatCentre.fileInpBoxOpen = false
+		return m, nil
+	}
+
+	if m.helpScreen.Focused {
+		m.helpScreen.Focused = false
+		return m, nil
+	}
+
+	if m.sessionsScreen.Focused {
+		m.sessionsScreen.Focused = false
+		return m, nil
+	}
+
+	if m.slashCmdCon.Focused {
+		m.slashCmdCon.Focused = false
 		return m, nil
 	}
 

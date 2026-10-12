@@ -10,7 +10,8 @@ import (
 )
 
 type Dropdown struct {
-	options   []string
+	Focused  bool
+	options  []string
 	selected int
 	cursor   int
 }
