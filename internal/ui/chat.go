@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 	"github.com/thero-sgit/xyn/internal/ui/stylesandcomponents"
+	"github.com/thero-sgit/xyn/internal/ui/submodels"
 )
 
 // -- CHAT CENTRE CONTROL
@@ -20,8 +21,7 @@ type chatCentre struct {
 	currentUserPrompt userPrompt
 	currentAgentRes   agentResponse
 	sendingPrompt     bool
-	fileInpBox        stylesandcomponents.FileInputBox
-	fileInpBoxOpen    bool
+	fileSelector      submodels.FileSelector
 	filesForContext   []string
 }
 
@@ -29,6 +29,7 @@ func newChatCentre() chatCentre {
 	return chatCentre{
 		isAgentWorking: false,
 		isChatClear:    true,
+		fileSelector:   submodels.NewFileSelector(),
 	}
 }
 

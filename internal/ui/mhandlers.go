@@ -4,9 +4,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
-	"github.com/thero-sgit/xyn/internal/common"
 	"github.com/thero-sgit/xyn/internal/config"
 	"github.com/thero-sgit/xyn/internal/ui/stylesandcomponents"
 	"github.com/thero-sgit/xyn/internal/ui/submodels"
@@ -67,13 +65,12 @@ func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 
 		case zone.Get("add-file-btn").InBounds(msg):
 			m.slashCmdCon.Focused = false
-			m.chatCentre.fileInpBox = stylesandcomponents.NewFileInputBox(0, 0)
-			m.chatCentre.fileInpBoxOpen = true
+			m.chatCentre.fileSelector.Focused = true
 			return m, nil
 
 		case zone.Get("model-selector-btn").InBounds(msg):
 			m.slashCmdCon.Focused = false
-			m.chatCentre.fileInpBoxOpen = false
+			m.chatCentre.fileSelector.Focused = false
 			return m, nil
 
 		case zone.Get("mode-toggle-btn").InBounds(msg):
@@ -196,13 +193,13 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "left", "right":
 		return m.handleLeftRightArrows(msg)
 	case "/":
-		return m.handleSlash()
+		return m.handleSlash(msg)
 	case "enter":
 		return m.handleEnterKey(msg)
 	case "?":
 		return m.handleHelpKey()
 	case "tab":
-		return m.handleTabKey()
+		return m.handleTabKey(msg)
 	case "@":
 		return m.handleAtKey()
 	}
@@ -218,8 +215,11 @@ func (m *Model) handleUpDownArrows(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.textarea, taCmd = m.textarea.Update(msg)
 	}
 
-	if m.chatCentre.fileInpBoxOpen {
-		m.chatCentre.fileInpBox.Vp, fVpCmd = m.chatCentre.fileInpBox.Vp.Update(msg)
+	if m.chatCentre.fileSelector.Focused {
+		updatedModel, cmd := m.chatCentre.fileSelector.Update(msg)
+		m.chatCentre.fileSelector = *updatedModel.(*submodels.FileSelector)
+
+		return m, cmd
 	}
 
 	if m.slashCmdCon.Focused {
@@ -234,8 +234,7 @@ func (m *Model) handleUpDownArrows(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (m *Model) handleAtKey() (tea.Model, tea.Cmd) {
 	if !m.textarea.Focused() && !m.slashCmdCon.Focused {
-		m.chatCentre.fileInpBox = stylesandcomponents.NewFileInputBox(0, 0)
-		m.chatCentre.fileInpBoxOpen = true
+		m.chatCentre.fileSelector.Focused = true
 	}
 	return m, nil
 }
@@ -247,9 +246,11 @@ func (m *Model) handleHelpKey() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *Model) handleSlash() (tea.Model, tea.Cmd) {
-	if !m.textarea.Focused() && !m.chatCentre.fileInpBoxOpen {
+func (m *Model) handleSlash(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if !m.textarea.Focused() && !m.chatCentre.fileSelector.Focused {
 		m.slashCmdCon.Focused = true
+	} else {
+		m.handleGenericKey(msg)
 	}
 	return m, nil
 }
@@ -264,12 +265,13 @@ func (m *Model) handleCtrlE() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *Model) handleTabKey() (tea.Model, tea.Cmd) {
+func (m *Model) handleTabKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	c := m.chatCentre
-	if c.fileInpBoxOpen && len(c.fileInpBox.Matches) > 0 {
-		c.fileInpBox.Ti.SetValue(c.fileInpBox.Matches[0].Path)
-		c.fileInpBox.Ti.CursorEnd()
-		c.fileInpBox.Vp.GotoTop()
+	if c.fileSelector.Focused && len(c.fileSelector.Options) > 0 {
+		updatedModel, cmd := m.chatCentre.fileSelector.Update(msg)
+		m.chatCentre.fileSelector = *updatedModel.(*submodels.FileSelector)
+
+		return m, cmd
 	}
 
 	m.chatCentre = c
@@ -277,22 +279,25 @@ func (m *Model) handleTabKey() (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if m.chatCentre.fileInpBoxOpen {
-		if len(m.chatCentre.fileInpBox.Matches) > 0 {
-			file := m.chatCentre.fileInpBox.Matches[0]
-			if m.chatCentre.fileInpBox.Prompt == "rm " {
+	if m.chatCentre.fileSelector.Focused {
+		if len(m.chatCentre.fileSelector.Options) > 0 {
+			file := m.chatCentre.fileSelector.Options[m.chatCentre.fileSelector.Cursor]
+			if m.chatCentre.fileSelector.Prompt == "rm " {
 				m.chatCentre.removeFileForContext(file.Path)
-				m.chatCentre.fileInpBoxOpen = false
+				m.chatCentre.fileSelector.Focused = false
 
+				m.chatCentre.fileSelector.SetPrompt("@")
 				return m, nil
 			}
 
 			if !file.IsDir {
 				m.chatCentre.addFileForContext(file.Path)
-				m.chatCentre.fileInpBoxOpen = false
-			}
-		}
+				m.chatCentre.fileSelector.Focused = false
 
+				m.chatCentre.fileSelector.SetPrompt("@")
+				return m, nil
+			}			
+		}
 	}
 
 	if m.slashCmdCon.Focused {
@@ -353,8 +358,8 @@ func (m *Model) handleAltEnter() (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) handleEscKey() (tea.Model, tea.Cmd) {
-	if m.chatCentre.fileInpBoxOpen {
-		m.chatCentre.fileInpBoxOpen = false
+	if m.chatCentre.fileSelector.Focused {
+		m.chatCentre.fileSelector.Focused = false
 		return m, nil
 	}
 
@@ -380,7 +385,7 @@ func (m *Model) handleEscKey() (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) handleGenericKey(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var taCmd, ciCmd, VpCmd, fVpCmd, fTiCmd, slConCmd tea.Cmd
+	var taCmd, VpCmd tea.Cmd
 	if m.slashCmdCon.Focused {
 		updatedModel, cmd := m.slashCmdCon.Update(msg)
 		m.slashCmdCon = *updatedModel.(*submodels.Selector)
@@ -388,37 +393,44 @@ func (m *Model) handleGenericKey(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	}
 
-	if m.chatCentre.fileInpBoxOpen {
-		Ti := m.chatCentre.fileInpBox.Ti
-		Vp := m.chatCentre.fileInpBox.Vp
+	if m.chatCentre.fileSelector.Focused {
+		updatedModel, cmd := m.chatCentre.fileSelector.Update(msg)
+		m.chatCentre.fileSelector = *updatedModel.(*submodels.FileSelector)
 
-		if Ti.Value() == "rm " {
-			Ti = m.chatCentre.fileInpBox.SetPrompt(Ti, "rm ")
-			Ti.Reset()
-		}
-
-		matches, err := common.ListMatches(Ti.Value())
-
-		if err != nil {
-			Vp.GotoTop()
-			Vp.SetContent(err.Error())
-		} else {
-			listItemStyle := lipgloss.NewStyle().MarginLeft(2)
-			var mList []string
-			for _, e := range matches {
-				if e.IsDir {
-					mList = append(mList, listItemStyle.Bold(true).Foreground(stylesandcomponents.AccentColor).Render(e.Name))
-				} else {
-					mList = append(mList, listItemStyle.Render(e.Name))
-				}
-			}
-			Vp.SetContent(strings.Join(mList, "\n"))
-		}
-
-		m.chatCentre.fileInpBox.Ti = Ti
-		m.chatCentre.fileInpBox.Vp = Vp
-		m.chatCentre.fileInpBox.Matches = matches
+		return m, cmd
 	}
+
+	// if m.chatCentre.fileInpBoxOpen {
+	// 	Ti := m.chatCentre.fileInpBox.Ti
+	// 	Vp := m.chatCentre.fileInpBox.Vp
+
+	// 	if Ti.Value() == "rm " {
+	// 		Ti = m.chatCentre.fileInpBox.SetPrompt(Ti, "rm ")
+	// 		Ti.Reset()
+	// 	}
+
+	// 	matches, err := common.ListMatches(Ti.Value())
+
+	// 	if err != nil {
+	// 		Vp.GotoTop()
+	// 		Vp.SetContent(err.Error())
+	// 	} else {
+	// 		listItemStyle := lipgloss.NewStyle().MarginLeft(2)
+	// 		var mList []string
+	// 		for _, e := range matches {
+	// 			if e.IsDir {
+	// 				mList = append(mList, listItemStyle.Bold(true).Foreground(stylesandcomponents.AccentColor).Render(e.Name))
+	// 			} else {
+	// 				mList = append(mList, listItemStyle.Render(e.Name))
+	// 			}
+	// 		}
+	// 		Vp.SetContent(strings.Join(mList, "\n"))
+	// 	}
+
+	// 	m.chatCentre.fileInpBox.Ti = Ti
+	// 	m.chatCentre.fileInpBox.Vp = Vp
+	// 	m.chatCentre.fileInpBox.Matches = matches
+	// }
 
 	if m.chatCentre.sendingPrompt {
 		stylesandcomponents.SendPromptState = stylesandcomponents.SendPromptBtnStates[1]
@@ -429,10 +441,5 @@ func (m *Model) handleGenericKey(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.textarea, taCmd = m.textarea.Update(msg)
 	m.viewport, VpCmd = m.viewport.Update(msg)
 
-	if m.chatCentre.fileInpBoxOpen {
-		m.chatCentre.fileInpBox.Vp, fVpCmd = m.chatCentre.fileInpBox.Vp.Update(msg)
-		m.chatCentre.fileInpBox.Ti, fTiCmd = m.chatCentre.fileInpBox.Ti.Update(msg)
-	}
-
-	return m, tea.Batch(taCmd, ciCmd, VpCmd, fVpCmd, fTiCmd, slConCmd)
+	return m, tea.Batch(taCmd, VpCmd)
 }

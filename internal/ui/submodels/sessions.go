@@ -7,8 +7,6 @@ import (
 	"github.com/thero-sgit/xyn/internal/ui/stylesandcomponents"
 )
 
-var ()
-
 type Sessions struct {
 	Focused bool
 }

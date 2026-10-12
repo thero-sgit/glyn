@@ -21,16 +21,16 @@ func (m Model) headerBar(headerHeight int) string {
 
 func (m Model) chatUi(middleHeight int) string {
 	taHeight := 3
-	if m.textarea.Length() > 0 || m.chatCentre.fileInpBoxOpen || m.slashCmdCon.Focused {
+	if m.textarea.Length() > 0 || m.chatCentre.fileSelector.Focused || m.slashCmdCon.Focused {
 		taHeight = 7
 	}
 
-	if m.chatCentre.fileInpBoxOpen {
-		m.chatCentre.fileInpBox.Vp.Height = taHeight - 2
-		m.chatCentre.fileInpBox.Vp.Width = m.width - 8
+	if m.chatCentre.fileSelector.Focused {
+		m.chatCentre.fileSelector.Viewport.Height = taHeight - 2
+		m.chatCentre.fileSelector.Viewport.Width = m.width - 8
 
 	} else if m.slashCmdCon.Focused {
-		m.slashCmdCon.Viewport.Height = taHeight - 1
+		m.slashCmdCon.Viewport.Height = taHeight - 2
 		m.slashCmdCon.Viewport.Width = m.width - 8
 
 	} else {
@@ -50,8 +50,8 @@ func (m Model) chatUi(middleHeight int) string {
 	sendStopBtn := zone.Mark("send-prompt-btn", stylesandcomponents.SendPromptState)
 
 	var inputBoxContent string
-	if m.chatCentre.fileInpBoxOpen {
-		inputBoxContent = m.chatCentre.fileInpBox.View()
+	if m.chatCentre.fileSelector.Focused {
+		inputBoxContent = m.chatCentre.fileSelector.View()
 	} else if m.slashCmdCon.Focused {
 		inputBoxContent = m.slashCmdCon.View()
 	} else {

@@ -38,7 +38,7 @@ func NewSelector(prompt, tiPrefix, subprompt, placeholder string, matchfunc func
 	return Selector{
 		ti:        ti,
 		tiPrefix:  tiPrefix,
-		Options:   matchfunc("/"),
+		Options:   matchfunc(tiPrefix),
 		matchFunc: matchfunc,
 	}
 }
@@ -91,5 +91,5 @@ func (s *Selector) View() string {
 
 	s.Viewport.SetContent(strings.Join(rows, "\n"))
 
-	return lipgloss.JoinVertical(lipgloss.Top, s.ti.View(), s.Viewport.View())
+	return lipgloss.NewStyle().MarginBottom(1).Render(lipgloss.JoinVertical(lipgloss.Top, s.ti.View(), s.Viewport.View()))
 }
