@@ -30,7 +30,7 @@ func (s *Selector) Init() tea.Cmd {
 	return nil
 }
 
-func NewSelector(prompt, tiPrefix, subprompt, placeholder string, options []common.Match, matchfunc func(string) []common.Match) Selector {
+func NewSelector(prompt, tiPrefix, subprompt, placeholder string, matchfunc func(string) []common.Match) Selector {
 	ti := textinput.New()
 	ti.Focus()
 	ti.Placeholder = placeholder
@@ -39,7 +39,7 @@ func NewSelector(prompt, tiPrefix, subprompt, placeholder string, options []comm
 	return Selector{
 		ti:        ti,
 		tiPrefix:  tiPrefix,
-		Options:   options,
+		Options: matchfunc("/"),
 		matchFunc: matchfunc,
 	}
 }

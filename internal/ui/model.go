@@ -51,15 +51,16 @@ type Model struct {
 	chatCentre  chatCentre
 
 	// Sub Models
-	helpScreen  submodels.HelpModel
-	slashCmdCon submodels.Selector
+	slashCmdCon    submodels.Selector
+	helpScreen     submodels.HelpModel
+	sessionsScreen submodels.Sessions
 
 }
 
 func InitialModel() *Model {
-	Vp := viewport.New(0, 0)
+	vp := viewport.New(0, 0)
 
-	Vp.KeyMap = viewport.KeyMap{
+	vp.KeyMap = viewport.KeyMap{
 		Up:           key.NewBinding(key.WithKeys("up")),
 		Down:         key.NewBinding(key.WithKeys("down")),
 		PageUp:       key.NewBinding(key.WithKeys("pgup")),
@@ -69,10 +70,11 @@ func InitialModel() *Model {
 	}
 
 	model := Model{
-		chatCentre:  newChatCentre(),
-		helpScreen:  submodels.NewHelpModel(),
-		slashCmdCon: submodels.NewSelector("Command", "/", "/", "<command>", common.SlashCommands, common.ListCmdMatches),
-		viewport:    Vp,
+		chatCentre:     newChatCentre(),
+		slashCmdCon:    submodels.NewSelector("Command", "/", "/", "<command>", common.ListCmdMatches),
+		helpScreen:     submodels.NewHelpModel(),
+		sessionsScreen: submodels.NewSessions(),
+		viewport:       vp,
 	}
 
 	model.viewport.SetContent(strings.Join(model.chatCentre.prettyHistory(), "\n"))
@@ -424,6 +426,10 @@ func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 		if slashCon.Options[slashCon.Cursor].Name() == "/help" {
 			m.handleHelpKey()
+		}
+
+		if slashCon.Options[slashCon.Cursor].Name() == "/sessions" {
+			m.viewport.SetContent(m.sessionsScreen.View())
 		}
 
 		updatedModel, cmd := slashCon.Update(msg)

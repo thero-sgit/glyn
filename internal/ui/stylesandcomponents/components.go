@@ -52,36 +52,6 @@ func Bunner() string {
 	)
 }
 
-func statusCmdComponent() string {
-	cmdLabel := BwLabelStyle.Render(" /status ")
-
-	tokenUsage := "Token usage (34,500 / 200,000 tokens — 17.2%)"
-	header 	   := lipgloss.JoinHorizontal(lipgloss.Left, cmdLabel, " ", tokenUsage)
-
-	tokenUsageProgressBar := tokenUsageProgessBar(5)		
-
-	tokenUsageBreakdown := fmt.Sprint(
-		"└ Breakdown by Category:\n",
-		"	  Conversation History ......... 18,200 tokens (52.8%)\n",
-		"	  Loaded Files (3) ............. 9,400 tokens (27.2%)\n",
-		"	  System & Instructions ........ 4,100 tokens (11.9%)\n",
-		"	  Tools Use & Skills ........... 2,800 tokens ( 8.1%)\n",
-	)
-
-	context := fmt.Sprint(
-		"└ Context:\n",
-		"	 • Model (openai/gpt-oss-120b) Token Limit Resets in 14h 2m 33s\n",
-	)
-
-	return lipgloss.JoinVertical(
-		lipgloss.Top,
-		header,
-		tokenUsageProgressBar,
-		tokenUsageBreakdown,
-		context,
-	)
-}
-
 func modelCard(modelInfo ai.GroqModelInfo) string {
 	header := lipgloss.NewStyle().Render(
 			BoldStyle.Render(SubtleStyle.Render("\u27E1")) +
