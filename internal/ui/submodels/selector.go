@@ -12,19 +12,18 @@ import (
 )
 
 type Selector struct {
-	ti 			textinput.Model
-	tiPrefix    string
-	Viewport    viewport.Model
+	ti       textinput.Model
+	tiPrefix string
+	Viewport viewport.Model
 
 	//
-	Options     []common.Match
-	matchFunc   func(string) []common.Match
-	Cursor      int
+	Options   []common.Match
+	matchFunc func(string) []common.Match
+	Cursor    int
 
 	//
-	Focused     bool
+	Focused bool
 }
-
 
 func (s *Selector) Init() tea.Cmd {
 	return nil
@@ -34,12 +33,12 @@ func NewSelector(prompt, tiPrefix, subprompt, placeholder string, matchfunc func
 	ti := textinput.New()
 	ti.Focus()
 	ti.Placeholder = placeholder
-	ti.Prompt = stylesandcomponents.BwLabelStyle.Bold(true).Render(" " + prompt + ": ") + " " + stylesandcomponents.BoldStyle.Foreground(stylesandcomponents.AccentColor).Render(subprompt)
+	ti.Prompt = stylesandcomponents.BwLabelStyle.Bold(true).Render(" "+prompt+": ") + " " + stylesandcomponents.BoldStyle.Foreground(stylesandcomponents.AccentColor).Render(subprompt)
 
 	return Selector{
 		ti:        ti,
 		tiPrefix:  tiPrefix,
-		Options: matchfunc("/"),
+		Options:   matchfunc("/"),
 		matchFunc: matchfunc,
 	}
 }
@@ -84,7 +83,7 @@ func (s *Selector) View() string {
 	for i, option := range s.Options {
 		switch {
 		case i == s.Cursor:
-			rows = append(rows, stylesandcomponents.BoldStyle.Foreground(stylesandcomponents.AccentColor).Render("> ") + option.Name()) 
+			rows = append(rows, stylesandcomponents.BoldStyle.Foreground(stylesandcomponents.AccentColor).Render("> ")+option.Name())
 		default:
 			rows = append(rows, option.Name())
 		}

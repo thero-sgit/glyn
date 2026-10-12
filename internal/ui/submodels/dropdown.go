@@ -16,7 +16,6 @@ type Dropdown struct {
 	cursor   int
 }
 
-
 func (d Dropdown) Init() tea.Cmd {
 	return nil
 }

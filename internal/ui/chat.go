@@ -28,7 +28,7 @@ type chatCentre struct {
 func newChatCentre() chatCentre {
 	return chatCentre{
 		isAgentWorking: false,
-		isChatClear: true,
+		isChatClear:    true,
 	}
 }
 
@@ -58,7 +58,7 @@ func (c *chatCentre) addFileForContext(path string) {
 
 func (c *chatCentre) removeFileForContext(path string) {
 	c.filesForContext = slices.DeleteFunc(c.filesForContext, func(s string) bool {
-		return s == path 
+		return s == path
 	})
 }
 
@@ -69,11 +69,11 @@ type chatItem interface {
 }
 
 type userPrompt struct {
-	index       int
-	width       int
-	message     string
-	waveIndex 	int
-	pretty    	string
+	index     int
+	width     int
+	message   string
+	waveIndex int
+	pretty    string
 }
 
 func (up userPrompt) getPretty() string {
@@ -89,7 +89,7 @@ func (up userPrompt) updated(width int) chatItem {
 }
 
 func newUserPrompt(prompt string, width int) userPrompt {
-	width = width-6
+	width = width - 6
 	pretty := lipgloss.NewStyle().
 		MarginBottom(1).
 		Width(width).
@@ -106,7 +106,7 @@ func newUserPrompt(prompt string, width int) userPrompt {
 		width:     width,
 		message:   prompt,
 		waveIndex: 0,
-		pretty:    pretty,	
+		pretty:    pretty,
 	}
 }
 
@@ -172,12 +172,11 @@ func (up *userPrompt) err() {
 }
 
 func colorForOffset(offset float64) lipgloss.Style {
-	level := 235 + int((offset + 1)/2*23)
+	level := 235 + int((offset+1)/2*23)
 	return lipgloss.NewStyle().Foreground(
 		lipgloss.Color(fmt.Sprintf("%d", level)),
 	)
 }
-
 
 type agentResponse struct {
 	index           int
@@ -201,7 +200,7 @@ func (a agentResponse) updated(width int) chatItem {
 func (a agentResponse) getPretty() string {
 	content := a.responseBuffer
 	if a.showReasoning {
-		reasoningContent := stylesandcomponents.SubtleStyle.Width(a.width-2).Render(a.reasoningBuffer)
+		reasoningContent := stylesandcomponents.SubtleStyle.Width(a.width - 2).Render(a.reasoningBuffer)
 		content = lipgloss.JoinVertical(
 			lipgloss.Top,
 			reasoningContent,
@@ -223,31 +222,31 @@ func newAgentResponse(width int) agentResponse {
 	agentBgActivity := newAgentBackgroundActivity("Thinking")
 
 	pretty := lipgloss.NewStyle().Width(width).MarginBottom(1).Render(lipgloss.JoinVertical(
-			lipgloss.Top,
-			agentBgActivity.prettyString,
-			lipgloss.NewStyle().
+		lipgloss.Top,
+		agentBgActivity.prettyString,
+		lipgloss.NewStyle().
 			Render(""),
-		),
+	),
 	)
 
-	return agentResponse {
-		width: width,
+	return agentResponse{
+		width:           width,
 		agentBgActivity: &agentBgActivity,
-		pretty: pretty,
+		pretty:          pretty,
 	}
 }
 
 type agentBackgroundActivityLabel struct {
-	index          int
-	prefixLabel    string
-	rawString      string
-	loaderIndex    int
-	loaderFrames   []string
-	loader         string
-	prettyString   string
-	doneStyle 	   lipgloss.Style
-	intrptStyle    lipgloss.Style
-	loaderStyle    lipgloss.Style
+	index        int
+	prefixLabel  string
+	rawString    string
+	loaderIndex  int
+	loaderFrames []string
+	loader       string
+	prettyString string
+	doneStyle    lipgloss.Style
+	intrptStyle  lipgloss.Style
+	loaderStyle  lipgloss.Style
 }
 
 func newAgentBackgroundActivity(activity string) agentBackgroundActivityLabel {
@@ -256,8 +255,7 @@ func newAgentBackgroundActivity(activity string) agentBackgroundActivityLabel {
 	frames := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 	loader := frames[0]
 
-
-	doneStyle   := lipgloss.NewStyle().Foreground(lipgloss.Color("#808080")).Italic(true)
+	doneStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#808080")).Italic(true)
 	loaderStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#E47753")).Bold(true)
 	intrptStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#808080")).Bold(true)
 
@@ -268,7 +266,7 @@ func newAgentBackgroundActivity(activity string) agentBackgroundActivityLabel {
 		activity,
 	)
 
-	return agentBackgroundActivityLabel {
+	return agentBackgroundActivityLabel{
 		prefixLabel:  prefixLabel,
 		rawString:    activity,
 		loaderIndex:  0,
@@ -294,7 +292,7 @@ func (abal *agentBackgroundActivityLabel) animate() {
 
 func (abal *agentBackgroundActivityLabel) done(onErr bool) {
 	var concl string
-	if onErr{
+	if onErr {
 		concl = abal.intrptStyle.Render("*")
 	} else {
 		concl = abal.doneStyle.Render("Thought process") + " >"

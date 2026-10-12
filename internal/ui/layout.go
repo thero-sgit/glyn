@@ -19,7 +19,6 @@ func (m Model) headerBar(headerHeight int) string {
 		Render(version)
 }
 
-
 func (m Model) chatUi(middleHeight int) string {
 	taHeight := 3
 	if m.textarea.Length() > 0 || m.chatCentre.fileInpBoxOpen || m.slashCmdCon.Focused {
@@ -28,14 +27,14 @@ func (m Model) chatUi(middleHeight int) string {
 
 	if m.chatCentre.fileInpBoxOpen {
 		m.chatCentre.fileInpBox.Vp.Height = taHeight - 2
-		m.chatCentre.fileInpBox.Vp.Width  = m.width - 8
+		m.chatCentre.fileInpBox.Vp.Width = m.width - 8
 
 	} else if m.slashCmdCon.Focused {
 		m.slashCmdCon.Viewport.Height = taHeight - 1
-		m.slashCmdCon.Viewport.Width  = m.width - 8
-		
+		m.slashCmdCon.Viewport.Width = m.width - 8
+
 	} else {
-		m.textarea.SetHeight(taHeight-1)
+		m.textarea.SetHeight(taHeight - 1)
 	}
 
 	m.viewport.Height = middleHeight - (taHeight + 1)
@@ -57,10 +56,10 @@ func (m Model) chatUi(middleHeight int) string {
 		inputBoxContent = m.slashCmdCon.View()
 	} else {
 		inputBoxContent = lipgloss.JoinVertical(lipgloss.Top, stylesandcomponents.FilesForContextLabel(m.chatCentre.filesForContext), lipgloss.NewStyle().Render(textArea, sendStopBtn))
-	}	
+	}
 
 	boxStyle := lipgloss.NewStyle().
-		Width(m.width-6)
+		Width(m.width - 6)
 
 	addFile := lipgloss.NewStyle().
 		MarginLeft(1).
@@ -70,24 +69,24 @@ func (m Model) chatUi(middleHeight int) string {
 		Render("@")
 
 	addFileButton := zone.Mark("add-file-btn", addFile)
-	modeLabelButton  := zone.Mark("mode-toggle-btn", stylesandcomponents.LabelValueBand(config.Config.Mode.Icon, config.Config.Mode.Name))
-	modelLabelBtn    := zone.Mark("model-selector-btn", stylesandcomponents.LabelValueBand("\u27E1", config.Config.Model))
+	modeLabelButton := zone.Mark("mode-toggle-btn", stylesandcomponents.LabelValueBand(config.Config.Mode.Icon, config.Config.Mode.Name))
+	modelLabelBtn := zone.Mark("model-selector-btn", stylesandcomponents.LabelValueBand("\u27E1", config.Config.Model))
 
 	inpLabels := lipgloss.NewStyle().PaddingLeft(1).Render(
 		lipgloss.JoinHorizontal(
 			lipgloss.Left,
 			addFileButton,
-			modelLabelBtn + " ",
-			modeLabelButton + " ",
+			modelLabelBtn+" ",
+			modeLabelButton+" ",
 		),
 	)
-	
+
 	promptBox := boxStyle.Render(
 		lipgloss.JoinVertical(lipgloss.Top, inputBoxContent, inpLabels),
 	)
 
 	activity := lipgloss.NewStyle().
-		Width(m.width-4).
+		Width(m.width - 4).
 		Height(middleHeight - (taHeight + 1)).
 		MarginLeft(2).
 		MarginRight(2).
@@ -102,7 +101,6 @@ func (m Model) chatUi(middleHeight int) string {
 		PaddingRight(2).
 		Render(main)
 }
-
 
 func (m Model) footerBar(footerHeight int) string {
 	joined := stylesandcomponents.SubtleStyle.Render("ctrl+e to write prompt   ? for help   esc/ctrl+c to quit")

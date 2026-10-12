@@ -7,13 +7,11 @@ import (
 	"github.com/thero-sgit/xyn/internal/ui/stylesandcomponents"
 )
 
-var (
-)
+var ()
 
 type Sessions struct {
 	Focused bool
 }
-
 
 func (h *Sessions) Init() tea.Cmd {
 	return nil
@@ -31,14 +29,12 @@ func (h *Sessions) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (h *Sessions) View() string {
-	header 	   := lipgloss.JoinHorizontal(
-		lipgloss.Left, 
-		stylesandcomponents.BwLabelStyle.Render(" /sessions "), 
-		" ", 
+	header := lipgloss.JoinHorizontal(
+		lipgloss.Left,
+		stylesandcomponents.BwLabelStyle.Render(" /sessions "),
+		" ",
 		config.Config.SanitizedWd,
 	)
-
-	
 
 	return lipgloss.JoinVertical(
 		lipgloss.Top,

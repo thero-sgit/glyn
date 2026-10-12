@@ -13,22 +13,19 @@ import (
 	"github.com/thero-sgit/xyn/internal/config"
 )
 
-const xynLargeText = 
-`██╗ ██╗██╗ ██╗██████╗
+const xynLargeText = `██╗ ██╗██╗ ██╗██████╗
  ████╔╝██████║██╔═██║
 ██╔═██╗╚═══██║██║ ██║
 ╚═╝ ╚═╝    ╚═╝╚═╝ ╚═╝`
 
-const codeLargeText = 
-`██████╗██████╗    ██╗██████╗█████╗
+const codeLargeText = `██████╗██████╗    ██╗██████╗█████╗
 ██╔═██║██╔═██║██████║██╔═██║██╔═██╗
 ██████║██║ ██║██╔═██║█████╔╝██║ ╚═╝
     ██║██████║██████║██████╗███╗
     ╚═╝╚═════╝╚═════╝╚═════╝╚══╝`
 
-
 var (
-	SendPromptBtnStates = []string {
+	SendPromptBtnStates = []string{
 		HighlighedStyle.PaddingLeft(1).PaddingRight(1).Bold(true).Render("send " + "\u27A4"),
 		BwLabelStyle.PaddingLeft(1).PaddingRight(1).Bold(true).Render("stop " + "\u25A0"),
 	}
@@ -37,12 +34,12 @@ var (
 
 func Bunner() string {
 	inf := lipgloss.NewStyle().MarginLeft(2).Render(lipgloss.JoinVertical(
-			lipgloss.Top,
-			BoldStyle.Render("xyn ") + SubtleStyle.Bold(true).Render(config.Config.Version),
-			BoldStyle.Foreground(AccentColor).Render("\u27E1 ") + SubtleStyle.Render(config.Config.Model),
-			BoldStyle.Foreground(AccentColor).Render("@ ") + SubtleStyle.Underline(true).Render("console.groq.com"),
-			BoldStyle.Foreground(AccentColor).Render("~") + SubtleStyle.Render(config.Config.WorkingDir),
-		),
+		lipgloss.Top,
+		BoldStyle.Render("xyn ")+SubtleStyle.Bold(true).Render(config.Config.Version),
+		BoldStyle.Foreground(AccentColor).Render("\u27E1 ")+SubtleStyle.Render(config.Config.Model),
+		BoldStyle.Foreground(AccentColor).Render("@ ")+SubtleStyle.Underline(true).Render("console.groq.com"),
+		BoldStyle.Foreground(AccentColor).Render("~")+SubtleStyle.Render(config.Config.WorkingDir),
+	),
 	)
 
 	return lipgloss.JoinHorizontal(
@@ -54,14 +51,14 @@ func Bunner() string {
 
 func modelCard(modelInfo ai.GroqModelInfo) string {
 	header := lipgloss.NewStyle().Render(
-			BoldStyle.Render(SubtleStyle.Render("\u27E1")) +
-			" " + modelInfo.Name + 
-			" (" + modelInfo.Id + ") " + 
+		BoldStyle.Render(SubtleStyle.Render("\u27E1")) +
+			" " + modelInfo.Name +
+			" (" + modelInfo.Id + ") " +
 			SubtleStyle.Render(modelInfo.OwnedBy),
 	)
 
-	c := map[string]string {
-		"tools": 	 "\u2692",
+	c := map[string]string{
+		"tools":     "\u2692",
 		"reasoning": "\u223f",
 	}
 
@@ -71,7 +68,7 @@ func modelCard(modelInfo ai.GroqModelInfo) string {
 		if ok {
 			labels = append(
 				labels,
-				SubtleStyle.Render(val + " ") + s + "  ",
+				SubtleStyle.Render(val+" ")+s+"  ",
 			)
 		}
 	}
@@ -95,12 +92,12 @@ func modelCard(modelInfo ai.GroqModelInfo) string {
 	return card
 }
 
-func CreateTextArea(width, height int, value string,) textarea.Model {
+func CreateTextArea(width, height int, value string) textarea.Model {
 	ta := textarea.New()
 	ta.Placeholder = ` Try "how does <filename> work?"`
 	ta.ShowLineNumbers = false
 	ta.Prompt = ""
-	
+
 	ta.SetWidth(width - 20)
 	ta.SetValue(value)
 	ta.SetHeight(height)
@@ -117,7 +114,7 @@ func CreateTextArea(width, height int, value string,) textarea.Model {
 func dirAndSessionLabel(directoryPath, sessionName string) string {
 	directoryPath = lipgloss.NewStyle().
 		Render(lipgloss.NewStyle().Foreground(AccentColor).Render("~") + SubtleStyle.Faint(true).Render(directoryPath))
-	
+
 	sColor := func() string {
 		if sessionName == "" {
 			return "#b1b2b1"
@@ -147,7 +144,7 @@ func LabelValueBand(label, value string) string {
 		Bold(true).
 		PaddingLeft(1).
 		PaddingRight(1).
-		Render(label )
+		Render(label)
 
 	value = HighlighedStyle.
 		Bold(true).
@@ -164,18 +161,18 @@ func LabelValueBand(label, value string) string {
 }
 
 func tokenUsageProgessBar(usage float32) string {
-	widthAdj  := 25
-	usageBars := int(usage * (float32(widthAdj)/100))
+	widthAdj := 25
+	usageBars := int(usage * (float32(widthAdj) / 100))
 
-	var filled string 
+	var filled string
 
 	for i := 0; i < usageBars; i++ {
 		filled += "■ "
 	}
 
-	var unFilled string 
+	var unFilled string
 
-	for i := 0; i < widthAdj - usageBars; i++ {
+	for i := 0; i < widthAdj-usageBars; i++ {
 		unFilled += "□ "
 	}
 
@@ -194,7 +191,7 @@ func RetryButton() string {
 		Italic(true).
 		Underline(true).
 		Foreground(lipgloss.Color("#d94444")).
-		Render("Retry "+ "\u21BB")
+		Render("Retry " + "\u21BB")
 
 	return zone.Mark("retry-button", b)
 }
@@ -208,11 +205,11 @@ func FilesForContextLabel(files []string) string {
 				MarginRight(1).
 				Render(
 					lipgloss.NewStyle().
-					Foreground(AccentColor).
-					Bold(true).
-					Render(" @") + 
-					lipgloss.NewStyle().Italic(true).Render(file) + 
-					" ",
+						Foreground(AccentColor).
+						Bold(true).
+						Render(" @")+
+						lipgloss.NewStyle().Italic(true).Render(file)+
+						" ",
 				),
 		)
 	}
@@ -220,13 +217,12 @@ func FilesForContextLabel(files []string) string {
 	return lipgloss.JoinHorizontal(lipgloss.Left, f...)
 }
 
-
 // -- File Input Component
 type FileInputBox struct {
-	Ti 			     textinput.Model
-	Vp               viewport.Model
-	Matches          []common.FileEntry
-	Prompt           string
+	Ti      textinput.Model
+	Vp      viewport.Model
+	Matches []common.FileEntry
+	Prompt  string
 }
 
 func NewFileInputBox(width, height int) FileInputBox {
@@ -234,7 +230,7 @@ func NewFileInputBox(width, height int) FileInputBox {
 	ti.Focus()
 	ti.Placeholder = "<filename> to add / rm + space to remove file"
 
-	fib := FileInputBox {
+	fib := FileInputBox{
 		Ti: ti,
 		Vp: viewport.New(width, height),
 	}
@@ -247,12 +243,12 @@ func NewFileInputBox(width, height int) FileInputBox {
 func (f *FileInputBox) SetPrompt(ti textinput.Model, p string) textinput.Model {
 	label := " Add file: "
 
-	if p == "rm "{
+	if p == "rm " {
 		label = " Remove file: "
 		ti.Placeholder = "<filename> to remove"
 	}
 
-	ti.Prompt = BwLabelStyle.Bold(true).Render(label) + lipgloss.NewStyle().Foreground(AccentColor).Bold(true).Render(" " + p)
+	ti.Prompt = BwLabelStyle.Bold(true).Render(label) + lipgloss.NewStyle().Foreground(AccentColor).Bold(true).Render(" "+p)
 	f.Prompt = p
 
 	return ti
@@ -260,9 +256,9 @@ func (f *FileInputBox) SetPrompt(ti textinput.Model, p string) textinput.Model {
 
 func (f *FileInputBox) View() string {
 	return lipgloss.NewStyle().MarginLeft(2).MarginBottom(1).Render(lipgloss.JoinVertical(
-			lipgloss.Top,
-			f.Ti.View(),
-			f.Vp.View(),
-		),
+		lipgloss.Top,
+		f.Ti.View(),
+		f.Vp.View(),
+	),
 	)
 }
