@@ -167,6 +167,15 @@ func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
 		m.textarea.Blur()
 
+		if m.helpScreen.Focused {
+			updatedModel, cmd := m.helpScreen.Update(msg)
+			m.helpScreen = *updatedModel.(*submodels.HelpModel)
+			
+			m.viewport.SetContent(m.helpScreen.View())
+
+			return m, cmd
+		}
+
 		switch {
 		case zone.Get("text-area").InBounds(msg):
 			m.textarea.Focus()

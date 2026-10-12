@@ -54,17 +54,28 @@ func NewHelpModel() HelpModel {
 }
 
 func (h *HelpModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	key, ok := msg.(tea.KeyMsg)
-	if !ok {
+	switch msg := msg.(type) {
+	case tea.MouseMsg:
+		if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
+			switch {
+			case zone.Get("helpCmd-general-btn").InBounds(msg):
+				h.state = 0
+			
+			case zone.Get("helpCmd-commands-btn").InBounds(msg):
+				h.state = 1
+			}
+		}
+
 		return h, nil
-	}
 
-	switch key.String() {
-	case "left":
-		h.state = 0
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "left":
+			h.state = 0
 
-	case "right":
-		h.state = 1
+		case "right":
+			h.state = 1
+		}
 	}
 
 	return h, nil
