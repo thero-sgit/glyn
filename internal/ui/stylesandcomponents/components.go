@@ -35,7 +35,7 @@ var (
 	SendPromptState = SendPromptBtnStates[0]
 )
 
-func bunner() string {
+func Bunner() string {
 	inf := lipgloss.NewStyle().MarginLeft(2).Render(lipgloss.JoinVertical(
 			lipgloss.Top,
 			BoldStyle.Render("xyn ") + SubtleStyle.Bold(true).Render(config.Config.Version),
@@ -49,46 +49,6 @@ func bunner() string {
 		lipgloss.Left,
 		lipgloss.JoinHorizontal(lipgloss.Left, lipgloss.NewStyle().Foreground(AccentColor).Render(xynLargeText), SubtleStyle.Render(codeLargeText)),
 		inf,
-	)
-}
-
-
-
-func helpCmdComponent() string {
-	var generalTabBtn  string
-	var commandsTabBtn string
-	var content        string
-	if helpCmdTabState == 0 {
-		generalTabBtn  = HighlighedStyle.PaddingLeft(1).PaddingRight(1).Render("General")
-		commandsTabBtn = SubtleStyle.Render(" Commands ")
-		content 	   = helpCmdGeneralTabContent
-	} else {
-		generalTabBtn  = SubtleStyle.Render(" General ")
-		commandsTabBtn = HighlighedStyle.PaddingLeft(1).PaddingRight(1).Render("Commands")
-		content        = helpCmdCommandsTabContent
-	}
-
-	generalTabBtn  = zone.Mark("helpCmd-general-btn", generalTabBtn)
-	commandsTabBtn = zone.Mark("helpCmd-commands-btn", commandsTabBtn)
-
-	tabs := lipgloss.JoinHorizontal(lipgloss.Left, generalTabBtn, " ", commandsTabBtn)
-
-	headerBar := lipgloss.NewStyle().MarginBottom(1).Render(lipgloss.JoinHorizontal(
-			lipgloss.Left, 
-			BwLabelStyle.Render(" /help "),
-			" ",
-			tabs,
-			" ",
-			"Useful Shortcuts & '/' Commands",
-			" ",
-			SubtleStyle.MarginLeft(5).Render("press 'esc' to close   left/right arrows to switch tabs"),
-		),
-	)
-
-	return lipgloss.JoinVertical(
-		lipgloss.Top,
-		headerBar,
-		content,
 	)
 }
 
@@ -212,6 +172,27 @@ func dirAndSessionLabel(directoryPath, sessionName string) string {
 		Render(joined)
 }
 
+func LabelValueBand(label, value string) string {
+	label = HighlighedStyle.
+		Bold(true).
+		PaddingLeft(1).
+		PaddingRight(1).
+		Render(label )
+
+	value = HighlighedStyle.
+		Bold(true).
+		PaddingRight(1).
+		Render(value)
+
+	joined := lipgloss.JoinHorizontal(lipgloss.Left, label, value)
+
+	output := BwLabelStyle.
+		AlignHorizontal(lipgloss.Left).
+		Render(joined)
+
+	return output
+}
+
 func tokenUsageProgessBar(usage float32) string {
 	widthAdj  := 25
 	usageBars := int(usage * (float32(widthAdj)/100))
@@ -238,7 +219,7 @@ func tokenUsageProgessBar(usage float32) string {
 		Render(filled + unFilled + fmt.Sprintf(" [%f%s] ", usage, "%"))
 }
 
-func retryButton() string {
+func RetryButton() string {
 	b := lipgloss.NewStyle().
 		Italic(true).
 		Underline(true).
@@ -272,10 +253,10 @@ func FilesForContextLabel(files []string) string {
 
 // -- File Input Component
 type FileInputBox struct {
-	ti 			     textinput.Model
-	vp               viewport.Model
-	matches          []common.FileEntry
-	prompt           string
+	Ti 			     textinput.Model
+	Vp               viewport.Model
+	Matches          []common.FileEntry
+	Prompt           string
 }
 
 func NewFileInputBox(width, height int) FileInputBox {
@@ -284,11 +265,11 @@ func NewFileInputBox(width, height int) FileInputBox {
 	ti.Placeholder = "<filename> to add / rm + space to remove file"
 
 	fib := FileInputBox {
-		ti: ti,
-		vp: viewport.New(width, height),
+		Ti: ti,
+		Vp: viewport.New(width, height),
 	}
 
-	fib.ti = fib.SetPrompt(fib.ti, "@")
+	fib.Ti = fib.SetPrompt(fib.Ti, "@")
 
 	return fib
 }
@@ -302,7 +283,7 @@ func (f *FileInputBox) SetPrompt(ti textinput.Model, p string) textinput.Model {
 	}
 
 	ti.Prompt = BwLabelStyle.Bold(true).Render(label) + lipgloss.NewStyle().Foreground(AccentColor).Bold(true).Render(" " + p)
-	f.prompt = p
+	f.Prompt = p
 
 	return ti
 }
@@ -310,8 +291,8 @@ func (f *FileInputBox) SetPrompt(ti textinput.Model, p string) textinput.Model {
 func (f *FileInputBox) View() string {
 	return lipgloss.NewStyle().MarginLeft(2).MarginBottom(1).Render(lipgloss.JoinVertical(
 			lipgloss.Top,
-			f.ti.View(),
-			f.vp.View(),
+			f.Ti.View(),
+			f.Vp.View(),
 		),
 	)
 }

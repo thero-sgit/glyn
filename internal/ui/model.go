@@ -16,19 +16,19 @@ import (
 	"github.com/thero-sgit/xyn/internal/ui/submodels"
 )
 
-type tickMsg50 time.Time
+type TickMsg50 time.Time
 
 func doTick50() tea.Cmd {
 	return tea.Tick(50*time.Millisecond, func(t time.Time) tea.Msg {
-		return tickMsg50(t)
+		return TickMsg50(t)
 	})
 }
 
-type tickMsg20 time.Time
+type TickMsg20 time.Time
 
 func doTick20() tea.Cmd {
 	return tea.Tick(20*time.Millisecond, func(t time.Time) tea.Msg {
-		return tickMsg20(t)
+		return TickMsg20(t)
 	})
 }
 
@@ -50,16 +50,16 @@ type Model struct {
 	//
 	chatCentre  chatCentre
 
-	//
-
 	// Sub Models
+	helpScreen  submodels.HelpModel
 	slashCmdCon submodels.Selector
+
 }
 
 func InitialModel() *Model {
-	vp := viewport.New(0, 0)
+	Vp := viewport.New(0, 0)
 
-	vp.KeyMap = viewport.KeyMap{
+	Vp.KeyMap = viewport.KeyMap{
 		Up:           key.NewBinding(key.WithKeys("up")),
 		Down:         key.NewBinding(key.WithKeys("down")),
 		PageUp:       key.NewBinding(key.WithKeys("pgup")),
@@ -70,8 +70,9 @@ func InitialModel() *Model {
 
 	model := Model{
 		chatCentre:  newChatCentre(),
+		helpScreen:  submodels.NewHelpModel(),
 		slashCmdCon: submodels.NewSelector("Command", "/", "/", "<command>", common.SlashCommands, common.ListCmdMatches),
-		viewport:    vp,
+		viewport:    Vp,
 	}
 
 	model.viewport.SetContent(strings.Join(model.chatCentre.prettyHistory(), "\n"))
@@ -93,9 +94,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleMouseAction(msg)
 	case errMsg:
 		return m.handleErrMsg()
-	case tickMsg50:
+	case TickMsg50:
 		return m.handleTick50()
-	case tickMsg20:
+	case TickMsg20:
 		return m.handleTick20()
 	case response:
 		return m.handleResponse(msg)
@@ -110,10 +111,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *Model) View() string {
 	if m.width == 0 || m.height == 0 {
-		return "Initializing screen..."
+		return "IniTializing screen..."
 	}
 
-	// Vertical height allocations
+	// VerTical height allocaTions
 	headerHeight := 2
 	footerHeight := 1
 	middleHeight := m.height - headerHeight - footerHeight
@@ -311,7 +312,7 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "/":
 		return m.handleSlash()
 	case "enter":
-		return m.handleEnterKey()
+		return m.handleEnterKey(msg)
 	case "?":
 		return m.handleHelpKey()
 	case "tab":
@@ -324,24 +325,25 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) handleUpDownArrows(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	var vpCmd, taCmd, fvpCmd, slConCmd tea.Cmd
+	var VpCmd, taCmd, fVpCmd, slConCmd tea.Cmd
 	if !m.textarea.Focused() {
-		m.viewport, vpCmd = m.viewport.Update(msg)
+		m.viewport, VpCmd = m.viewport.Update(msg)
 	} else {
 		m.textarea, taCmd = m.textarea.Update(msg)
 	}
 
 	if m.chatCentre.fileInpBoxOpen {
-		m.chatCentre.fileInpBox.vp, fvpCmd = m.chatCentre.fileInpBox.vp.Update(msg)
+		m.chatCentre.fileInpBox.Vp, fVpCmd = m.chatCentre.fileInpBox.Vp.Update(msg)
 	}
 
 	if m.slashCmdCon.Focused {
 		updatedModel, cmd := m.slashCmdCon.Update(msg)
-		m.slashCmdCon = updatedModel.(submodels.Selector)
-		slConCmd = cmd
+		m.slashCmdCon = *updatedModel.(*submodels.Selector)
+		
+		return m, cmd
 	}
 
-	return m, tea.Batch(vpCmd, taCmd, fvpCmd, slConCmd)
+	return m, tea.Batch(VpCmd, taCmd, fVpCmd, slConCmd)
 }
 
 func (m *Model) handleAtKey() (tea.Model, tea.Cmd) {
@@ -353,6 +355,9 @@ func (m *Model) handleAtKey() (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) handleHelpKey() (tea.Model, tea.Cmd) {
+	m.helpScreen.Focused = true
+	m.viewport.SetContent(m.helpScreen.View())
+
 	return m, nil
 }
 
@@ -375,21 +380,21 @@ func (m *Model) handleCtrlE() (tea.Model, tea.Cmd) {
 
 func (m *Model) handleTabKey() (tea.Model, tea.Cmd) {
 	c := m.chatCentre
-	if c.fileInpBoxOpen && len(c.fileInpBox.matches) > 0 {
-		c.fileInpBox.ti.SetValue(c.fileInpBox.matches[0].Path)
-		c.fileInpBox.ti.CursorEnd()
-		c.fileInpBox.vp.GotoTop()
+	if c.fileInpBoxOpen && len(c.fileInpBox.Matches) > 0 {
+		c.fileInpBox.Ti.SetValue(c.fileInpBox.Matches[0].Path)
+		c.fileInpBox.Ti.CursorEnd()
+		c.fileInpBox.Vp.GotoTop()
 	}
 
 	m.chatCentre = c
 	return m, nil
 }
 
-func (m *Model) handleEnterKey() (tea.Model, tea.Cmd) {
+func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.chatCentre.fileInpBoxOpen {
-		if len(m.chatCentre.fileInpBox.matches) > 0 {
-			file := m.chatCentre.fileInpBox.matches[0]
-			if m.chatCentre.fileInpBox.prompt == "rm " {
+		if len(m.chatCentre.fileInpBox.Matches) > 0 {
+			file := m.chatCentre.fileInpBox.Matches[0]
+			if m.chatCentre.fileInpBox.Prompt == "rm " {
 				m.chatCentre.removeFileForContext(file.Path)
 				m.chatCentre.fileInpBoxOpen = false
 
@@ -404,11 +409,33 @@ func (m *Model) handleEnterKey() (tea.Model, tea.Cmd) {
 
 	}
 
+	if m.slashCmdCon.Focused {
+		slashCon := m.slashCmdCon
+		slashCon.Focused = false
+
+		if slashCon.Options[slashCon.Cursor].Name() == "/help" {
+			m.handleHelpKey()
+		}
+
+		updatedModel, cmd := slashCon.Update(msg)
+		m.slashCmdCon = *updatedModel.(*submodels.Selector)
+		return m, cmd
+	}
+
 
 	return m, nil
 }
 
 func (m *Model) handleLeftRightArrows(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.helpScreen.Focused {
+		updatedModel, cmd := m.helpScreen.Update(msg)
+		m.helpScreen = *updatedModel.(*submodels.HelpModel)
+		
+		m.viewport.SetContent(m.helpScreen.View())
+
+		return m, cmd
+	}
+
 	return m, nil
 }
 
@@ -447,28 +474,28 @@ func (m *Model) handleEscKey() (tea.Model, tea.Cmd) {
 
 
 func (m *Model) handleGenericKey(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var taCmd, ciCmd, vpCmd, fvpCmd, ftiCmd, slConCmd tea.Cmd
+	var taCmd, ciCmd, VpCmd, fVpCmd, fTiCmd, slConCmd tea.Cmd
 	if m.slashCmdCon.Focused {
 		updatedModel, cmd := m.slashCmdCon.Update(msg)
-		m.slashCmdCon = updatedModel.(submodels.Selector)
+		m.slashCmdCon = *updatedModel.(*submodels.Selector)
 		
 		return m, cmd
 	}
 
 	if m.chatCentre.fileInpBoxOpen {
-		ti := m.chatCentre.fileInpBox.ti
-		vp := m.chatCentre.fileInpBox.vp
+		Ti := m.chatCentre.fileInpBox.Ti
+		Vp := m.chatCentre.fileInpBox.Vp
 
-		if ti.Value() == "rm " {
-			ti = m.chatCentre.fileInpBox.setPrompt(ti, "rm ")
-			ti.Reset()
+		if Ti.Value() == "rm " {
+			Ti = m.chatCentre.fileInpBox.SetPrompt(Ti, "rm ")
+			Ti.Reset()
 		}
 
-		matches, err := common.ListMatches(ti.Value())
+		matches, err := common.ListMatches(Ti.Value())
 
 		if err != nil {
-			vp.GotoTop()
-			vp.SetContent(err.Error())
+			Vp.GotoTop()
+			Vp.SetContent(err.Error())
 		} else {
 			listItemStyle := lipgloss.NewStyle().MarginLeft(2)
 			var mList []string
@@ -479,12 +506,12 @@ func (m *Model) handleGenericKey(msg tea.Msg) (tea.Model, tea.Cmd) {
 					mList = append(mList, listItemStyle.Render(e.Name))
 				}
 			}
-			vp.SetContent(strings.Join(mList, "\n"))
+			Vp.SetContent(strings.Join(mList, "\n"))
 		}
 
-		m.chatCentre.fileInpBox.ti = ti
-		m.chatCentre.fileInpBox.vp = vp
-		m.chatCentre.fileInpBox.matches = matches
+		m.chatCentre.fileInpBox.Ti = Ti
+		m.chatCentre.fileInpBox.Vp = Vp
+		m.chatCentre.fileInpBox.Matches = matches
 	}
 
 	if m.chatCentre.sendingPrompt {
@@ -494,12 +521,12 @@ func (m *Model) handleGenericKey(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	m.textarea, taCmd = m.textarea.Update(msg)
-	m.viewport, vpCmd = m.viewport.Update(msg)
+	m.viewport, VpCmd = m.viewport.Update(msg)
 
 	if m.chatCentre.fileInpBoxOpen {
-		m.chatCentre.fileInpBox.vp, fvpCmd = m.chatCentre.fileInpBox.vp.Update(msg)
-		m.chatCentre.fileInpBox.ti, ftiCmd = m.chatCentre.fileInpBox.ti.Update(msg)
+		m.chatCentre.fileInpBox.Vp, fVpCmd = m.chatCentre.fileInpBox.Vp.Update(msg)
+		m.chatCentre.fileInpBox.Ti, fTiCmd = m.chatCentre.fileInpBox.Ti.Update(msg)
 	}
 
-	return m, tea.Batch(taCmd, ciCmd, vpCmd, fvpCmd, ftiCmd, slConCmd)
+	return m, tea.Batch(taCmd, ciCmd, VpCmd, fVpCmd, fTiCmd, slConCmd)
 }

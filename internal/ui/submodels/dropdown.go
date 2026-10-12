@@ -6,7 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/thero-sgit/xyn/internal/common"
+	"github.com/thero-sgit/xyn/internal/ui/stylesandcomponents"
 )
 
 type Dropdown struct {
@@ -53,13 +53,13 @@ func (d Dropdown) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (d Dropdown) View() string {
 	arrow := ">"
 
-	header := common.HighlighedStyle.Bold(true).Render(fmt.Sprintf(" Header %s ", arrow))
+	header := stylesandcomponents.HighlighedStyle.Bold(true).Render(fmt.Sprintf(" Header %s ", arrow))
 
 	var rows []string
 	for i, option := range d.options {
 		switch {
 		case i == d.cursor:
-			rows = append(rows, common.HighlighedStyle.Render(fmt.Sprintf(" %s ", option)))
+			rows = append(rows, stylesandcomponents.HighlighedStyle.Render(fmt.Sprintf(" %s ", option)))
 		default:
 			rows = append(rows, " "+option)
 		}

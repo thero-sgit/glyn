@@ -19,15 +19,14 @@ type Selector struct {
 	//
 	Options     []common.Match
 	matchFunc   func(string) []common.Match
-	Selected    int
-	cursor      int
+	Cursor      int
 
 	//
 	Focused     bool
 }
 
 
-func (s Selector) Init() tea.Cmd {
+func (s *Selector) Init() tea.Cmd {
 	return nil
 }
 
@@ -45,7 +44,7 @@ func NewSelector(prompt, tiPrefix, subprompt, placeholder string, options []comm
 	}
 }
 
-func (s Selector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (s *Selector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	key, ok := msg.(tea.KeyMsg)
 	if !ok {
 		return s, nil
@@ -55,16 +54,18 @@ func (s Selector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch key.String() {
 	case "enter":
-		s.Selected = s.cursor
+		s.Cursor = 0
+		s.Options = s.matchFunc(s.tiPrefix)
+		s.ti.Reset()
 
 	case "up":
-		if s.cursor > 0 {
-			s.cursor--
+		if s.Cursor > 0 {
+			s.Cursor--
 		}
 
 	case "down":
-		if s.cursor < len(s.Options)-1 {
-			s.cursor++
+		if s.Cursor < len(s.Options)-1 {
+			s.Cursor++
 		}
 
 	default:
@@ -72,17 +73,17 @@ func (s Selector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		s.ti.CursorEnd()
 		s.Options = s.matchFunc(s.tiPrefix + s.ti.Value())
-		s.cursor = 0
+		s.Cursor = 0
 	}
 
 	return s, cmd
 }
 
-func (s Selector) View() string {
+func (s *Selector) View() string {
 	var rows []string
 	for i, option := range s.Options {
 		switch {
-		case i == s.cursor:
+		case i == s.Cursor:
 			rows = append(rows, stylesandcomponents.BoldStyle.Foreground(stylesandcomponents.AccentColor).Render("> ") + option.Name()) 
 		default:
 			rows = append(rows, option.Name())

@@ -11,19 +11,17 @@ type Match interface {
 	Name() string
 }
 
-
 type SlashCommand struct {
 	name   string
 	pretty string
-	Comp   func() string
 }
 
 func (s SlashCommand) Name() string {
 	return s.name
 }
 
-func NewSlashCommand(name, pretty string, comp func() string) SlashCommand {
-	return SlashCommand{name: name, pretty: pretty, Comp: comp}
+func NewSlashCommand(name, pretty string) SlashCommand {
+	return SlashCommand{name: name, pretty: pretty}
 }
 
 func ListCmdMatches(token string) []Match {

@@ -8,7 +8,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
-	"github.com/thero-sgit/xyn/internal/common"
+	"github.com/thero-sgit/xyn/internal/ui/stylesandcomponents"
 )
 
 // -- CHAT CENTRE CONTROL
@@ -21,7 +21,7 @@ type chatCentre struct {
 	currentUserPrompt userPrompt
 	currentAgentRes   agentResponse
 	sendingPrompt     bool
-	fileInpBox        fileInputBox
+	fileInpBox        stylesandcomponents.FileInputBox
 	fileInpBoxOpen    bool
 	filesForContext   []string
 }
@@ -34,7 +34,7 @@ func newChatCentre() chatCentre {
 }
 
 func (c *chatCentre) prettyHistory() []string {
-	h := []string{bunner()}
+	h := []string{stylesandcomponents.Bunner()}
 	for _, item := range c.history {
 		h = append(h, item.getPretty())
 	}
@@ -98,7 +98,7 @@ func newUserPrompt(prompt string, width int) userPrompt {
 		Render(
 			lipgloss.JoinHorizontal(
 				lipgloss.Left,
-				common.HighlighedStyle.Render(" you $ "),
+				stylesandcomponents.HighlighedStyle.Render(" you $ "),
 				lipgloss.NewStyle().PaddingLeft(1).Render(prompt),
 			),
 		)
@@ -128,12 +128,12 @@ func (up *userPrompt) animate() {
 		Width(up.width).
 		PaddingRight(1).
 		Render(
-			common.HighlighedStyle.Render(" you $ ") + lipgloss.NewStyle().PaddingLeft(1).Render(newPretty.String()),
+			stylesandcomponents.HighlighedStyle.Render(" you $ ") + lipgloss.NewStyle().PaddingLeft(1).Render(newPretty.String()),
 		)
 }
 
 func (up *userPrompt) sent() {
-	p := common.HighlighedStyle.Render(" you $ ") + lipgloss.NewStyle().PaddingLeft(1).Render(up.message)
+	p := stylesandcomponents.HighlighedStyle.Render(" you $ ") + lipgloss.NewStyle().PaddingLeft(1).Render(up.message)
 
 	up.pretty = lipgloss.NewStyle().
 		MarginBottom(1).
@@ -149,14 +149,14 @@ func (up *userPrompt) sent() {
 }
 
 func (up *userPrompt) err() {
-	p := common.HighlighedStyle.Render(" you $ ") + lipgloss.NewStyle().Strikethrough(true).PaddingLeft(1).Render(up.message)
+	p := stylesandcomponents.HighlighedStyle.Render(" you $ ") + lipgloss.NewStyle().Strikethrough(true).PaddingLeft(1).Render(up.message)
 
 	ed := lipgloss.JoinHorizontal(
 		lipgloss.Left,
 		lipgloss.NewStyle().MarginRight(4).Render(
-			common.SubtleStyle.Render("failed to send"),
+			stylesandcomponents.SubtleStyle.Render("failed to send"),
 		),
-		retryButton(),
+		stylesandcomponents.RetryButton(),
 	)
 
 	up.pretty = lipgloss.NewStyle().
@@ -202,7 +202,7 @@ func (a agentResponse) updated(width int) chatItem {
 func (a agentResponse) getPretty() string {
 	content := a.responseBuffer
 	if a.showReasoning {
-		reasoningContent := common.SubtleStyle.Width(a.width-2).Render(a.reasoningBuffer)
+		reasoningContent := stylesandcomponents.SubtleStyle.Width(a.width-2).Render(a.reasoningBuffer)
 		content = lipgloss.JoinVertical(
 			lipgloss.Top,
 			reasoningContent,
@@ -252,7 +252,7 @@ type agentBackgroundActivityLabel struct {
 }
 
 func newAgentBackgroundActivity(activity string) agentBackgroundActivityLabel {
-	prefixLabel := common.BwLabelStyle.Render(" xyn $ ")
+	prefixLabel := stylesandcomponents.BwLabelStyle.Render(" xyn $ ")
 
 	frames := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 	loader := frames[0]

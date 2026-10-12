@@ -2,8 +2,8 @@ package common
 
 var (
 	SlashCommands = []Match {
-		NewSlashCommand("/help", "/help  ", nil),
-		NewSlashCommand("/status", "/status", nil),
-		NewSlashCommand("/model", "/model", nil),
+		NewSlashCommand("/help", "/help  "),
+		NewSlashCommand("/status", "/status"),
+		NewSlashCommand("/model", "/model"),
 	}
 )

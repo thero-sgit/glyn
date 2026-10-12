@@ -3,7 +3,6 @@ package ui
 import (
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
-	"github.com/thero-sgit/xyn/internal/common"
 	"github.com/thero-sgit/xyn/internal/config"
 	"github.com/thero-sgit/xyn/internal/ui/stylesandcomponents"
 )
@@ -28,8 +27,8 @@ func (m Model) chatUi(middleHeight int) string {
 	}
 
 	if m.chatCentre.fileInpBoxOpen {
-		m.chatCentre.fileInpBox.vp.Height = taHeight - 2
-		m.chatCentre.fileInpBox.vp.Width  = m.width - 8
+		m.chatCentre.fileInpBox.Vp.Height = taHeight - 2
+		m.chatCentre.fileInpBox.Vp.Width  = m.width - 8
 
 	} else if m.slashCmdCon.Focused {
 		m.slashCmdCon.Viewport.Height = taHeight - 1
@@ -53,7 +52,7 @@ func (m Model) chatUi(middleHeight int) string {
 
 	var inputBoxContent string
 	if m.chatCentre.fileInpBoxOpen {
-		inputBoxContent = m.chatCentre.fileInpBox.view()
+		inputBoxContent = m.chatCentre.fileInpBox.View()
 	} else if m.slashCmdCon.Focused {
 		inputBoxContent = m.slashCmdCon.View()
 	} else {
@@ -71,8 +70,8 @@ func (m Model) chatUi(middleHeight int) string {
 		Render("@")
 
 	addFileButton := zone.Mark("add-file-btn", addFile)
-	modeLabelButton  := zone.Mark("mode-toggle-btn", labelValueBand(config.Config.Mode.Icon, config.Config.Mode.Name))
-	modelLabelBtn    := zone.Mark("model-selector-btn", labelValueBand("\u27E1", config.Config.Model))
+	modeLabelButton  := zone.Mark("mode-toggle-btn", stylesandcomponents.LabelValueBand(config.Config.Mode.Icon, config.Config.Mode.Name))
+	modelLabelBtn    := zone.Mark("model-selector-btn", stylesandcomponents.LabelValueBand("\u27E1", config.Config.Model))
 
 	inpLabels := lipgloss.NewStyle().PaddingLeft(1).Render(
 		lipgloss.JoinHorizontal(
@@ -105,7 +104,7 @@ func (m Model) chatUi(middleHeight int) string {
 }
 
 func (m Model) footerBar(footerHeight int) string {
-	joined := common.SubtleStyle.Render("ctrl+e to write prompt   ? for help   esc/ctrl+c to quit")
+	joined := stylesandcomponents.SubtleStyle.Render("ctrl+e to write prompt   ? for help   esc/ctrl+c to quit")
 
 	return lipgloss.NewStyle().
 		PaddingRight(2).

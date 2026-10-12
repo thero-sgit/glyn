@@ -1,29 +1,30 @@
 package submodels
 
 import (
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/thero-sgit/xyn/internal/common"
+	zone "github.com/lrstanley/bubblezone"
+	"github.com/thero-sgit/xyn/internal/ui/stylesandcomponents"
 )
 
 var (
-	helpCmdTabState   = 0
 	helpCmdGeneralTabContent = lipgloss.NewStyle().
 		Render(
 			lipgloss.JoinVertical(
 				lipgloss.Top,
-				common.BoldStyle.Render("esc") + "/" + common.BoldStyle.Render("ctrl+c") + " to quit xyn",
-				common.BoldStyle.Render("/") + " display '/' command input screen",
+				stylesandcomponents.BoldStyle.Render("esc") + "/" + stylesandcomponents.BoldStyle.Render("ctrl+c") + " to quit xyn",
+				stylesandcomponents.BoldStyle.Render("/") + " display '/' command input screen",
 
-				common.SubtleStyle.MarginTop(1).Render("AI interaction & config"),
-				common.BoldStyle.Render("alt+enter") + "/click " + sendPromptBtnStates[0] + " send prompt",
-				common.BoldStyle.Render("@") + "/click " + common.BoldStyle.Render("@") + " to add files",
-				"click " + labelValueBand("\u27E1", "`model-id`") + " to view models list",
-				"click " + labelValueBand("?/" + "\u2726", "`mode`") + " to switch mode",
+				stylesandcomponents.SubtleStyle.MarginTop(1).Render("AI interaction & config"),
+				stylesandcomponents.BoldStyle.Render("alt+enter") + "/click " + stylesandcomponents.SendPromptBtnStates[0] + " send prompt",
+				stylesandcomponents.BoldStyle.Render("@") + "/click " + stylesandcomponents.BoldStyle.Render("@") + " to add files",
+				"click " + stylesandcomponents.LabelValueBand("\u27E1", "`model-id`") + " to view models list",
+				"click " + stylesandcomponents.LabelValueBand("?/" + "\u2726", "`mode`") + " to switch mode",
 				
-				common.SubtleStyle.MarginTop(1).Render("In chat screen"),
-				common.BoldStyle.Render("pgup, pgdn, up, down arrows") + "/" + common.BoldStyle.Render("mouse") + " to scroll",
-				common.BoldStyle.Render("ctrl+e") + " to focus prompt text input",
-				common.BoldStyle.Render("ctrl+x") + "/click " + sendPromptBtnStates[1] + " to interupt session",
+				stylesandcomponents.SubtleStyle.MarginTop(1).Render("In chat screen"),
+				stylesandcomponents.BoldStyle.Render("pgup, pgdn, up, down arrows") + "/" + stylesandcomponents.BoldStyle.Render("mouse") + " to scroll",
+				stylesandcomponents.BoldStyle.Render("ctrl+e") + " to focus prompt text input",
+				stylesandcomponents.BoldStyle.Render("ctrl+x") + "/click " + stylesandcomponents.SendPromptBtnStates[1] + " to interupt session",
 			),
 		)
 
@@ -31,9 +32,79 @@ var (
 		Render(
 			lipgloss.JoinVertical(
 				lipgloss.Top,
-				common.BoldStyle.Render("/help") + " display helpful keyboard shortcuts",
-				common.BoldStyle.Render("/status") + " display usage and general status",
-				common.BoldStyle.Render("/model") + " display models list",
+				stylesandcomponents.BoldStyle.Render("/help") + " display helpful keyboard shortcuts",
+				stylesandcomponents.BoldStyle.Render("/status") + " display usage and general status",
+				stylesandcomponents.BoldStyle.Render("/model") + " display models list",
 			),
 		)
 )
+
+type HelpModel struct {
+	state   int
+	Focused bool
+}
+
+
+func (h *HelpModel) Init() tea.Cmd {
+	return nil
+}
+
+func NewHelpModel() HelpModel {
+	return HelpModel{ state: 0 }
+}
+
+func (h *HelpModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	key, ok := msg.(tea.KeyMsg)
+	if !ok {
+		return h, nil
+	}
+
+	switch key.String() {
+	case "left":
+		h.state = 0
+
+	case "right":
+		h.state = 1
+	}
+
+	return h, nil
+}
+
+func (h *HelpModel) View() string {
+	var generalTabBtn  string
+	var commandsTabBtn string
+	var content        string
+
+	if h.state == 0 {
+		generalTabBtn  = stylesandcomponents.HighlighedStyle.PaddingLeft(1).PaddingRight(1).Render("General")
+		commandsTabBtn = stylesandcomponents.SubtleStyle.Render(" Commands ")
+		content 	   = helpCmdGeneralTabContent
+	} else {
+		generalTabBtn  = stylesandcomponents.SubtleStyle.Render(" General ")
+		commandsTabBtn = stylesandcomponents.HighlighedStyle.PaddingLeft(1).PaddingRight(1).Render("Commands")
+		content        = helpCmdCommandsTabContent
+	}
+
+	generalTabBtn  = zone.Mark("helpCmd-general-btn", generalTabBtn)
+	commandsTabBtn = zone.Mark("helpCmd-commands-btn", commandsTabBtn)
+
+	tabs := lipgloss.JoinHorizontal(lipgloss.Left, generalTabBtn, " ", commandsTabBtn)
+
+	headerBar := lipgloss.NewStyle().MarginBottom(1).Render(lipgloss.JoinHorizontal(
+			lipgloss.Left, 
+			stylesandcomponents.BwLabelStyle.Render(" /help "),
+			" ",
+			tabs,
+			" ",
+			"Useful Shortcuts & '/' Commands",
+			" ",
+			stylesandcomponents.SubtleStyle.MarginLeft(5).Render("press 'esc' to close   left/right arrows to switch tabs"),
+		),
+	)
+
+	return lipgloss.JoinVertical(
+		lipgloss.Top,
+		headerBar,
+		content,
+	)
+}
