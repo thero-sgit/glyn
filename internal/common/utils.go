@@ -6,7 +6,8 @@ import (
 
 // Matching
 type Match interface {
-	Name() string
+	Name() 	 string
+	Pretty() string
 }
 
 type SlashCommand struct {
@@ -18,6 +19,10 @@ func (s SlashCommand) Name() string {
 	return s.name
 }
 
+func (s SlashCommand) Pretty() string {
+	return s.pretty
+}
+
 func NewSlashCommand(name, pretty string) SlashCommand {
 	return SlashCommand{name: name, pretty: pretty}
 }
@@ -25,7 +30,7 @@ func NewSlashCommand(name, pretty string) SlashCommand {
 func ListCmdMatches(token string) []Match {
 	var r []Match
 	for _, cmd := range SlashCommands {
-		if strings.HasPrefix(strings.ToLower(cmd.Name()), strings.ToLower(token)) { r = append(r, cmd)}
+		if strings.HasPrefix(strings.ToLower("/" + cmd.Name()), strings.ToLower(token)) { r = append(r, cmd)}
 	}
 
 	return r

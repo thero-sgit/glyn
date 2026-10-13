@@ -60,6 +60,11 @@ func (f *FileSelector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch key.String() {
+	case "enter", "tab":
+		f.ti.SetValue(f.Options[f.Cursor].Path)
+		f.ti.CursorEnd()
+		f.Options = listMatches(f.ti.Value())
+
 	case "up":
 		if f.Cursor > 0 {
 			f.Cursor--
@@ -80,14 +85,14 @@ func (f *FileSelector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	default:
 		f.ti, cmd = f.ti.Update(msg)
+		f.Viewport.GotoTop()
 		f.ti.CursorEnd()
 
 		if f.ti.Value() == "rm " {
 			f.SetPrompt("rm ")
-		} else {
-			f.Options = listMatches(f.ti.Value())
 		}
-
+		
+		f.Options = listMatches(f.ti.Value())
 		f.Cursor = 0
 	}
 

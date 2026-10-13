@@ -240,6 +240,7 @@ func (m *Model) handleAtKey() (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) handleHelpKey() (tea.Model, tea.Cmd) {
+	m.sessionsScreen.Focused = false
 	m.helpScreen.Focused = true
 	m.viewport.SetContent(m.helpScreen.View())
 
@@ -266,15 +267,20 @@ func (m *Model) handleCtrlE() (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) handleTabKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	c := m.chatCentre
-	if c.fileSelector.Focused && len(c.fileSelector.Options) > 0 {
+	if m.chatCentre.fileSelector.Focused && len(m.chatCentre.fileSelector.Options) > 0 {
 		updatedModel, cmd := m.chatCentre.fileSelector.Update(msg)
 		m.chatCentre.fileSelector = *updatedModel.(*submodels.FileSelector)
 
 		return m, cmd
 	}
 
-	m.chatCentre = c
+	if m.slashCmdCon.Focused {
+		updatedModel, cmd := m.slashCmdCon.Update(msg)
+		m.slashCmdCon = *updatedModel.(*submodels.Selector)
+
+		return m, cmd
+	}
+
 	return m, nil
 }
 
@@ -296,7 +302,12 @@ func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 				m.chatCentre.fileSelector.SetPrompt("@")
 				return m, nil
-			}			
+			} else {
+				updatedModel, cmd := m.chatCentre.fileSelector.Update(msg)
+				m.chatCentre.fileSelector = *updatedModel.(*submodels.FileSelector)
+
+				return m, cmd
+			}
 		}
 	}
 
@@ -304,11 +315,12 @@ func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		slashCon := m.slashCmdCon
 		slashCon.Focused = false
 
-		if slashCon.Options[slashCon.Cursor].Name() == "/help" {
+		if slashCon.Options[slashCon.Cursor].Pretty() == "/help" {
 			m.handleHelpKey()
 		}
 
-		if slashCon.Options[slashCon.Cursor].Name() == "/sessions" {
+		if slashCon.Options[slashCon.Cursor].Pretty() == "/sessions" {
+			m.helpScreen.Focused = false
 			m.sessionsScreen.Focused = true
 			m.viewport.SetContent(m.sessionsScreen.View())
 		}
@@ -399,38 +411,6 @@ func (m *Model) handleGenericKey(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, cmd
 	}
-
-	// if m.chatCentre.fileInpBoxOpen {
-	// 	Ti := m.chatCentre.fileInpBox.Ti
-	// 	Vp := m.chatCentre.fileInpBox.Vp
-
-	// 	if Ti.Value() == "rm " {
-	// 		Ti = m.chatCentre.fileInpBox.SetPrompt(Ti, "rm ")
-	// 		Ti.Reset()
-	// 	}
-
-	// 	matches, err := common.ListMatches(Ti.Value())
-
-	// 	if err != nil {
-	// 		Vp.GotoTop()
-	// 		Vp.SetContent(err.Error())
-	// 	} else {
-	// 		listItemStyle := lipgloss.NewStyle().MarginLeft(2)
-	// 		var mList []string
-	// 		for _, e := range matches {
-	// 			if e.IsDir {
-	// 				mList = append(mList, listItemStyle.Bold(true).Foreground(stylesandcomponents.AccentColor).Render(e.Name))
-	// 			} else {
-	// 				mList = append(mList, listItemStyle.Render(e.Name))
-	// 			}
-	// 		}
-	// 		Vp.SetContent(strings.Join(mList, "\n"))
-	// 	}
-
-	// 	m.chatCentre.fileInpBox.Ti = Ti
-	// 	m.chatCentre.fileInpBox.Vp = Vp
-	// 	m.chatCentre.fileInpBox.Matches = matches
-	// }
 
 	if m.chatCentre.sendingPrompt {
 		stylesandcomponents.SendPromptState = stylesandcomponents.SendPromptBtnStates[1]

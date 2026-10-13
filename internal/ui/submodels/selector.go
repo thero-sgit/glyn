@@ -57,6 +57,11 @@ func (s *Selector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		s.Options = s.matchFunc(s.tiPrefix)
 		s.ti.Reset()
 
+	case "tab":
+		s.ti.SetValue(s.Options[s.Cursor].Name())
+		s.ti.CursorEnd()
+		s.Options = s.matchFunc(s.tiPrefix + s.ti.Value())
+
 	case "up":
 		if s.Cursor > 0 {
 			s.Cursor--
@@ -83,9 +88,9 @@ func (s *Selector) View() string {
 	for i, option := range s.Options {
 		switch {
 		case i == s.Cursor:
-			rows = append(rows, stylesandcomponents.BoldStyle.Foreground(stylesandcomponents.AccentColor).Render("> ")+option.Name())
+			rows = append(rows, stylesandcomponents.BoldStyle.Foreground(stylesandcomponents.AccentColor).Render("> ")+option.Pretty())
 		default:
-			rows = append(rows, option.Name())
+			rows = append(rows, option.Pretty())
 		}
 	}
 
