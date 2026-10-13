@@ -136,19 +136,28 @@ func dirAndSessionLabel(directoryPath, sessionName string) string {
 		Render(joined)
 }
 
-func LabelValueBand(label, value string) string {
+func LabelValueBand(label, value, secondaryValue string) string {
 	label = HighlighedStyle.
 		Bold(true).
 		PaddingLeft(1).
-		PaddingRight(1).
 		Render(label)
 
 	value = HighlighedStyle.
 		Bold(true).
+		PaddingLeft(1).
 		PaddingRight(1).
 		Render(value)
 
-	joined := lipgloss.JoinHorizontal(lipgloss.Left, label, value)
+	if secondaryValue != "" {
+		secondaryValue = lipgloss.NewStyle().
+		Background(AccentColor).
+		Foreground(lipgloss.Color("#282828")).
+		PaddingRight(1).
+		Render(secondaryValue)
+	}
+	
+
+	joined := lipgloss.JoinHorizontal(lipgloss.Left, label, value, secondaryValue)
 
 	output := BwLabelStyle.
 		AlignHorizontal(lipgloss.Left).

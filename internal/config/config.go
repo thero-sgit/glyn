@@ -37,6 +37,7 @@ type configuration struct {
 	SanitizedWd      string
 	GroqApiKey       string
 	Model 			 string
+	Effort           string
 	Mode             mode
 	MdRenderer       glamour.TermRenderer
 }
@@ -118,6 +119,7 @@ func Init() {
 		WorkingDir: getWd(),
 		GroqApiKey: apiKey(),
 		Model:		"openai/gpt-oss-120b",
+		Effort:     "medium",
 	}
 
 	Config.SanitizedWd = workingDirSanitized()

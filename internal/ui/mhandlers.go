@@ -49,15 +49,6 @@ func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
 		m.textarea.Blur()
 
-		if m.helpScreen.Focused {
-			updatedModel, cmd := m.helpScreen.Update(msg)
-			m.helpScreen = *updatedModel.(*submodels.HelpModel)
-
-			m.viewport.SetContent(m.helpScreen.View())
-
-			return m, cmd
-		}
-
 		switch {
 		case zone.Get("text-area").InBounds(msg):
 			m.textarea.Focus()
@@ -70,7 +61,10 @@ func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 
 		case zone.Get("model-selector-btn").InBounds(msg):
 			m.slashCmdCon.Focused = false
-			m.chatCentre.fileSelector.Focused = false
+			m.helpScreen.Focused = false
+			m.sessionsScreen.Focused = false
+			m.llmsScreen.Focused = true
+			m.viewport.SetContent(m.llmsScreen.View())
 			return m, nil
 
 		case zone.Get("mode-toggle-btn").InBounds(msg):
@@ -96,6 +90,22 @@ func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			tempPrettyHistory[len(tempPrettyHistory)-1] = m.chatCentre.currentAgentRes.getPretty()
 			m.viewport.SetContent(strings.Join(tempPrettyHistory, "\n"))
 			return m, nil
+
+		case m.helpScreen.Focused:
+			updatedModel, cmd := m.helpScreen.Update(msg)
+			m.helpScreen = *updatedModel.(*submodels.HelpModel)
+
+			m.viewport.SetContent(m.helpScreen.View())
+
+			return m, cmd
+
+		case m.llmsScreen.Focused:
+			updatedModel, cmd := m.llmsScreen.Update(msg)
+			m.llmsScreen = *updatedModel.(*submodels.LLModels)
+
+			m.viewport.SetContent(m.llmsScreen.View())
+
+			return m, cmd
 		}
 	}
 
@@ -208,28 +218,41 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) handleUpDownArrows(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	var VpCmd, taCmd, fVpCmd, slConCmd tea.Cmd
-	if !m.textarea.Focused() {
-		m.viewport, VpCmd = m.viewport.Update(msg)
-	} else {
-		m.textarea, taCmd = m.textarea.Update(msg)
-	}
+	var cmd tea.Cmd
 
-	if m.chatCentre.fileSelector.Focused {
+	switch {
+	case m.chatCentre.fileSelector.Focused:
 		updatedModel, cmd := m.chatCentre.fileSelector.Update(msg)
 		m.chatCentre.fileSelector = *updatedModel.(*submodels.FileSelector)
-
 		return m, cmd
-	}
 
-	if m.slashCmdCon.Focused {
+	case m.slashCmdCon.Focused:
 		updatedModel, cmd := m.slashCmdCon.Update(msg)
 		m.slashCmdCon = *updatedModel.(*submodels.Selector)
+		return m, cmd		
 
+	case m.helpScreen.Focused:
+		updatedModel, cmd := m.helpScreen.Update(msg)
+		m.helpScreen = *updatedModel.(*submodels.HelpModel)
+		m.viewport.SetContent(m.helpScreen.View())
+		return m, cmd
+
+	case m.llmsScreen.Focused:
+		updatedModel, cmd := m.llmsScreen.Update(msg)
+		m.llmsScreen = *updatedModel.(*submodels.LLModels)
+		m.viewport.SetContent(m.llmsScreen.View())
+		return m, cmd
+	
+	case !m.textarea.Focused():
+		m.viewport, cmd = m.viewport.Update(msg)
+		return m, cmd
+
+	case m.textarea.Focused():
+		m.textarea, cmd = m.textarea.Update(msg)
 		return m, cmd
 	}
 
-	return m, tea.Batch(VpCmd, taCmd, fVpCmd, slConCmd)
+	return m, cmd
 }
 
 func (m *Model) handleAtKey() (tea.Model, tea.Cmd) {
@@ -240,8 +263,9 @@ func (m *Model) handleAtKey() (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) handleHelpKey() (tea.Model, tea.Cmd) {
-	m.sessionsScreen.Focused = false
 	m.helpScreen.Focused = true
+	m.sessionsScreen.Focused = false
+	m.llmsScreen.Focused = false
 	m.viewport.SetContent(m.helpScreen.View())
 
 	return m, nil
@@ -285,7 +309,8 @@ func (m *Model) handleTabKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if m.chatCentre.fileSelector.Focused {
+	switch {
+	case m.chatCentre.fileSelector.Focused:
 		if len(m.chatCentre.fileSelector.Options) > 0 {
 			file := m.chatCentre.fileSelector.Options[m.chatCentre.fileSelector.Cursor]
 			if m.chatCentre.fileSelector.Prompt == "rm " {
@@ -309,9 +334,8 @@ func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				return m, cmd
 			}
 		}
-	}
 
-	if m.slashCmdCon.Focused {
+	case m.slashCmdCon.Focused:
 		slashCon := m.slashCmdCon
 		slashCon.Focused = false
 
@@ -322,12 +346,27 @@ func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if slashCon.Options[slashCon.Cursor].Pretty() == "/sessions" {
 			m.helpScreen.Focused = false
 			m.sessionsScreen.Focused = true
+			m.llmsScreen.Focused = false
 			m.viewport.SetContent(m.sessionsScreen.View())
+		}
+
+		if slashCon.Options[slashCon.Cursor].Pretty() == "/model" {
+			m.helpScreen.Focused = false
+			m.sessionsScreen.Focused = false
+			m.llmsScreen.Focused = true
+			m.viewport.SetContent(m.llmsScreen.View())
 		}
 
 		updatedModel, cmd := slashCon.Update(msg)
 		m.slashCmdCon = *updatedModel.(*submodels.Selector)
 		return m, cmd
+	
+	case m.llmsScreen.Focused:
+		updatedModel, cmd := m.llmsScreen.Update(msg)
+		m.llmsScreen = *updatedModel.(*submodels.LLModels)
+		m.viewport.SetContent(m.llmsScreen.View())
+		return m, cmd
+
 	}
 
 	return m, nil
@@ -370,24 +409,27 @@ func (m *Model) handleAltEnter() (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) handleEscKey() (tea.Model, tea.Cmd) {
-	if m.chatCentre.fileSelector.Focused {
+	switch {
+	case m.chatCentre.fileSelector.Focused:
 		m.chatCentre.fileSelector.Focused = false
 		return m, nil
-	}
 
-	if m.helpScreen.Focused {
+	case m.helpScreen.Focused:
 		m.helpScreen.Focused = false
 		m.renderChat()
 		return m, nil
-	}
 
-	if m.sessionsScreen.Focused {
+	case m.sessionsScreen.Focused:
 		m.sessionsScreen.Focused = false
 		m.renderChat()
 		return m, nil
-	}
 
-	if m.slashCmdCon.Focused {
+	case m.llmsScreen.Focused:
+		m.llmsScreen.Focused = false
+		m.renderChat()
+		return m, nil
+
+	case m.slashCmdCon.Focused:
 		m.slashCmdCon.Focused = false
 		return m, nil
 	}

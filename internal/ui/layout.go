@@ -69,8 +69,8 @@ func (m Model) chatUi(middleHeight int) string {
 		Render("@")
 
 	addFileButton := zone.Mark("add-file-btn", addFile)
-	modeLabelButton := zone.Mark("mode-toggle-btn", stylesandcomponents.LabelValueBand(config.Config.Mode.Icon, config.Config.Mode.Name))
-	modelLabelBtn := zone.Mark("model-selector-btn", stylesandcomponents.LabelValueBand("\u27E1", config.Config.Model))
+	modeLabelButton := zone.Mark("mode-toggle-btn", stylesandcomponents.LabelValueBand(config.Config.Mode.Icon, config.Config.Mode.Name, ""))
+	modelLabelBtn := zone.Mark("model-selector-btn", stylesandcomponents.LabelValueBand("\u27E1", config.Config.Model, config.Config.Effort))
 
 	inpLabels := lipgloss.NewStyle().PaddingLeft(1).Render(
 		lipgloss.JoinHorizontal(

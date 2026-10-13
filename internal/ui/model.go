@@ -52,6 +52,7 @@ type Model struct {
 	slashCmdCon    submodels.Selector
 	helpScreen     submodels.HelpModel
 	sessionsScreen submodels.Sessions
+	llmsScreen     submodels.LLModels
 }
 
 func InitialModel() *Model {
@@ -71,6 +72,7 @@ func InitialModel() *Model {
 		slashCmdCon:    submodels.NewSelector("Command", "/", "/", "<command>", common.ListCmdMatches),
 		helpScreen:     submodels.NewHelpModel(),
 		sessionsScreen: submodels.NewSessions(),
+		llmsScreen:     submodels.NewModelsModel(),
 		viewport:       vp,
 	}
 

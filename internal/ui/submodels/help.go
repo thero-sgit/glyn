@@ -18,8 +18,8 @@ var (
 				stylesandcomponents.SubtleStyle.MarginTop(1).Render("AI interaction & config"),
 				stylesandcomponents.BoldStyle.Render("alt+enter")+"/click "+stylesandcomponents.SendPromptBtnStates[0]+" send prompt",
 				stylesandcomponents.BoldStyle.Render("@")+"/click "+stylesandcomponents.BoldStyle.Render("@")+" to add files",
-				"click "+stylesandcomponents.LabelValueBand("\u27E1", "`model-id`")+" to view models list",
-				"click "+stylesandcomponents.LabelValueBand("?/"+"\u2726", "`mode`")+" to switch mode",
+				"click "+stylesandcomponents.LabelValueBand("\u27E1", "`model-id`", "")+" to view models list",
+				"click "+stylesandcomponents.LabelValueBand("?/"+"\u2726", "`mode`", "")+" to switch mode",
 
 				stylesandcomponents.SubtleStyle.MarginTop(1).Render("In chat screen"),
 				stylesandcomponents.BoldStyle.Render("pgup, pgdn, up, down arrows")+"/"+stylesandcomponents.BoldStyle.Render("mouse")+" to scroll",

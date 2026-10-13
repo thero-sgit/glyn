@@ -13,9 +13,9 @@ import (
 )
 
 type FileEntry struct {
-	Name 	 string
-	Path     string
-	IsDir    bool
+	Name  string
+	Path  string
+	IsDir bool
 }
 
 type FileSelector struct {
@@ -24,8 +24,8 @@ type FileSelector struct {
 	Prompt   string
 
 	//
-	Options   []FileEntry
-	Cursor    int
+	Options []FileEntry
+	Cursor  int
 
 	//
 	Focused bool
@@ -40,9 +40,9 @@ func NewFileSelector() FileSelector {
 	ti.Focus()
 	ti.Placeholder = "<filename> to add / rm + space to remove file"
 
-	fib := FileSelector {
-		ti:        ti,
-		Options:   listMatches(""),
+	fib := FileSelector{
+		ti:      ti,
+		Options: listMatches(""),
 	}
 
 	fib.SetPrompt("@")
@@ -68,10 +68,10 @@ func (f *FileSelector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case "up":
 		if f.Cursor > 0 {
 			f.Cursor--
-			
+
 			if f.Cursor < 3 {
 				f.Viewport, cmd = f.Viewport.Update(msg)
-			}			
+			}
 		}
 
 	case "down":
@@ -80,7 +80,7 @@ func (f *FileSelector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			if f.Cursor > 4 {
 				f.Viewport, cmd = f.Viewport.Update(msg)
-			}			
+			}
 		}
 
 	default:
@@ -91,7 +91,7 @@ func (f *FileSelector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if f.ti.Value() == "rm " {
 			f.SetPrompt("rm ")
 		}
-		
+
 		f.Options = listMatches(f.ti.Value())
 		f.Cursor = 0
 	}
@@ -106,14 +106,14 @@ func (f *FileSelector) View() string {
 
 func (f *FileSelector) renderViewport() {
 	var rows []string
-		for i, option := range f.Options {
-			switch {
-			case i == f.Cursor:
-				rows = append(rows, stylesandcomponents.BoldStyle.Foreground(stylesandcomponents.AccentColor).Render("> ")+option.Name)
-			default:
-				rows = append(rows, option.Name)
-			}
+	for i, option := range f.Options {
+		switch {
+		case i == f.Cursor:
+			rows = append(rows, stylesandcomponents.BoldStyle.Foreground(stylesandcomponents.AccentColor).Render("> ")+option.Name)
+		default:
+			rows = append(rows, option.Name)
 		}
+	}
 
 	f.Viewport.SetContent(strings.Join(rows, "\n"))
 }
@@ -130,7 +130,6 @@ func (f *FileSelector) SetPrompt(p string) {
 	f.Prompt = p
 	f.ti.Reset()
 }
-
 
 func listMatches(token string) []FileEntry {
 	dir, prefix := filepath.Split(token)
@@ -156,7 +155,7 @@ func listMatches(token string) []FileEntry {
 			}
 
 			entries = append(entries, FileEntry{name, path_, e.IsDir()})
-		}		
+		}
 	}
 
 	return entries

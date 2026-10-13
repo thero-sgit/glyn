@@ -6,60 +6,78 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	zone "github.com/lrstanley/bubblezone"
 	"github.com/thero-sgit/xyn/internal/ui/stylesandcomponents"
 )
 
 type Dropdown struct {
-	Focused  bool
+	id       string
 	options  []string
-	selected int
 	cursor   int
+	Selected string
+	Focused  bool
+	open     bool
 }
 
-func (d Dropdown) Init() tea.Cmd {
+func (d *Dropdown) Init() tea.Cmd {
 	return nil
 }
 
-func NewDropdown(options []string) tea.Model {
+func NewDropdown(id, selected string, options []string) Dropdown {
 	return Dropdown{
+		id: id,
+		Selected: selected,
 		options: options,
 	}
 }
 
-func (d Dropdown) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	key, ok := msg.(tea.KeyMsg)
-	if !ok {
-		return d, nil
-	}
-
-	switch key.String() {
-	case "enter", " ":
-		d.selected = d.cursor
-
-	case "up":
-		if d.cursor > 0 {
-			d.cursor--
+func (d *Dropdown) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.MouseMsg:
+		if zone.Get(d.id+"-dropdown-menu").InBounds(msg) && d.Focused {
+			d.open = !d.open
+			return d, nil
 		}
 
-	case "down":
-		if d.cursor < len(d.options)-1 {
-			d.cursor++
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "enter", " ":
+			d.Selected = d.options[d.cursor]
+			d.open = false
+			return d, nil
+
+		case "up":
+			if d.cursor > 0 && d.Focused {
+				d.cursor--
+			}
+
+		case "down":
+			if d.cursor < len(d.options)-1 && d.Focused {
+				d.cursor++
+			}
 		}
 	}
 
 	return d, nil
 }
 
-func (d Dropdown) View() string {
-	arrow := ">"
+func (d *Dropdown) View() string {
+	arrow := "\u27A4"
+	if d.open {
+		arrow = "I"
+	}
 
-	header := stylesandcomponents.HighlighedStyle.Bold(true).Render(fmt.Sprintf(" Header %s ", arrow))
+	header := zone.Mark(d.id+"-dropdown-menu", stylesandcomponents.HighlighedStyle.Render(fmt.Sprintf(" %s %s ", d.Selected, stylesandcomponents.BoldStyle.Render(arrow+" "))))
+
+	if !d.open {
+		return header
+	}
 
 	var rows []string
 	for i, option := range d.options {
 		switch {
 		case i == d.cursor:
-			rows = append(rows, stylesandcomponents.HighlighedStyle.Render(fmt.Sprintf(" %s ", option)))
+			rows = append(rows, stylesandcomponents.BoldStyle.Foreground(stylesandcomponents.AccentColor).Render("> ")+option)
 		default:
 			rows = append(rows, " "+option)
 		}

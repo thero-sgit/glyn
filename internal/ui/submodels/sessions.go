@@ -32,6 +32,7 @@ func (h *Sessions) View() string {
 		stylesandcomponents.BwLabelStyle.Render(" /sessions "),
 		" ",
 		config.Config.SanitizedWd,
+		stylesandcomponents.SubtleStyle.MarginLeft(5).Render("press 'esc' to close"),
 	)
 
 	return lipgloss.JoinVertical(
