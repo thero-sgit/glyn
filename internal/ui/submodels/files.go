@@ -62,6 +62,8 @@ func (f *FileSelector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch key.String() {
 	case "enter", "tab":
 		f.ti.SetValue(f.Options[f.Cursor].Path)
+		f.Cursor = 0
+		f.Viewport.GotoTop()
 		f.ti.CursorEnd()
 		f.Options = listMatches(f.ti.Value())
 

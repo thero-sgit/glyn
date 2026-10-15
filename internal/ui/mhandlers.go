@@ -69,6 +69,12 @@ func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 
 		case zone.Get("mode-toggle-btn").InBounds(msg):
 			config.Config.Mode.Toggle()
+			switch config.Config.Mode.Name {
+			case "ask ":
+				config.Config.Mode.Icon = " ?"
+			case "agent":
+				config.Config.Mode.Icon = "\u2726"
+			}
 			return m, nil
 
 		case zone.Get("send-prompt-btn").InBounds(msg):
@@ -236,12 +242,6 @@ func (m *Model) handleUpDownArrows(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.helpScreen = *updatedModel.(*submodels.HelpModel)
 		m.viewport.SetContent(m.helpScreen.View())
 		return m, cmd
-
-	case m.llmsScreen.Focused:
-		updatedModel, cmd := m.llmsScreen.Update(msg)
-		m.llmsScreen = *updatedModel.(*submodels.LLModels)
-		m.viewport.SetContent(m.llmsScreen.View())
-		return m, cmd
 	
 	case !m.textarea.Focused():
 		m.viewport, cmd = m.viewport.Update(msg)
@@ -373,13 +373,19 @@ func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) handleLeftRightArrows(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if m.helpScreen.Focused {
+	switch {
+	case m.helpScreen.Focused:
 		updatedModel, cmd := m.helpScreen.Update(msg)
 		m.helpScreen = *updatedModel.(*submodels.HelpModel)
-
 		m.viewport.SetContent(m.helpScreen.View())
-
 		return m, cmd
+
+	case m.llmsScreen.Focused:
+		updatedModel, cmd := m.llmsScreen.Update(msg)
+		m.llmsScreen = *updatedModel.(*submodels.LLModels)
+		m.viewport.SetContent(m.llmsScreen.View())
+		return m, cmd
+
 	}
 
 	return m, nil

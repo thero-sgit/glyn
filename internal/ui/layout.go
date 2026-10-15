@@ -70,7 +70,7 @@ func (m Model) chatUi(middleHeight int) string {
 
 	addFileButton := zone.Mark("add-file-btn", addFile)
 	modeLabelButton := zone.Mark("mode-toggle-btn", stylesandcomponents.LabelValueBand(config.Config.Mode.Icon, config.Config.Mode.Name, ""))
-	modelLabelBtn := zone.Mark("model-selector-btn", stylesandcomponents.LabelValueBand("\u27E1", config.Config.Model, config.Config.Effort))
+	modelLabelBtn := zone.Mark("model-selector-btn", stylesandcomponents.LabelValueBand("\u27E1", config.Config.Model.Name, config.Config.Effort.Name))
 
 	inpLabels := lipgloss.NewStyle().PaddingLeft(1).Render(
 		lipgloss.JoinHorizontal(

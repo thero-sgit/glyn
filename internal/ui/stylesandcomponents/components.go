@@ -6,20 +6,13 @@ import (
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
-	"github.com/thero-sgit/xyn/internal/ai"
 	"github.com/thero-sgit/xyn/internal/config"
 )
 
-const xynLargeText = `██╗ ██╗██╗ ██╗██████╗
- ████╔╝██████║██╔═██║
-██╔═██╗╚═══██║██║ ██║
-╚═╝ ╚═╝    ╚═╝╚═╝ ╚═╝`
-
-const codeLargeText = `██████╗██████╗    ██╗██████╗█████╗
-██╔═██║██╔═██║██████║██╔═██║██╔═██╗
-██████║██║ ██║██╔═██║█████╔╝██║ ╚═╝
-    ██║██████║██████║██████╗███╗
-    ╚═╝╚═════╝╚═════╝╚═════╝╚══╝`
+const codeLargeText = ` ██████     ██ ██████
+██    ██  ██ ██████ ██  ██
+██    ██  ██ ██  ██ █████
+█████ ██████ ██████ ██████`
 
 var (
 	SendPromptBtnStates = []string{
@@ -30,63 +23,21 @@ var (
 )
 
 func Bunner() string {
-	inf := lipgloss.NewStyle().MarginLeft(2).Render(lipgloss.JoinVertical(
+	inf := lipgloss.NewStyle().Render(lipgloss.JoinVertical(
 		lipgloss.Top,
 		BoldStyle.Render("xyn ")+SubtleStyle.Bold(true).Render(config.Config.Version),
-		BoldStyle.Foreground(AccentColor).Render("\u27E1 ")+SubtleStyle.Render(config.Config.Model),
+		BoldStyle.Foreground(AccentColor).Render("\u27E1 ")+SubtleStyle.Render(config.Config.Model.Name),
 		BoldStyle.Foreground(AccentColor).Render("@ ")+SubtleStyle.Underline(true).Render("console.groq.com"),
 		BoldStyle.Foreground(AccentColor).Render("~")+SubtleStyle.Render(config.Config.WorkingDir),
 	),
 	)
 
-	return lipgloss.JoinHorizontal(
-		lipgloss.Left,
-		lipgloss.JoinHorizontal(lipgloss.Left, lipgloss.NewStyle().Foreground(AccentColor).Render(xynLargeText), SubtleStyle.Render(codeLargeText)),
-		inf,
-	)
-}
-
-func modelCard(modelInfo ai.GroqModelInfo) string {
-	header := lipgloss.NewStyle().Render(
-		BoldStyle.Render(SubtleStyle.Render("\u27E1")) +
-			" " + modelInfo.Name +
-			" (" + modelInfo.Id + ") " +
-			SubtleStyle.Render(modelInfo.OwnedBy),
-	)
-
-	c := map[string]string{
-		"tools":     "\u2692",
-		"reasoning": "\u223f",
-	}
-
-	var labels []string
-	for _, s := range modelInfo.SupportedFeatures {
-		val, ok := c[s]
-		if ok {
-			labels = append(
-				labels,
-				SubtleStyle.Render(val+" ")+s+"  ",
-			)
-		}
-	}
-
-	capabilities := lipgloss.NewStyle().Render(
-		lipgloss.JoinVertical(
-			lipgloss.Top,
-			SubtleStyle.Render("Capabilities"),
-			lipgloss.JoinHorizontal(lipgloss.Left, labels...),
+	return lipgloss.NewStyle().MarginBottom(1).Render(lipgloss.JoinHorizontal(
+			lipgloss.Left,
+			lipgloss.JoinHorizontal(lipgloss.Left, HighlighedStyle.Render(" \u29D7yn ") + SubtleStyle.Render(codeLargeText)),
+			inf,
 		),
 	)
-
-	card := lipgloss.NewStyle().MarginBottom(1).Render(
-		lipgloss.JoinVertical(
-			lipgloss.Top,
-			header,
-			capabilities,
-		),
-	)
-
-	return card
 }
 
 func CreateTextArea(width, height int, value string) textarea.Model {

@@ -118,9 +118,9 @@ func (g groq) CreateChatCompletionStream(ctx context.Context, reqBody GroqStream
 
 func (g groq) handlePrompt(ctx context.Context, messages []GroqChatCompletionMessage) (GroqChatCompletionStream, error) {
 	req := GroqStreamRequest{
-		Model: config.Config.Model,
+		Model: config.Config.Model.Name,
 		Messages:  messages,
-		ReasoningEffort: config.Config.Effort,
+		ReasoningEffort: config.Config.Effort.Name,
 		ReasoningFormat: "parsed",
 		Stream: true,
 	}

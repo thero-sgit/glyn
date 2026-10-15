@@ -9,24 +9,28 @@ import (
 	"github.com/charmbracelet/glamour"
 )
 
-var modes = []string{"ask ", "agent"}
+var modes = []string{"agent", "ask "}
 
-type mode struct {
-	Icon string
-	Name string
-	i    int
+type toggle struct {
+	Icon    string
+	Name    string
+	i       int
+	options []string
 }
 
-func (m *mode) Toggle() {
-	m.i = (m.i + 1) % len(modes)
-	m.Name = modes[m.i]
+func NewToggle(icon string, options []string) toggle {
+	t := toggle{Icon: icon, options: options}
+	t.Name = t.options[t.i]
+	return t
+}
 
-	switch m.Name {
-	case "ask ":
-		m.Icon = " ?"
-	case "agent":
-		m.Icon = "\u2726"
-	}
+func (m *toggle) Toggle() {
+	m.i = (m.i + 1) % len(m.options)
+	m.Name = m.options[m.i]
+}
+
+func (m toggle) Pretty() string {
+	return m.Icon + " " + m.Name
 }
 
 var Config configuration
@@ -36,9 +40,9 @@ type configuration struct {
 	WorkingDir       string
 	SanitizedWd      string
 	GroqApiKey       string
-	Model 			 string
-	Effort           string
-	Mode             mode
+	Model 			 toggle
+	Effort           toggle
+	Mode             toggle
 	MdRenderer       glamour.TermRenderer
 }
 
@@ -118,11 +122,10 @@ func Init() {
 		Version:    "v1.0.0",
 		WorkingDir: getWd(),
 		GroqApiKey: apiKey(),
-		Model:		"openai/gpt-oss-120b",
-		Effort:     "medium",
+		Model:		NewToggle("\u27E1", []string{"model-1", "model-2"}),
+		Effort:     NewToggle("\u26CF", []string{"low", "medium", "high"}),
 	}
 
 	Config.SanitizedWd = workingDirSanitized()
-	Config.Mode = mode{i: 0}
-	Config.Mode.Toggle()
+	Config.Mode = NewToggle("\u2726", modes)
 }
