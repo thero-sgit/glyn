@@ -15,18 +15,18 @@ type toggle struct {
 	Icon    string
 	Name    string
 	i       int
-	options []string
+	Options []string
 }
 
 func NewToggle(icon string, options []string) toggle {
-	t := toggle{Icon: icon, options: options}
-	t.Name = t.options[t.i]
+	t := toggle{Icon: icon, Options: options}
+	t.Name = t.Options[t.i]
 	return t
 }
 
 func (m *toggle) Toggle() {
-	m.i = (m.i + 1) % len(m.options)
-	m.Name = m.options[m.i]
+	m.i = (m.i + 1) % len(m.Options)
+	m.Name = m.Options[m.i]
 }
 
 func (m toggle) Pretty() string {
@@ -122,8 +122,8 @@ func Init() {
 		Version:    "v1.0.0",
 		WorkingDir: getWd(),
 		GroqApiKey: apiKey(),
-		Model:		NewToggle("\u27E1", []string{"model-1", "model-2"}),
-		Effort:     NewToggle("\u26CF", []string{"low", "medium", "high"}),
+		Model:		NewToggle("\u27E1", []string{""}),
+		Effort:     NewToggle("\u26CF", []string{"medium", "high", "low"}),
 	}
 
 	Config.SanitizedWd = workingDirSanitized()

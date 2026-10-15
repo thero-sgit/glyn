@@ -191,6 +191,12 @@ func (m *Model) handleSessionInfo(msg sessionInfo) (tea.Model, tea.Cmd) {
 	return m, awaitSessionInfo(CHandler.session.Ctx, msg.c)
 }
 
+func (m *Model) handleModelsCmd(msg submodels.ModelsCmd) (tea.Model, tea.Cmd) {
+	updatedModel, cmd := m.llmsScreen.Update(msg)
+	m.llmsScreen = *updatedModel.(*submodels.LLModels)
+	return m, cmd
+}
+
 // KEYS
 func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
@@ -213,7 +219,7 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "enter":
 		return m.handleEnterKey(msg)
 	case "?":
-		return m.handleHelpKey()
+		return m.handleHelpKey(msg)
 	case "tab":
 		return m.handleTabKey(msg)
 	case "@":
@@ -262,11 +268,16 @@ func (m *Model) handleAtKey() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *Model) handleHelpKey() (tea.Model, tea.Cmd) {
-	m.helpScreen.Focused = true
-	m.sessionsScreen.Focused = false
-	m.llmsScreen.Focused = false
-	m.viewport.SetContent(m.helpScreen.View())
+func (m *Model) handleHelpKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.textarea.Focused() {
+		m.handleGenericKey(msg)
+
+	} else {
+		m.helpScreen.Focused = true
+		m.sessionsScreen.Focused = false
+		m.llmsScreen.Focused = false
+		m.viewport.SetContent(m.helpScreen.View())
+	}
 
 	return m, nil
 }
@@ -340,7 +351,7 @@ func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		slashCon.Focused = false
 
 		if slashCon.Options[slashCon.Cursor].Pretty() == "/help" {
-			m.handleHelpKey()
+			m.handleHelpKey(msg)
 		}
 
 		if slashCon.Options[slashCon.Cursor].Pretty() == "/sessions" {

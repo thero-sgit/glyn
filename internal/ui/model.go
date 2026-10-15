@@ -83,7 +83,9 @@ func InitialModel() *Model {
 }
 
 func (m *Model) Init() tea.Cmd {
-	return tea.Batch(textarea.Blink)
+	var cmd tea.Cmd
+	m, cmd = CHandler.handleGetModels(m)
+	return cmd
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -100,6 +102,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleTick20()
 	case response:
 		return m.handleResponse(msg)
+	case submodels.ModelsCmd:
+		return m.handleModelsCmd(msg)
 	case sessionInfo:
 		return m.handleSessionInfo(msg)
 	case tea.KeyMsg:

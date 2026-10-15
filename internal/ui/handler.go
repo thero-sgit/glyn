@@ -5,6 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/thero-sgit/xyn/internal/ai"
+	"github.com/thero-sgit/xyn/internal/ui/submodels"
 )
 
 var CHandler Handler
@@ -105,11 +106,6 @@ func (h *Handler) handlePrompt(m *Model) (*Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-type models struct {
-	m []ai.GroqModelInfo
-	c chan []ai.GroqModelInfo
-}
-
 func awaitModels(ctx context.Context, c chan []ai.GroqModelInfo) tea.Cmd {
 	return func() tea.Msg {
 		select {
@@ -118,7 +114,7 @@ func awaitModels(ctx context.Context, c chan []ai.GroqModelInfo) tea.Cmd {
 				return nil
 			}
 
-			return models{m: m, c: c}
+			return submodels.ModelsCmd{M: m, C: c}
 		case <-ctx.Done():
 			return nil
 		}

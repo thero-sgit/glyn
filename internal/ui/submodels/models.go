@@ -1,6 +1,8 @@
 package submodels
 
 import (
+	"slices"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
@@ -9,9 +11,15 @@ import (
 	"github.com/thero-sgit/xyn/internal/ui/stylesandcomponents"
 )
 
+type ModelsCmd struct {
+	M []ai.GroqModelInfo
+	C chan []ai.GroqModelInfo
+}
+
 type LLModels struct {
 	Focused bool
 	tab     int
+	models  []ai.GroqModelInfo
 }
 
 func (l *LLModels) Init() tea.Cmd {
@@ -24,6 +32,18 @@ func NewModelsModel() LLModels {
 
 func (l *LLModels) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case ModelsCmd:
+		l.models = msg.M
+		var m []string
+		for _, model := range l.models {
+			m = append(m, model.Id)
+		}
+		slices.Sort(m)
+
+		config.Config.Model.Options = m
+		config.Config.Model.Toggle()
+		return l, nil		
+	
 	case tea.MouseMsg:
 		if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
 			switch {
@@ -95,28 +115,21 @@ func (l *LLModels) View() string {
 		),
 	)
 
-	models := []ai.GroqModelInfo {
-		{
-			Id:   "model-1",
-			Name: "Model-One",
-			OwnedBy: "Baseby",
-			SupportedFeatures: []string{"tools", "reasoning"},
-		},
-	}
-
-	modelcards := []string{
-		modelCard(models[0]),
+	var modelCards []string
+	for i, model := range l.models {
+		highlight := config.Config.Model.Name == l.models[i].Id
+		modelCards = append(modelCards, modelCard(model, highlight))
 	}
 
 	return lipgloss.JoinVertical(
 		lipgloss.Top,
 		header,
-		lipgloss.JoinHorizontal(lipgloss.Left, modelcards...),
+		lipgloss.JoinHorizontal(lipgloss.Top, modelCards...),
 	)
 }
 
 
-func modelCard(modelInfo ai.GroqModelInfo) string {
+func modelCard(modelInfo ai.GroqModelInfo, highlight bool) string {
 	header := lipgloss.NewStyle().Render(
 		stylesandcomponents.BoldStyle.Render(stylesandcomponents.SubtleStyle.Render("\u27E1")) +
 			" " + modelInfo.Name +
@@ -148,7 +161,12 @@ func modelCard(modelInfo ai.GroqModelInfo) string {
 		),
 	)
 
-	card := lipgloss.NewStyle().Margin(0, 1, 1, 0).Padding(0, 1, 0, 1).Border(lipgloss.RoundedBorder()).Render(
+	style := lipgloss.NewStyle().Margin(0, 1, 1, 0).Padding(0, 1, 0, 1).Border(lipgloss.RoundedBorder())
+	if highlight {
+		style = lipgloss.NewStyle().Margin(0, 1, 1, 0).Padding(0, 1, 0, 1).Border(lipgloss.RoundedBorder()).BorderForeground(stylesandcomponents.AccentColor)
+	}
+
+	card := style.Render(
 		lipgloss.JoinVertical(
 			lipgloss.Top,
 			header,
