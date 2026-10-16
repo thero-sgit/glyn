@@ -115,6 +115,13 @@ func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	
+	if !(m.helpScreen.Focused && m.sessionsScreen.Focused && m.llmsScreen.Focused) {
+		var cmd tea.Cmd
+		m.viewport, cmd = m.viewport.Update(msg)
+		return m, cmd
+	}	
+
 	return m, nil
 }
 
