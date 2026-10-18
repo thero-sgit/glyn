@@ -41,6 +41,7 @@ func (m *Model) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 
 	config.Config.SetRenderer(m.viewport.Width - 2)
 	m.chatCentre.updatedWidths(m.viewport.Width)
+	m.sessionsScreen.Width = m.viewport.Width
 
 	return m, nil
 }
@@ -254,6 +255,12 @@ func (m *Model) handleUpDownArrows(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		updatedModel, cmd := m.helpScreen.Update(msg)
 		m.helpScreen = *updatedModel.(*submodels.HelpModel)
 		m.viewport.SetContent(m.helpScreen.View())
+		return m, cmd
+
+	case m.sessionsScreen.Focused:
+		updatedModel, cmd := m.sessionsScreen.Update(msg)
+		m.sessionsScreen = *updatedModel.(*submodels.Sessions)
+		m.viewport.SetContent(m.sessionsScreen.View())
 		return m, cmd
 	
 	case !m.textarea.Focused():

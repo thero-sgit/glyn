@@ -34,7 +34,7 @@ func newChatCentre() chatCentre {
 }
 
 func (c *chatCentre) prettyHistory() []string {
-	h := []string{stylesandcomponents.Bunner()}
+	h := []string{stylesandcomponents.Burner()}
 	for _, item := range c.history {
 		h = append(h, item.getPretty())
 	}

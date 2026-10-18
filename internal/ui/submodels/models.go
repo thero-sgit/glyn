@@ -33,15 +33,18 @@ func NewModelsModel() LLModels {
 func (l *LLModels) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case ModelsCmd:
-		l.models = msg.M
-		var m []string
-		for _, model := range l.models {
-			m = append(m, model.Id)
-		}
-		slices.Sort(m)
+		if len(msg.M) > 0 {
+			l.models = msg.M
+			var m []string
+			for _, model := range l.models {
+				m = append(m, model.Id)
+			}
+			slices.Sort(m)
 
-		config.Config.Model.Options = m
-		config.Config.Model.Toggle()
+			config.Config.Model.Options = m
+			config.Config.Model.Toggle()
+		}
+
 		return l, nil		
 	
 	case tea.MouseMsg:

@@ -11,7 +11,8 @@ import (
 
 const codeLargeText = ` ██████     ██ ██████
 ██    ██  ██ ██████ ██  ██
-██    ██  ██ ██  ██ █████
+██    ██  ██ ██  ██ ██████
+██    ██  ██ ██  ██ ██
 █████ ██████ ██████ ██████`
 
 var (
@@ -22,7 +23,7 @@ var (
 	SendPromptState = SendPromptBtnStates[0]
 )
 
-func Bunner() string {
+func Burner() string {
 	inf := lipgloss.NewStyle().Render(lipgloss.JoinVertical(
 		lipgloss.Top,
 		BoldStyle.Render("xyn ")+SubtleStyle.Bold(true).Render(config.Config.Version),
@@ -34,7 +35,7 @@ func Bunner() string {
 
 	return lipgloss.NewStyle().MarginBottom(1).Render(lipgloss.JoinHorizontal(
 			lipgloss.Left,
-			lipgloss.JoinHorizontal(lipgloss.Left, HighlighedStyle.Render(" \u29D7yn ") + SubtleStyle.Render(codeLargeText)),
+			lipgloss.JoinHorizontal(lipgloss.Left, HighlighedStyle.Render("  \u29D7  ") + SubtleStyle.Render(codeLargeText)),
 			inf,
 		),
 	)
@@ -117,7 +118,7 @@ func LabelValueBand(label, value, secondaryValue string) string {
 	return output
 }
 
-func tokenUsageProgessBar(usage float32) string {
+func TokenUsageProgessBar(usage float32) string {
 	widthAdj := 25
 	usageBars := int(usage * (float32(widthAdj) / 100))
 
@@ -137,8 +138,6 @@ func tokenUsageProgessBar(usage float32) string {
 	unFilled = lipgloss.NewStyle().Foreground(lipgloss.Color("#808080")).Render(unFilled)
 
 	return lipgloss.NewStyle().
-		MarginTop(1).
-		MarginBottom(1).
 		AlignHorizontal(lipgloss.Center).
 		Render(filled + unFilled + fmt.Sprintf(" [%f%s] ", usage, "%"))
 }
