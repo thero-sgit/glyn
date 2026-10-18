@@ -4,11 +4,11 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 	"github.com/thero-sgit/xyn/internal/config"
-	"github.com/thero-sgit/xyn/internal/ui/stylesandcomponents"
+	"github.com/thero-sgit/xyn/internal/ui/library"
 )
 
 func (m Model) headerBar(headerHeight int) string {
-	version := stylesandcomponents.SubtleStyle.Render(config.Config.Version)
+	version := library.SubtleStyle.Render(config.Config.Version)
 
 	return lipgloss.NewStyle().
 		Width(m.width).
@@ -48,7 +48,7 @@ func (m *Model) inputBox(h int) string {
 
 	textArea := lipgloss.JoinHorizontal(lipgloss.Left, prompt, m.textarea.View())
 	textArea = zone.Mark("text-area", textArea)
-	sendStopBtn := zone.Mark("send-prompt-btn", stylesandcomponents.SendPromptState)
+	sendStopBtn := zone.Mark("send-prompt-btn", library.SendPromptState)
 
 	var inputBoxContent string
 	if m.fileSelector.Focused {
@@ -70,8 +70,8 @@ func (m *Model) inputBox(h int) string {
 		Render("@")
 
 	addFileButton := zone.Mark("add-file-btn", addFile)
-	modeLabelButton := zone.Mark("mode-toggle-btn", stylesandcomponents.LabelValueBand(config.Config.Mode.Icon, config.Config.Mode.Name, ""))
-	modelLabelBtn := zone.Mark("model-selector-btn", stylesandcomponents.LabelValueBand("\u27E1", config.Config.Model.Name, config.Config.Effort.Name))
+	modeLabelButton := zone.Mark("mode-toggle-btn", library.LabelValueBand(config.Config.Mode.Icon, config.Config.Mode.Name, ""))
+	modelLabelBtn := zone.Mark("model-selector-btn", library.LabelValueBand("\u27E1", config.Config.Model.Name, config.Config.Effort.Name))
 
 	inpLabels := lipgloss.NewStyle().PaddingLeft(1).Render(
 		lipgloss.JoinHorizontal(
@@ -95,7 +95,7 @@ func (m *Model) inputBox(h int) string {
 }
 
 func (m Model) footerBar(footerHeight int) string {
-	joined := stylesandcomponents.SubtleStyle.Render("ctrl+e to write prompt   ? for help   esc/ctrl+c to quit")
+	joined := library.SubtleStyle.Render("ctrl+e to write prompt   ? for help   ctrl+c to quit")
 
 	return lipgloss.NewStyle().
 		PaddingRight(2).

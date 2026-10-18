@@ -1,4 +1,4 @@
-package stylesandcomponents
+package library
 
 import (
 	"fmt"

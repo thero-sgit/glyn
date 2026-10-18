@@ -3,16 +3,17 @@ package submodels
 import (
 	"strings"
 
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/thero-sgit/xyn/internal/config"
-	"github.com/thero-sgit/xyn/internal/ui/stylesandcomponents"
+	"github.com/thero-sgit/xyn/internal/ui/library"
 )
 
 type Sessions struct {
-	width    int
+	viewport *viewport.Model
 	chats    []ChatSession
-	cursor   int
+	cursor   int	
 }
 
 func (s *Sessions) Init() tea.Cmd {
@@ -41,13 +42,18 @@ func NewSessions() tea.Model {
 		},
 	}
 
-	return &Sessions{chats: chats}
+	v := viewport.New(0, 0)
+
+	return &Sessions{
+		viewport: &v,
+		chats: chats,
+	}
 }
 
 func (s *Sessions) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		s.width = msg.Width
+		s.viewport.Width, s.viewport.Height = msg.Width, msg.Height
 
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -75,24 +81,28 @@ func (s *Sessions) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (s *Sessions) View() string {
 	header := lipgloss.JoinHorizontal(
 		lipgloss.Left,
-		stylesandcomponents.BwLabelStyle.Render(" /sessions "),
+		library.BwLabelStyle.Render(" /sessions "),
 		" ",
 		config.Config.SanitizedWd,
 		" · ",
-		stylesandcomponents.TokenUsageProgessBar(25.0),
-		stylesandcomponents.SubtleStyle.MarginLeft(5).Render("press 'esc' to close"),
+		library.TokenUsageProgessBar(25.0),
+		library.SubtleStyle.MarginLeft(5).Render("press 'esc' to close"),
 	)
 
 	var content []string
 	for i, chat := range s.chats {
-		content = append(content, chat.pretty(s.width, i == s.cursor, i == s.cursor))
+		content = append(content, chat.pretty(s.viewport.Width, i == s.cursor, i == s.cursor))
 	}
 
-	return lipgloss.JoinVertical(
-		lipgloss.Top,
-		lipgloss.NewStyle().MarginBottom(1).Render(header),
-		strings.Join(content, "\n"),
+	s.viewport.SetContent(
+		lipgloss.JoinVertical(
+			lipgloss.Top,
+			lipgloss.NewStyle().MarginBottom(1).Render(header),
+			strings.Join(content, "\n"),
+		),
 	)
+
+	return s.viewport.View()
 }
 
 type ChatSession struct {
@@ -110,7 +120,7 @@ func (c ChatSession) pretty(width int, highlight, current bool) string {
 
 	style := lipgloss.NewStyle()
 	if highlight {
-		style = stylesandcomponents.HighlighedStyle
+		style = library.HighlighedStyle
 	}
 
 	inf := style.Render(
@@ -121,7 +131,7 @@ func (c ChatSession) pretty(width int, highlight, current bool) string {
 			style.Render(" · " + c.lastUpdated),
 			style.Render(" · " + c.tokenUsage + " tokens"),
 		),
-	)	
+	)
 
 	return style.Width(width-4).MarginBottom(1).PaddingLeft(1).Render(
 		lipgloss.JoinVertical(

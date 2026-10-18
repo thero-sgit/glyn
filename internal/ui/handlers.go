@@ -1,22 +1,14 @@
 package ui
 
 import (
-	// "strings"
-
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
 	"github.com/thero-sgit/xyn/internal/config"
-	"github.com/thero-sgit/xyn/internal/ui/stylesandcomponents"
+	"github.com/thero-sgit/xyn/internal/ui/library"
 	"github.com/thero-sgit/xyn/internal/ui/submodels"
 )
 
 func (m *Model) handleErrMsg() (tea.Model, tea.Cmd) {
-	// m.isAgentWorking = false
-	// m.sendingPrompt = false
-	// stylesandcomponents.SendPromptState = stylesandcomponents.SendPromptBtnStates[0]
-	// m.currentUserPrompt.err()
-	// m.viewport.SetContent(strings.Join(append(m.prettyHistory(), m.currentUserPrompt.getPretty()), "\n"))
-
 	return m, nil
 }
 
@@ -29,7 +21,7 @@ func (m *Model) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 		taHeight = 6
 	}
 
-	m.textarea = stylesandcomponents.CreateTextArea(msg.Width, taHeight, m.textarea.Value())
+	m.textarea = library.CreateTextArea(msg.Width, taHeight, m.textarea.Value())
 
 	headerHeight := 2
 	footerHeight := 2
@@ -38,13 +30,7 @@ func (m *Model) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 	m.viewport.Height = max(middleHeight-promptBoxHeight, 1)
 	m.viewport.Width = m.width - 4
 
-	config.Config.SetRenderer(m.viewport.Width - 2)
-	// m.updatedWidths(m.viewport.Width)
-
-	var cmd tea.Cmd
-	m.sessionsScreen, cmd = m.sessionsScreen.Update(msg)
-
-	return m, cmd
+	return m, nil
 }
 
 func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
@@ -149,7 +135,7 @@ func (m *Model) handleResponse(msg response) (tea.Model, tea.Cmd) {
 	// if msg.chunk.EOS {
 	// 	m.isAgentWorking = false
 	// 	m.currentAgentRes.agentBgActivity.done(false)
-	// 	stylesandcomponents.SendPromptState = stylesandcomponents.SendPromptBtnStates[0]
+	// 	library.SendPromptState = library.SendPromptBtnStates[0]
 	// 	m.currentAgentRes.responseBuffer, _ = config.Config.MdRenderer.Render(m.currentAgentRes.responseBuffer)
 	// 	m.history = append(m.history, m.currentAgentRes)
 	// 	return m, doTick50()
@@ -360,32 +346,18 @@ func (m *Model) handleAltEnter() (tea.Model, tea.Cmd) {
 
 func (m *Model) handleEscKey() (tea.Model, tea.Cmd) {
 	switch {
-	// case m.fileSelector.Focused:
-	// 	m.fileSelector.Focused = false
-	// 	return m, nil
+	case m.fileSelector.Focused:
+		m.fileSelector.Focused = false
+		return m, nil
 
-	// case m.helpScreen.Focused:
-	// 	m.helpScreen.Focused = false
-	// 	m.renderChat()
-	// 	return m, nil
+	case m.slashCmdCon.Focused:
+		m.slashCmdCon.Focused = false
+		return m, nil
 
-	// case m.sessionsScreen.Focused:
-	// 	m.sessionsScreen.Focused = false
-	// 	m.renderChat()
-	// 	return m, nil
-
-	// case m.llmsScreen.Focused:
-	// 	m.llmsScreen.Focused = false
-	// 	m.renderChat()
-	// 	return m, nil
-
-	// case m.slashCmdCon.Focused:
-	// 	m.slashCmdCon.Focused = false
-	// 	return m, nil
+	default:
+		m.focused = &m.chatScreen
+		return m, nil
 	}
-
-	CHandler.session.Close()
-	return m, tea.Quit
 }
 
 func (m *Model) handleGenericKey(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -405,9 +377,9 @@ func (m *Model) handleGenericKey(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// if m.sendingPrompt {
-	// 	stylesandcomponents.SendPromptState = stylesandcomponents.SendPromptBtnStates[1]
+	// 	library.SendPromptState = library.SendPromptBtnStates[1]
 	// } else {
-	// 	stylesandcomponents.SendPromptState = stylesandcomponents.SendPromptBtnStates[0]
+	// 	library.SendPromptState = library.SendPromptBtnStates[0]
 	// }
 
 	m.textarea, taCmd = m.textarea.Update(msg)

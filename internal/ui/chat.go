@@ -8,7 +8,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
-	"github.com/thero-sgit/xyn/internal/ui/stylesandcomponents"
+	"github.com/thero-sgit/xyn/internal/ui/library"
 	"github.com/thero-sgit/xyn/internal/ui/submodels"
 )
 
@@ -34,7 +34,7 @@ func newChatCentre() chatCentre {
 }
 
 func (c *chatCentre) prettyHistory() []string {
-	h := []string{stylesandcomponents.Burner()}
+	h := []string{library.Burner()}
 	for _, item := range c.history {
 		h = append(h, item.getPretty())
 	}
@@ -98,7 +98,7 @@ func newUserPrompt(prompt string, width int) userPrompt {
 		Render(
 			lipgloss.JoinHorizontal(
 				lipgloss.Left,
-				stylesandcomponents.HighlighedStyle.Render(" you $ "),
+				library.HighlighedStyle.Render(" you $ "),
 				lipgloss.NewStyle().PaddingLeft(1).Render(prompt),
 			),
 		)
@@ -128,12 +128,12 @@ func (up *userPrompt) animate() {
 		Width(up.width).
 		PaddingRight(1).
 		Render(
-			stylesandcomponents.HighlighedStyle.Render(" you $ ") + lipgloss.NewStyle().PaddingLeft(1).Render(newPretty.String()),
+			library.HighlighedStyle.Render(" you $ ") + lipgloss.NewStyle().PaddingLeft(1).Render(newPretty.String()),
 		)
 }
 
 func (up *userPrompt) sent() {
-	p := stylesandcomponents.HighlighedStyle.Render(" you $ ") + lipgloss.NewStyle().PaddingLeft(1).Render(up.message)
+	p := library.HighlighedStyle.Render(" you $ ") + lipgloss.NewStyle().PaddingLeft(1).Render(up.message)
 
 	up.pretty = lipgloss.NewStyle().
 		MarginBottom(1).
@@ -149,14 +149,14 @@ func (up *userPrompt) sent() {
 }
 
 func (up *userPrompt) err() {
-	p := stylesandcomponents.HighlighedStyle.Render(" you $ ") + lipgloss.NewStyle().Strikethrough(true).PaddingLeft(1).Render(up.message)
+	p := library.HighlighedStyle.Render(" you $ ") + lipgloss.NewStyle().Strikethrough(true).PaddingLeft(1).Render(up.message)
 
 	ed := lipgloss.JoinHorizontal(
 		lipgloss.Left,
 		lipgloss.NewStyle().MarginRight(4).Render(
-			stylesandcomponents.SubtleStyle.Render("failed to send"),
+			library.SubtleStyle.Render("failed to send"),
 		),
-		stylesandcomponents.RetryButton(),
+		library.RetryButton(),
 	)
 
 	up.pretty = lipgloss.NewStyle().
@@ -201,7 +201,7 @@ func (a agentResponse) updated(width int) chatItem {
 func (a agentResponse) getPretty() string {
 	content := a.responseBuffer
 	if a.showReasoning {
-		reasoningContent := stylesandcomponents.SubtleStyle.Width(a.width - 2).Render(a.reasoningBuffer)
+		reasoningContent := library.SubtleStyle.Width(a.width - 2).Render(a.reasoningBuffer)
 		content = lipgloss.JoinVertical(
 			lipgloss.Top,
 			reasoningContent,
@@ -251,7 +251,7 @@ type agentBackgroundActivityLabel struct {
 }
 
 func newAgentBackgroundActivity(activity string) agentBackgroundActivityLabel {
-	prefixLabel := stylesandcomponents.BwLabelStyle.Render(" xyn $ ")
+	prefixLabel := library.BwLabelStyle.Render(" xyn $ ")
 
 	frames := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 	loader := frames[0]

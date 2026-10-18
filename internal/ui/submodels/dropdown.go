@@ -7,7 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
-	"github.com/thero-sgit/xyn/internal/ui/stylesandcomponents"
+	"github.com/thero-sgit/xyn/internal/ui/library"
 )
 
 type Dropdown struct {
@@ -67,7 +67,7 @@ func (d *Dropdown) View() string {
 		arrow = "I"
 	}
 
-	header := zone.Mark(d.id+"-dropdown-menu", stylesandcomponents.HighlighedStyle.Render(fmt.Sprintf(" %s %s ", d.Selected, stylesandcomponents.BoldStyle.Render(arrow+" "))))
+	header := zone.Mark(d.id+"-dropdown-menu", library.HighlighedStyle.Render(fmt.Sprintf(" %s %s ", d.Selected, library.BoldStyle.Render(arrow+" "))))
 
 	if !d.open {
 		return header
@@ -77,7 +77,7 @@ func (d *Dropdown) View() string {
 	for i, option := range d.options {
 		switch {
 		case i == d.cursor:
-			rows = append(rows, stylesandcomponents.BoldStyle.Foreground(stylesandcomponents.AccentColor).Render("> ")+option)
+			rows = append(rows, library.BoldStyle.Foreground(library.AccentColor).Render("> ")+option)
 		default:
 			rows = append(rows, " "+option)
 		}

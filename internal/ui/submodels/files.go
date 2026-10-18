@@ -9,7 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/thero-sgit/xyn/internal/ui/stylesandcomponents"
+	"github.com/thero-sgit/xyn/internal/ui/library"
 )
 
 type FileEntry struct {
@@ -114,7 +114,7 @@ func (f *FileSelector) renderViewport() {
 	for i, option := range f.Options {
 		switch {
 		case i == f.Cursor:
-			rows = append(rows, stylesandcomponents.BoldStyle.Foreground(stylesandcomponents.AccentColor).Render("> ")+option.Name)
+			rows = append(rows, library.BoldStyle.Foreground(library.AccentColor).Render("> ")+option.Name)
 		default:
 			rows = append(rows, option.Name)
 		}
@@ -131,7 +131,7 @@ func (f *FileSelector) SetPrompt(p string) {
 		f.ti.Placeholder = "<filename> to remove"
 	}
 
-	f.ti.Prompt = stylesandcomponents.BwLabelStyle.Bold(true).Render(label) + lipgloss.NewStyle().Foreground(stylesandcomponents.AccentColor).Bold(true).Render(" "+p)
+	f.ti.Prompt = library.BwLabelStyle.Bold(true).Render(label) + lipgloss.NewStyle().Foreground(library.AccentColor).Bold(true).Render(" "+p)
 	f.Prompt = p
 	f.ti.Reset()
 }

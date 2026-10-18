@@ -4,7 +4,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
-	"github.com/thero-sgit/xyn/internal/ui/stylesandcomponents"
+	"github.com/thero-sgit/xyn/internal/ui/library"
 )
 
 var (
@@ -12,19 +12,19 @@ var (
 					Render(
 			lipgloss.JoinVertical(
 				lipgloss.Top,
-				stylesandcomponents.BoldStyle.Render("esc")+"/"+stylesandcomponents.BoldStyle.Render("ctrl+c")+" to quit xyn",
-				stylesandcomponents.BoldStyle.Render("/")+" display '/' command input screen",
+				library.BoldStyle.Render("esc")+"/"+library.BoldStyle.Render("ctrl+c")+" to quit xyn",
+				library.BoldStyle.Render("/")+" display '/' command input screen",
 
-				stylesandcomponents.SubtleStyle.MarginTop(1).Render("AI interaction & config"),
-				stylesandcomponents.BoldStyle.Render("alt+enter")+"/click "+stylesandcomponents.SendPromptBtnStates[0]+" send prompt",
-				stylesandcomponents.BoldStyle.Render("@")+"/click "+stylesandcomponents.BoldStyle.Render("@")+" to add files",
-				"click "+stylesandcomponents.LabelValueBand("\u27E1", "`model-id`", "")+" to view models list",
-				"click "+stylesandcomponents.LabelValueBand("?/"+"\u2726", "`mode`", "")+" to switch mode",
+				library.SubtleStyle.MarginTop(1).Render("AI interaction & config"),
+				library.BoldStyle.Render("alt+enter")+"/click "+library.SendPromptBtnStates[0]+" send prompt",
+				library.BoldStyle.Render("@")+"/click "+library.BoldStyle.Render("@")+" to add files",
+				"click "+library.LabelValueBand("\u27E1", "`model-id`", "")+" to view models list",
+				"click "+library.LabelValueBand("?/"+"\u2726", "`mode`", "")+" to switch mode",
 
-				stylesandcomponents.SubtleStyle.MarginTop(1).Render("In chat screen"),
-				stylesandcomponents.BoldStyle.Render("pgup, pgdn, up, down arrows")+"/"+stylesandcomponents.BoldStyle.Render("mouse")+" to scroll",
-				stylesandcomponents.BoldStyle.Render("ctrl+e")+" to focus prompt text input",
-				stylesandcomponents.BoldStyle.Render("ctrl+x")+"/click "+stylesandcomponents.SendPromptBtnStates[1]+" to interupt session",
+				library.SubtleStyle.MarginTop(1).Render("In chat screen"),
+				library.BoldStyle.Render("pgup, pgdn, up, down arrows")+"/"+library.BoldStyle.Render("mouse")+" to scroll",
+				library.BoldStyle.Render("ctrl+e")+" to focus prompt text input",
+				library.BoldStyle.Render("ctrl+x")+"/click "+library.SendPromptBtnStates[1]+" to interupt session",
 			),
 		)
 
@@ -32,9 +32,9 @@ var (
 					Render(
 			lipgloss.JoinVertical(
 				lipgloss.Top,
-				stylesandcomponents.BoldStyle.Render("/help")+" display helpful keyboard shortcuts",
-				stylesandcomponents.BoldStyle.Render("/status")+" display usage and general status",
-				stylesandcomponents.BoldStyle.Render("/model")+" display models list",
+				library.BoldStyle.Render("/help")+" display helpful keyboard shortcuts",
+				library.BoldStyle.Render("/status")+" display usage and general status",
+				library.BoldStyle.Render("/model")+" display models list",
 			),
 		)
 )
@@ -85,12 +85,12 @@ func (h *HelpModel) View() string {
 	var content string
 
 	if h.state == 0 {
-		generalTabBtn = stylesandcomponents.HighlighedStyle.PaddingLeft(1).PaddingRight(1).Render("General")
-		commandsTabBtn = stylesandcomponents.SubtleStyle.Render(" Commands ")
+		generalTabBtn = library.HighlighedStyle.PaddingLeft(1).PaddingRight(1).Render("General")
+		commandsTabBtn = library.SubtleStyle.Render(" Commands ")
 		content = helpCmdGeneralTabContent
 	} else {
-		generalTabBtn = stylesandcomponents.SubtleStyle.Render(" General ")
-		commandsTabBtn = stylesandcomponents.HighlighedStyle.PaddingLeft(1).PaddingRight(1).Render("Commands")
+		generalTabBtn = library.SubtleStyle.Render(" General ")
+		commandsTabBtn = library.HighlighedStyle.PaddingLeft(1).PaddingRight(1).Render("Commands")
 		content = helpCmdCommandsTabContent
 	}
 
@@ -101,13 +101,13 @@ func (h *HelpModel) View() string {
 
 	headerBar := lipgloss.NewStyle().MarginBottom(1).Render(lipgloss.JoinHorizontal(
 		lipgloss.Left,
-		stylesandcomponents.BwLabelStyle.Render(" /help "),
+		library.BwLabelStyle.Render(" /help "),
 		" ",
 		tabs,
 		" ",
 		"Useful Shortcuts & '/' Commands",
 		" ",
-		stylesandcomponents.SubtleStyle.MarginLeft(5).Render("press 'esc' to close   left/right arrows to switch tabs"),
+		library.SubtleStyle.MarginLeft(5).Render("press 'esc' to close   left/right arrows to switch tabs"),
 	),
 	)
 

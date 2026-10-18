@@ -8,7 +8,7 @@ import (
 	zone "github.com/lrstanley/bubblezone"
 	"github.com/thero-sgit/xyn/internal/ai"
 	"github.com/thero-sgit/xyn/internal/config"
-	"github.com/thero-sgit/xyn/internal/ui/stylesandcomponents"
+	"github.com/thero-sgit/xyn/internal/ui/library"
 )
 
 type ModelsCmd struct {
@@ -96,11 +96,11 @@ func (l *LLModels) View() string {
 	var commandsTabBtn string
 
 	if l.tab == 0 {
-		generalTabBtn = stylesandcomponents.HighlighedStyle.PaddingLeft(1).PaddingRight(1).Render(config.Config.Model.Pretty())
-		commandsTabBtn = stylesandcomponents.SubtleStyle.Render(config.Config.Effort.Pretty())
+		generalTabBtn = library.HighlighedStyle.PaddingLeft(1).PaddingRight(1).Render(config.Config.Model.Pretty())
+		commandsTabBtn = library.SubtleStyle.Render(config.Config.Effort.Pretty())
 	} else {
-		generalTabBtn = stylesandcomponents.SubtleStyle.Render(config.Config.Model.Pretty())
-		commandsTabBtn = stylesandcomponents.HighlighedStyle.PaddingLeft(1).PaddingRight(1).Render(config.Config.Effort.Pretty())
+		generalTabBtn = library.SubtleStyle.Render(config.Config.Model.Pretty())
+		commandsTabBtn = library.HighlighedStyle.PaddingLeft(1).PaddingRight(1).Render(config.Config.Effort.Pretty())
 	}
 
 	generalTabBtn = zone.Mark("model-toggle", generalTabBtn)
@@ -110,10 +110,10 @@ func (l *LLModels) View() string {
 
 	header := lipgloss.NewStyle().MarginBottom(1).Render(lipgloss.JoinHorizontal(
 		lipgloss.Left,
-		stylesandcomponents.BwLabelStyle.MarginRight(1).Render(" /model "),
+		library.BwLabelStyle.MarginRight(1).Render(" /model "),
 		tabs,
 		"  Compatable models from Groq (console.groq.com/docs/models)",
-		stylesandcomponents.SubtleStyle.MarginLeft(5).Render("press 'esc' to close"),
+		library.SubtleStyle.MarginLeft(5).Render("press 'esc' to close"),
 		),
 	)
 
@@ -133,10 +133,10 @@ func (l *LLModels) View() string {
 
 func modelCard(modelInfo ai.GroqModelInfo, highlight bool) string {
 	header := lipgloss.NewStyle().Render(
-		stylesandcomponents.BoldStyle.Render(stylesandcomponents.SubtleStyle.Render("\u27E1")) +
+		library.BoldStyle.Render(library.SubtleStyle.Render("\u27E1")) +
 			" " + modelInfo.Name +
 			" (" + modelInfo.Id + ") " +
-			stylesandcomponents.SubtleStyle.Render(modelInfo.OwnedBy),
+			library.SubtleStyle.Render(modelInfo.OwnedBy),
 	)
 
 	c := map[string]string{
@@ -150,7 +150,7 @@ func modelCard(modelInfo ai.GroqModelInfo, highlight bool) string {
 		if ok {
 			labels = append(
 				labels,
-				stylesandcomponents.SubtleStyle.Render(val+" ")+s+"  ",
+				library.SubtleStyle.Render(val+" ")+s+"  ",
 			)
 		}
 	}
@@ -158,14 +158,14 @@ func modelCard(modelInfo ai.GroqModelInfo, highlight bool) string {
 	capabilities := lipgloss.NewStyle().Render(
 		lipgloss.JoinVertical(
 			lipgloss.Top,
-			stylesandcomponents.SubtleStyle.Render("Capabilities"),
+			library.SubtleStyle.Render("Capabilities"),
 			lipgloss.JoinHorizontal(lipgloss.Left, labels...),
 		),
 	)
 
 	style := lipgloss.NewStyle().Margin(0, 1, 1, 0).Padding(0, 1, 0, 1).Border(lipgloss.RoundedBorder())
 	if highlight {
-		style = lipgloss.NewStyle().Margin(0, 1, 1, 0).Padding(0, 1, 0, 1).Border(lipgloss.RoundedBorder()).BorderForeground(stylesandcomponents.AccentColor)
+		style = lipgloss.NewStyle().Margin(0, 1, 1, 0).Padding(0, 1, 0, 1).Border(lipgloss.RoundedBorder()).BorderForeground(library.AccentColor)
 	}
 
 	card := style.Render(

@@ -38,17 +38,19 @@ func sendPromptKeyMsg() tea.Cmd {
 }
 
 type Model struct {
-	width    int
-	height   int
-	mHeight  int
-	textarea textarea.Model
-	viewport viewport.Model
+	width          int
+	height         int
+	mHeight        int
+	inputBoxHeight int
+	textarea       textarea.Model
+	viewport       viewport.Model
 
 	//
 	slashCmdCon    submodels.Selector
 	fileSelector   submodels.FileSelector
 
 	// Screens
+	chatScreen     tea.Model
 	helpScreen     tea.Model
 	sessionsScreen tea.Model
 	llmsScreen     tea.Model
@@ -60,12 +62,13 @@ func InitialModel() *Model {
 	model := Model{
 		slashCmdCon:    submodels.NewSelector("Command", "/", "/", "<command>", common.ListCmdMatches),
 		fileSelector:   submodels.NewFileSelector(),
+		chatScreen:     submodels.NewChatScreen(),
 		helpScreen:     submodels.NewHelpModel(),
 		sessionsScreen: submodels.NewSessions(),
 		llmsScreen:     submodels.NewModelsModel(),
 	}
 
-	model.focused = &model.helpScreen
+	model.focused = &model.chatScreen
 	InitHandler()
 
 	return &model
@@ -110,7 +113,13 @@ func (m *Model) View() string {
 
 	// 
 	inputBox := m.inputBox(middleHeight)
+	
+	//
 	focused := *m.focused
+	focused.Update(tea.WindowSizeMsg{
+		Width:  m.width,
+		Height: m.mHeight,
+	})
 
 	content := lipgloss.NewStyle().Padding(0, 2, 0, 2).Height(m.mHeight).Render(focused.View())
 	screen := lipgloss.JoinVertical(lipgloss.Left, m.headerBar(headerHeight), content, inputBox, m.footerBar(footerHeight))

@@ -8,7 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/thero-sgit/xyn/internal/common"
-	"github.com/thero-sgit/xyn/internal/ui/stylesandcomponents"
+	"github.com/thero-sgit/xyn/internal/ui/library"
 )
 
 type Selector struct {
@@ -33,7 +33,7 @@ func NewSelector(prompt, tiPrefix, subprompt, placeholder string, matchfunc func
 	ti := textinput.New()
 	ti.Focus()
 	ti.Placeholder = placeholder
-	ti.Prompt = stylesandcomponents.BwLabelStyle.Bold(true).Render(" "+prompt+": ") + " " + stylesandcomponents.BoldStyle.Foreground(stylesandcomponents.AccentColor).Render(subprompt)
+	ti.Prompt = library.BwLabelStyle.Bold(true).Render(" "+prompt+": ") + " " + library.BoldStyle.Foreground(library.AccentColor).Render(subprompt)
 
 	return Selector{
 		ti:        ti,
@@ -91,7 +91,7 @@ func (s *Selector) View() string {
 	for i, option := range s.Options {
 		switch {
 		case i == s.Cursor:
-			rows = append(rows, stylesandcomponents.BoldStyle.Foreground(stylesandcomponents.AccentColor).Render("> ")+option.Pretty())
+			rows = append(rows, library.BoldStyle.Foreground(library.AccentColor).Render("> ")+option.Pretty())
 		default:
 			rows = append(rows, option.Pretty())
 		}
