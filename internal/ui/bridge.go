@@ -76,32 +76,32 @@ func awaitSessionInfo(ctx context.Context, c chan ai.Chunk) tea.Cmd {
 }
 
 func (h *Handler) handlePrompt(m *Model) (*Model, tea.Cmd) {
-	responseChan := make(chan ai.Chunk)
-	sessionInfoChan := make(chan ai.Chunk)
-	errChan := make(chan error, 2)
+	// responseChan := make(chan ai.Chunk)
+	// sessionInfoChan := make(chan ai.Chunk)
+	// errChan := make(chan error, 2)
 
-	prompt := m.chatCentre.currentUserPrompt.message
-	reqCtx := h.session.Ctx
+	// // prompt := m.chatCentre.currentUserPrompt.message
+	// reqCtx := h.session.Ctx
 
 	var cmds []tea.Cmd
 
-	if len(h.session.History) < 1 {
-		h.session.NameSession(prompt, sessionInfoChan, errChan)
-		cmds = append(cmds, awaitSessionInfo(reqCtx, sessionInfoChan))
-	}
+	// if len(h.session.History) < 1 {
+	// 	h.session.NameSession(prompt, sessionInfoChan, errChan)
+	// 	cmds = append(cmds, awaitSessionInfo(reqCtx, sessionInfoChan))
+	// }
 
-	h.session.NewPrompt(prompt, responseChan, errChan)
+	// h.session.NewPrompt(prompt, responseChan, errChan)
 
-	m.textarea.Blur()
-	m.textarea.Reset()
+	// m.textarea.Blur()
+	// m.textarea.Reset()
 
-	if m.chatCentre.isChatClear && len(h.session.History) > 0 {
-		m.chatCentre.isChatClear = false
-	}
+	// if m.chatCentre.isChatClear && len(h.session.History) > 0 {
+	// 	m.chatCentre.isChatClear = false
+	// }
 
-	m.chatCentre.sendingPrompt = true
+	// m.chatCentre.sendingPrompt = true
 
-	cmds = append(cmds, errorListener(reqCtx, errChan), awaitResponse(reqCtx, responseChan))
+	// cmds = append(cmds, errorListener(reqCtx, errChan), awaitResponse(reqCtx, responseChan))
 
 	return m, tea.Batch(cmds...)
 }

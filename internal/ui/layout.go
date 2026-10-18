@@ -20,23 +20,22 @@ func (m Model) headerBar(headerHeight int) string {
 }
 
 func (m *Model) inputBox(h int) string {
-	taHeight := 3
-	if m.textarea.Length() > 0 || m.chatCentre.fileSelector.Focused || m.slashCmdCon.Focused {
-		taHeight = 7
+	taHeight := 4
+	if m.textarea.Length() > 0 || m.fileSelector.Focused || m.slashCmdCon.Focused {
+		taHeight = 8
 	}
 
-	if m.chatCentre.fileSelector.Focused {
-		m.chatCentre.fileSelector.Viewport.Height = taHeight - 2
-		m.chatCentre.fileSelector.Viewport.Width = m.width - 8
+	if m.fileSelector.Focused {
+		m.fileSelector.Viewport.Height = taHeight - 3
+		m.fileSelector.Viewport.Width = m.width - 8
 
 	} else if m.slashCmdCon.Focused {
-		m.slashCmdCon.Viewport.Height = taHeight - 2
+		m.slashCmdCon.Viewport.Height = taHeight - 3
 		m.slashCmdCon.Viewport.Width = m.width - 8
 
 	} else {
 		m.textarea.SetHeight(taHeight - 1)
 	}
-	taHeight++
 
 	m.mHeight = h - taHeight
 
@@ -52,12 +51,12 @@ func (m *Model) inputBox(h int) string {
 	sendStopBtn := zone.Mark("send-prompt-btn", stylesandcomponents.SendPromptState)
 
 	var inputBoxContent string
-	if m.chatCentre.fileSelector.Focused {
-		inputBoxContent = m.chatCentre.fileSelector.View()
+	if m.fileSelector.Focused {
+		inputBoxContent = m.fileSelector.View()
 	} else if m.slashCmdCon.Focused {
 		inputBoxContent = m.slashCmdCon.View()
 	} else {
-		inputBoxContent = lipgloss.JoinVertical(lipgloss.Top, stylesandcomponents.FilesForContextLabel(m.chatCentre.filesForContext), lipgloss.NewStyle().Render(textArea, sendStopBtn))
+		inputBoxContent = lipgloss.JoinVertical(lipgloss.Top, lipgloss.NewStyle().Render(textArea, sendStopBtn))
 	}
 
 	boxStyle := lipgloss.NewStyle().

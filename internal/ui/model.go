@@ -44,10 +44,10 @@ type Model struct {
 	viewport viewport.Model
 
 	//
-	chatCentre chatCentre
-
-	// Sub Models
 	slashCmdCon    submodels.Selector
+	fileSelector   submodels.FileSelector
+
+	// Screens
 	helpScreen     tea.Model
 	sessionsScreen tea.Model
 	llmsScreen     tea.Model
@@ -57,8 +57,8 @@ type Model struct {
 
 func InitialModel() *Model {
 	model := Model{
-		chatCentre:     newChatCentre(),
 		slashCmdCon:    submodels.NewSelector("Command", "/", "/", "<command>", common.ListCmdMatches),
+		fileSelector:   submodels.NewFileSelector(),
 		helpScreen:     submodels.NewHelpModel(),
 		sessionsScreen: submodels.NewSessions(),
 		llmsScreen:     submodels.NewModelsModel(),
