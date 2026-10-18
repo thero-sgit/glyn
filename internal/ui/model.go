@@ -1,10 +1,7 @@
 package ui
 
 import (
-	"strings"
 	"time"
-
-	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -42,6 +39,7 @@ func sendPromptKeyMsg() tea.Cmd {
 type Model struct {
 	width    int
 	height   int
+	mHeight  int
 	textarea textarea.Model
 	viewport viewport.Model
 
@@ -50,33 +48,23 @@ type Model struct {
 
 	// Sub Models
 	slashCmdCon    submodels.Selector
-	helpScreen     submodels.HelpModel
-	sessionsScreen submodels.Sessions
-	llmsScreen     submodels.LLModels
+	helpScreen     tea.Model
+	sessionsScreen tea.Model
+	llmsScreen     tea.Model
+
+	focused        *tea.Model
 }
 
 func InitialModel() *Model {
-	vp := viewport.New(0, 0)
-
-	vp.KeyMap = viewport.KeyMap{
-		Up:           key.NewBinding(key.WithKeys("up")),
-		Down:         key.NewBinding(key.WithKeys("down")),
-		PageUp:       key.NewBinding(key.WithKeys("pgup")),
-		PageDown:     key.NewBinding(key.WithKeys("pgdn")),
-		HalfPageUp:   key.NewBinding(),
-		HalfPageDown: key.NewBinding(),
-	}
-
 	model := Model{
 		chatCentre:     newChatCentre(),
 		slashCmdCon:    submodels.NewSelector("Command", "/", "/", "<command>", common.ListCmdMatches),
 		helpScreen:     submodels.NewHelpModel(),
 		sessionsScreen: submodels.NewSessions(),
 		llmsScreen:     submodels.NewModelsModel(),
-		viewport:       vp,
 	}
 
-	model.viewport.SetContent(strings.Join(model.chatCentre.prettyHistory(), "\n"))
+	model.focused = &model.helpScreen
 	InitHandler()
 
 	return &model
@@ -92,25 +80,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		return m.handleWindowSize(msg)
-	case tea.MouseMsg:
-		return m.handleMouseAction(msg)
-	case errMsg:
-		return m.handleErrMsg()
-	case TickMsg50:
-		return m.handleTick50()
-	case TickMsg20:
-		return m.handleTick20()
-	case response:
-		return m.handleResponse(msg)
-	case submodels.ModelsCmd:
-		return m.handleModelsCmd(msg)
-	case sessionInfo:
-		return m.handleSessionInfo(msg)
+
 	case tea.KeyMsg:
 		return m.handleKeyMsg(msg)
-	}
 
-	return m, nil
+	default:
+		focused := *m.focused
+		focused.Update(msg)
+		return m, nil
+	}
 }
 
 func (m *Model) View() string {
@@ -118,15 +96,17 @@ func (m *Model) View() string {
 		return "IniTializing screen..."
 	}
 
+	//
 	headerHeight := 2
 	footerHeight := 1
 	middleHeight := m.height - headerHeight - footerHeight
 
-	middle := lipgloss.JoinHorizontal(lipgloss.Top, m.chatUi(middleHeight))
-	screen := lipgloss.JoinVertical(lipgloss.Left, m.headerBar(headerHeight), middle, m.footerBar(footerHeight))
-	return zone.Scan(screen)
-}
+	// 
+	inputBox := m.inputBox(middleHeight)
+	focused := *m.focused
 
-func (m *Model) renderChat() {
-	m.viewport.SetContent(strings.Join(m.chatCentre.prettyHistory(), "\n"))
+	content := lipgloss.NewStyle().Padding(0, 2, 0, 2).Height(m.mHeight).Render(focused.View())
+	screen := lipgloss.JoinVertical(lipgloss.Left, m.headerBar(headerHeight), content, inputBox, m.footerBar(footerHeight))
+
+	return zone.Scan(screen)
 }

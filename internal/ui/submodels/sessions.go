@@ -20,7 +20,7 @@ func (s *Sessions) Init() tea.Cmd {
 	return nil
 }
 
-func NewSessions() Sessions {
+func NewSessions() tea.Model {
 	chats := []ChatSession{
 		{
 			name: "Refactor Auth", 
@@ -42,7 +42,7 @@ func NewSessions() Sessions {
 		},
 	}
 
-	return Sessions{chats: chats}
+	return &Sessions{chats: chats}
 }
 
 func (s *Sessions) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

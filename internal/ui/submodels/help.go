@@ -48,8 +48,8 @@ func (h *HelpModel) Init() tea.Cmd {
 	return nil
 }
 
-func NewHelpModel() HelpModel {
-	return HelpModel{state: 0}
+func NewHelpModel() tea.Model {
+	return &HelpModel{state: 0}
 }
 
 func (h *HelpModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

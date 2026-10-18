@@ -26,8 +26,8 @@ func (l *LLModels) Init() tea.Cmd {
 	return nil
 }
 
-func NewModelsModel() LLModels {
-	return LLModels{}
+func NewModelsModel() tea.Model {
+	return &LLModels{}
 }
 
 func (l *LLModels) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

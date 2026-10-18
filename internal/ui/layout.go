@@ -19,7 +19,7 @@ func (m Model) headerBar(headerHeight int) string {
 		Render(version)
 }
 
-func (m Model) chatUi(middleHeight int) string {
+func (m *Model) inputBox(h int) string {
 	taHeight := 3
 	if m.textarea.Length() > 0 || m.chatCentre.fileSelector.Focused || m.slashCmdCon.Focused {
 		taHeight = 7
@@ -36,9 +36,11 @@ func (m Model) chatUi(middleHeight int) string {
 	} else {
 		m.textarea.SetHeight(taHeight - 1)
 	}
+	taHeight++
 
-	m.viewport.Height = middleHeight - (taHeight + 1)
+	m.mHeight = h - taHeight
 
+	//
 	prompt := lipgloss.NewStyle().
 		Height(2).
 		AlignHorizontal(lipgloss.Center).
@@ -85,21 +87,12 @@ func (m Model) chatUi(middleHeight int) string {
 		lipgloss.JoinVertical(lipgloss.Top, inputBoxContent, inpLabels),
 	)
 
-	activity := lipgloss.NewStyle().
-		Width(m.width - 4).
-		Height(middleHeight - (taHeight + 1)).
-		MarginLeft(2).
-		MarginRight(2).
-		Render(m.viewport.View())
-
-	main := lipgloss.JoinVertical(lipgloss.Top, activity, promptBox)
-
 	return lipgloss.NewStyle().
 		Width(m.width).
-		Height(middleHeight).
+		Height(taHeight).
 		PaddingLeft(2).
 		PaddingRight(2).
-		Render(main)
+		Render(promptBox)
 }
 
 func (m Model) footerBar(footerHeight int) string {
