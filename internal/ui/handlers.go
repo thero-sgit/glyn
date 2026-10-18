@@ -35,7 +35,6 @@ func (m *Model) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 	footerHeight := 2
 	middleHeight := m.height - headerHeight - footerHeight
 	promptBoxHeight := taHeight + 1
-
 	m.viewport.Height = max(middleHeight-promptBoxHeight, 1)
 	m.viewport.Width = m.width - 4
 
@@ -218,10 +217,8 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleCtrlE()
 	case "alt+enter":
 		return m.handleAltEnter()
-	case "pgup", "pgdown", "up", "down":
-		return m.handleUpDownArrows(msg)
-	case "left", "right":
-		return m.handleLeftRightArrows(msg)
+	case "pgup", "pgdown", "up", "down", "left", "right":
+		return m.handleUpArrows(msg)
 	case "/":
 		return m.handleSlash(msg)
 	case "enter":
@@ -237,11 +234,31 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m.handleGenericKey(msg)
 }
 
-func (m *Model) handleUpDownArrows(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	focused := *m.focused
-	focused.Update(msg)
+func (m *Model) handleUpArrows(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch {
+	case m.textarea.Focused():
+		var cmd tea.Cmd
+		m.textarea, cmd = m.textarea.Update(msg)
+		return m, cmd 
 
-	return m, nil
+	case m.slashCmdCon.Focused:
+		updatedModel, cmd := m.slashCmdCon.Update(msg)
+		m.slashCmdCon = *updatedModel.(*submodels.Selector)
+
+		return m, cmd
+
+	case m.fileSelector.Focused:
+		updatedModel, cmd := m.fileSelector.Update(msg)
+		m.fileSelector = *updatedModel.(*submodels.FileSelector)
+
+		return m, cmd
+
+	default:
+		focused := *m.focused
+		focused.Update(msg)
+
+		return m, nil
+	}	
 }
 
 func (m *Model) handleAtKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {

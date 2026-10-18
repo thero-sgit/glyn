@@ -85,6 +85,9 @@ func (f *FileSelector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+	case "left", "right":
+		f.ti, cmd = f.ti.Update(msg)
+
 	default:
 		f.ti, cmd = f.ti.Update(msg)
 		f.Viewport.GotoTop()

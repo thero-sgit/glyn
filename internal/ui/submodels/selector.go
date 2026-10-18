@@ -72,6 +72,9 @@ func (s *Selector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			s.Cursor++
 		}
 
+	case "left", "right":
+		s.ti, cmd = s.ti.Update(msg)
+
 	default:
 		s.ti, cmd = s.ti.Update(msg)
 
