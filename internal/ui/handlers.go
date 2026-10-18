@@ -40,9 +40,11 @@ func (m *Model) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 
 	config.Config.SetRenderer(m.viewport.Width - 2)
 	// m.updatedWidths(m.viewport.Width)
-	// m.sessionsScreen.Width = m.viewport.Width
 
-	return m, nil
+	var cmd tea.Cmd
+	m.sessionsScreen, cmd = m.sessionsScreen.Update(msg)
+
+	return m, cmd
 }
 
 func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
@@ -55,16 +57,12 @@ func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case zone.Get("add-file-btn").InBounds(msg):
-			// m.slashCmdCon.Focused = false
-			// m.fileSelector.Focused = true
+			m.slashCmdCon.Focused = false
+			m.fileSelector.Focused = true
 			return m, nil
 
 		case zone.Get("model-selector-btn").InBounds(msg):
-			// m.slashCmdCon.Focused = false
-			// m.helpScreen.Focused = false
-			// m.sessionsScreen.Focused = false
-			// m.llmsScreen.Focused = true
-			m.viewport.SetContent(m.llmsScreen.View())
+			m.focused = &m.llmsScreen
 			return m, nil
 
 		case zone.Get("mode-toggle-btn").InBounds(msg):
@@ -105,22 +103,12 @@ func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 
 		// 	return m, cmd
 
-		// case m.llmsScreen.Focused:
-		// 	updatedModel, cmd := m.llmsScreen.Update(msg)
-		// 	m.llmsScreen = *updatedModel.(*submodels.LLModels)
-
-		// 	m.viewport.SetContent(m.llmsScreen.View())
-
-		// 	return m, cmd
+		default:
+			focused := *m.focused
+			focused.Update(msg)
+			return m, nil
 		}
 	}
-
-	
-	// if !(m.helpScreen.Focused && m.sessionsScreen.Focused && m.llmsScreen.Focused) {
-	// 	var cmd tea.Cmd
-	// 	m.viewport, cmd = m.viewport.Update(msg)
-	// 	return m, cmd
-	// }	
 
 	return m, nil
 }
@@ -199,9 +187,9 @@ func (m *Model) handleResponse(msg response) (tea.Model, tea.Cmd) {
 // }
 
 func (m *Model) handleModelsCmd(msg submodels.ModelsCmd) (tea.Model, tea.Cmd) {
-	// updatedModel, cmd := m.llmsScreen.Update(msg)
-	// // m.llmsScreen = *updatedModel.(*submodels.LLModels)
-	 return m, nil
+	var cmd tea.Cmd
+	m.llmsScreen, cmd = m.llmsScreen.Update(msg)
+	return m, cmd
 }
 
 // KEYS
@@ -217,7 +205,7 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleCtrlE()
 	case "alt+enter":
 		return m.handleAltEnter()
-	case "pgup", "pgdown", "up", "down", "left", "right":
+	case "pgup", "pgdown", "up", "down", "left", "right", "tab":
 		return m.handleUpArrows(msg)
 	case "/":
 		return m.handleSlash(msg)
@@ -225,8 +213,6 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleEnterKey(msg)
 	case "?":
 		return m.handleHelpKey(msg)
-	case "tab":
-		return m.handleTabKey(msg)
 	case "@":
 		return m.handleAtKey(msg)
 	}
@@ -272,15 +258,10 @@ func (m *Model) handleAtKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (m *Model) handleHelpKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.textarea.Focused() {
-		m.handleGenericKey(msg)
-
-	} else {
-		// m.helpScreen.Focused = true
-		// m.sessionsScreen.Focused = false
-		// m.llmsScreen.Focused = false
-		// m.viewport.SetContent(m.helpScreen.View())
+		return m.handleGenericKey(msg)
 	}
 
+	m.focused = &m.helpScreen
 	return m, nil
 }
 
@@ -299,25 +280,6 @@ func (m *Model) handleCtrlE() (tea.Model, tea.Cmd) {
 	} else {
 		m.textarea.Blur()
 	}
-
-	return m, nil
-}
-
-func (m *Model) handleTabKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if m.fileSelector.Focused && len(m.fileSelector.Options) > 0 {
-		updatedModel, cmd := m.fileSelector.Update(msg)
-		m.fileSelector = *updatedModel.(*submodels.FileSelector)
-
-		return m, cmd
-	}
-
-	// if m.slashCmdCon.Focused {
-	// 	updatedModel, cmd := m.slashCmdCon.Update(msg)
-	// 	m.slashCmdCon = *updatedModel.(*submodels.Selector)
-
-	// 	return m, cmd
-	// }
-
 	return m, nil
 }
 
@@ -348,48 +310,29 @@ func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// 		}
 	// 	}
 
-	// case m.slashCmdCon.Focused:
-	// 	slashCon := m.slashCmdCon
-	// 	slashCon.Focused = false
+	case m.slashCmdCon.Focused:
+		slashCon := m.slashCmdCon
+		slashCon.Focused = false
 
-	// 	if slashCon.Options[slashCon.Cursor].Pretty() == "/help" {
-	// 		m.handleHelpKey(msg)
-	// 	}
+		switch slashCon.Options[slashCon.Cursor].Pretty() {		
+		case "/help":
+			m.focused = &m.helpScreen
+		case"/sessions":
+			m.focused = &m.sessionsScreen
+		case"/model":
+			m.focused = &m.llmsScreen
+		}
 
-	// 	if slashCon.Options[slashCon.Cursor].Pretty() == "/sessions" {
-	// 		m.helpScreen.Focused = false
-	// 		m.sessionsScreen.Focused = true
-	// 		m.llmsScreen.Focused = false
-	// 		m.viewport.SetContent(m.sessionsScreen.View())
-	// 	}
-
-	// 	if slashCon.Options[slashCon.Cursor].Pretty() == "/model" {
-	// 		m.helpScreen.Focused = false
-	// 		m.sessionsScreen.Focused = false
-	// 		m.llmsScreen.Focused = true
-	// 		m.viewport.SetContent(m.llmsScreen.View())
-	// 	}
-
-	// 	updatedModel, cmd := slashCon.Update(msg)
-	// 	m.slashCmdCon = *updatedModel.(*submodels.Selector)
-	// 	return m, cmd
+		updatedModel, cmd := slashCon.Update(msg)
+		m.slashCmdCon = *updatedModel.(*submodels.Selector)
+		return m, cmd
 	
-	// case m.llmsScreen.Focused:
-	// 	updatedModel, cmd := m.llmsScreen.Update(msg)
-	// 	m.llmsScreen = *updatedModel.(*submodels.LLModels)
-	// 	m.viewport.SetContent(m.llmsScreen.View())
-	// 	return m, cmd
+	default:
+		focused := *m.focused
+		focused.Update(msg)
 
+		return m, nil
 	}
-
-	return m, nil
-}
-
-func (m *Model) handleLeftRightArrows(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	focused := *m.focused
-	focused.Update(msg)
-
-	return m, nil
 }
 
 func (m *Model) handleAltEnter() (tea.Model, tea.Cmd) {

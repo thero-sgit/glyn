@@ -17,7 +17,6 @@ type ModelsCmd struct {
 }
 
 type LLModels struct {
-	Focused bool
 	tab     int
 	models  []ai.GroqModelInfo
 }

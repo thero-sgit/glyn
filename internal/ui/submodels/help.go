@@ -41,7 +41,6 @@ var (
 
 type HelpModel struct {
 	state   int
-	Focused bool
 }
 
 func (h *HelpModel) Init() tea.Cmd {

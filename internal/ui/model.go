@@ -82,8 +82,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		return m.handleWindowSize(msg)
 
+	case tea.MouseMsg:
+		return m.handleMouseAction(msg)
+
 	case tea.KeyMsg:
 		return m.handleKeyMsg(msg)
+
+	case submodels.ModelsCmd:
+		return m.handleModelsCmd(msg)
 
 	default:
 		focused := *m.focused

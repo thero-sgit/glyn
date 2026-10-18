@@ -10,8 +10,7 @@ import (
 )
 
 type Sessions struct {
-	Width    int
-	Focused  bool
+	width    int
 	chats    []ChatSession
 	cursor   int
 }
@@ -47,28 +46,26 @@ func NewSessions() tea.Model {
 
 func (s *Sessions) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		s.width = msg.Width
+
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "enter", " ":
 
 		case "up":
-			if s.Focused {
-				if s.cursor > 0 {
-					s.cursor--
-				} else {
-					s.cursor = len(s.chats)-1
-				}
-			}
-			
+			if s.cursor > 0 {
+				s.cursor--
+			} else {
+				s.cursor = len(s.chats)-1
+			}			
 
 		case "down":
-			if s.Focused {
-				if s.cursor < len(s.chats)-1 {
-					s.cursor++
-				} else {
-					s.cursor = 0
-				}
-			}			
+			if s.cursor < len(s.chats)-1 {
+				s.cursor++
+			} else {
+				s.cursor = 0
+			}		
 		}
 	}
 
@@ -88,7 +85,7 @@ func (s *Sessions) View() string {
 
 	var content []string
 	for i, chat := range s.chats {
-		content = append(content, chat.pretty(s.Width, i == s.cursor, i == s.cursor))
+		content = append(content, chat.pretty(s.width, i == s.cursor, i == s.cursor))
 	}
 
 	return lipgloss.JoinVertical(
