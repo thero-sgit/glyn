@@ -1,4 +1,4 @@
-package submodels
+package components
 
 import (
 	"strings"
@@ -7,8 +7,8 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/thero-sgit/xyn/internal/common"
-	"github.com/thero-sgit/xyn/internal/ui/library"
+	"github.com/thero-sgit/glyn/internal/common"
+	"github.com/thero-sgit/glyn/internal/ui/library"
 )
 
 type Selector struct {

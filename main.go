@@ -6,9 +6,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
-	"github.com/thero-sgit/xyn/internal/ai"
-	"github.com/thero-sgit/xyn/internal/config"
-	"github.com/thero-sgit/xyn/internal/ui"
+	"github.com/thero-sgit/glyn/internal/ai"
+	"github.com/thero-sgit/glyn/internal/config"
+	"github.com/thero-sgit/glyn/internal/ui"
 )
 
 func main() {

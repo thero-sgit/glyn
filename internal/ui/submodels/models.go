@@ -3,12 +3,13 @@ package submodels
 import (
 	"slices"
 
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
-	"github.com/thero-sgit/xyn/internal/ai"
-	"github.com/thero-sgit/xyn/internal/config"
-	"github.com/thero-sgit/xyn/internal/ui/library"
+	"github.com/thero-sgit/glyn/internal/ai"
+	"github.com/thero-sgit/glyn/internal/config"
+	"github.com/thero-sgit/glyn/internal/ui/library"
 )
 
 type ModelsCmd struct {
@@ -17,8 +18,9 @@ type ModelsCmd struct {
 }
 
 type LLModels struct {
-	tab     int
-	models  []ai.GroqModelInfo
+	viewport viewport.Model
+	tab      int
+	models   []ai.GroqModelInfo
 }
 
 func (l *LLModels) Init() tea.Cmd {
@@ -26,11 +28,44 @@ func (l *LLModels) Init() tea.Cmd {
 }
 
 func NewModelsModel() tea.Model {
-	return &LLModels{}
+	return &LLModels{
+		viewport: viewport.New(0, 0),
+	}
 }
 
 func (l *LLModels) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		l.viewport.Width, l.viewport.Height = msg.Width, msg.Height
+		return l, nil
+
+	case tea.MouseMsg:
+		var cmd tea.Cmd
+		if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
+			switch {
+			case zone.Get("model-toggle").InBounds(msg):
+				if l.tab == 0 {
+					config.Config.Model.Toggle()
+				} else {
+					l.tab = 0
+				}
+				
+				return l, cmd
+
+			case zone.Get("effort-toggle").InBounds(msg):
+				if l.tab == 1 {
+					config.Config.Effort.Toggle()
+				} else {
+					l.tab = 1
+				}
+
+				return l, cmd
+			}
+		}
+
+		l.viewport, cmd = l.viewport.Update(msg)
+		return l, cmd
+
 	case ModelsCmd:
 		if len(msg.M) > 0 {
 			l.models = msg.M
@@ -44,32 +79,7 @@ func (l *LLModels) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			config.Config.Model.Toggle()
 		}
 
-		return l, nil		
-	
-	case tea.MouseMsg:
-		if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
-			switch {
-			case zone.Get("model-toggle").InBounds(msg):
-				if l.tab == 0 {
-					config.Config.Model.Toggle()
-				} else {
-					l.tab = 0
-				}
-				
-				return l, nil
-
-			case zone.Get("effort-toggle").InBounds(msg):
-				if l.tab == 1 {
-					config.Config.Effort.Toggle()
-				} else {
-					l.tab = 1
-				}
-
-				return l, nil
-			}
-		}
-
-		return l, nil
+		return l, nil	
 
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -123,11 +133,15 @@ func (l *LLModels) View() string {
 		modelCards = append(modelCards, modelCard(model, highlight))
 	}
 
-	return lipgloss.JoinVertical(
-		lipgloss.Top,
-		header,
-		lipgloss.JoinHorizontal(lipgloss.Top, modelCards...),
+	l.viewport.SetContent(
+		lipgloss.JoinVertical(
+			lipgloss.Top,
+			header,
+			lipgloss.JoinHorizontal(lipgloss.Top, modelCards...),
+		),
 	)
+
+	return l.viewport.View()
 }
 
 

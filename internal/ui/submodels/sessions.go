@@ -6,12 +6,12 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/thero-sgit/xyn/internal/config"
-	"github.com/thero-sgit/xyn/internal/ui/library"
+	"github.com/thero-sgit/glyn/internal/config"
+	"github.com/thero-sgit/glyn/internal/ui/library"
 )
 
 type Sessions struct {
-	viewport *viewport.Model
+	viewport viewport.Model
 	chats    []ChatSession
 	cursor   int	
 }
@@ -42,10 +42,8 @@ func NewSessions() tea.Model {
 		},
 	}
 
-	v := viewport.New(0, 0)
-
 	return &Sessions{
-		viewport: &v,
+		viewport: viewport.New(0, 0),
 		chats: chats,
 	}
 }
@@ -54,6 +52,12 @@ func (s *Sessions) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		s.viewport.Width, s.viewport.Height = msg.Width, msg.Height
+		return s, nil
+
+	case tea.MouseMsg:
+		var cmd tea.Cmd
+		s.viewport, cmd = s.viewport.Update(msg)
+		return s, cmd
 
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -64,7 +68,9 @@ func (s *Sessions) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				s.cursor--
 			} else {
 				s.cursor = len(s.chats)-1
-			}			
+			}
+
+			return s, nil
 
 		case "down":
 			if s.cursor < len(s.chats)-1 {
@@ -72,6 +78,8 @@ func (s *Sessions) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else {
 				s.cursor = 0
 			}		
+
+			return s, nil
 		}
 	}
 

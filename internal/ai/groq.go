@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/thero-sgit/xyn/internal/config"
+	"github.com/thero-sgit/glyn/internal/config"
 )
 
 type GroqChatCompletionMessage struct {

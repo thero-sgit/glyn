@@ -8,8 +8,8 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
-	"github.com/thero-sgit/xyn/internal/ui/library"
-	"github.com/thero-sgit/xyn/internal/ui/submodels"
+	"github.com/thero-sgit/glyn/internal/ui/library"
+	"github.com/thero-sgit/glyn/internal/ui/submodels/components"
 )
 
 // -- CHAT CENTRE CONTROL
@@ -21,7 +21,7 @@ type chatCentre struct {
 	currentUserPrompt userPrompt
 	currentAgentRes   agentResponse
 	sendingPrompt     bool
-	fileSelector      submodels.FileSelector
+	fileSelector      components.FileSelector
 	filesForContext   []string
 }
 
@@ -29,12 +29,12 @@ func newChatCentre() chatCentre {
 	return chatCentre{
 		isAgentWorking: false,
 		isChatClear:    true,
-		fileSelector:   submodels.NewFileSelector(),
+		fileSelector:   components.NewFileSelector(),
 	}
 }
 
 func (c *chatCentre) prettyHistory() []string {
-	h := []string{library.Burner()}
+	h := []string{}
 	for _, item := range c.history {
 		h = append(h, item.getPretty())
 	}
@@ -251,7 +251,7 @@ type agentBackgroundActivityLabel struct {
 }
 
 func newAgentBackgroundActivity(activity string) agentBackgroundActivityLabel {
-	prefixLabel := library.BwLabelStyle.Render(" xyn $ ")
+	prefixLabel := library.BwLabelStyle.Render(" glyn $ ")
 
 	frames := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 	loader := frames[0]

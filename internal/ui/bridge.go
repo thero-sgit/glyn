@@ -4,8 +4,8 @@ import (
 	"context"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/thero-sgit/xyn/internal/ai"
-	"github.com/thero-sgit/xyn/internal/ui/submodels"
+	"github.com/thero-sgit/glyn/internal/ai"
+	"github.com/thero-sgit/glyn/internal/ui/submodels"
 )
 
 var CHandler Handler

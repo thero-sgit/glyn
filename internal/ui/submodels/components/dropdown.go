@@ -1,4 +1,4 @@
-package submodels
+package components
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
-	"github.com/thero-sgit/xyn/internal/ui/library"
+	"github.com/thero-sgit/glyn/internal/ui/library"
 )
 
 type Dropdown struct {

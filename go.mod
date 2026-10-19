@@ -1,4 +1,4 @@
-module github.com/thero-sgit/xyn
+module github.com/thero-sgit/glyn
 
 go 1.26.3
 

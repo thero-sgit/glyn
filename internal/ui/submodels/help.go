@@ -1,10 +1,11 @@
 package submodels
 
 import (
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
-	"github.com/thero-sgit/xyn/internal/ui/library"
+	"github.com/thero-sgit/glyn/internal/ui/library"
 )
 
 var (
@@ -12,7 +13,7 @@ var (
 					Render(
 			lipgloss.JoinVertical(
 				lipgloss.Top,
-				library.BoldStyle.Render("esc")+"/"+library.BoldStyle.Render("ctrl+c")+" to quit xyn",
+				library.BoldStyle.Render("esc")+"/"+library.BoldStyle.Render("ctrl+c")+" to quit glyn",
 				library.BoldStyle.Render("/")+" display '/' command input screen",
 
 				library.SubtleStyle.MarginTop(1).Render("AI interaction & config"),
@@ -40,7 +41,8 @@ var (
 )
 
 type HelpModel struct {
-	state   int
+	state    int
+	viewport viewport.Model
 }
 
 func (h *HelpModel) Init() tea.Cmd {
@@ -48,23 +50,34 @@ func (h *HelpModel) Init() tea.Cmd {
 }
 
 func NewHelpModel() tea.Model {
-	return &HelpModel{state: 0}
+	return &HelpModel{
+		viewport: viewport.New(0, 0),
+		state: 0,
+	}
 }
 
 func (h *HelpModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		h.viewport.Width, h.viewport.Height = msg.Width, msg.Height
+		return h, nil
+
 	case tea.MouseMsg:
+		var cmd tea.Cmd
 		if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
 			switch {
 			case zone.Get("helpCmd-general-btn").InBounds(msg):
 				h.state = 0
+				return h, cmd
 
 			case zone.Get("helpCmd-commands-btn").InBounds(msg):
 				h.state = 1
+				return h, cmd
 			}
 		}
-
-		return h, nil
+			
+		h.viewport, cmd = h.viewport.Update(msg)
+		return h, cmd
 
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -99,21 +112,28 @@ func (h *HelpModel) View() string {
 
 	tabs := lipgloss.JoinHorizontal(lipgloss.Left, generalTabBtn, " ", commandsTabBtn)
 
-	headerBar := lipgloss.NewStyle().MarginBottom(1).Render(lipgloss.JoinHorizontal(
-		lipgloss.Left,
-		library.BwLabelStyle.Render(" /help "),
-		" ",
-		tabs,
-		" ",
-		"Useful Shortcuts & '/' Commands",
-		" ",
-		library.SubtleStyle.MarginLeft(5).Render("press 'esc' to close   left/right arrows to switch tabs"),
-	),
+	headerBar := lipgloss.NewStyle().
+		MarginBottom(1).
+		Render(
+			lipgloss.JoinHorizontal(
+				lipgloss.Left,
+				library.BwLabelStyle.Render(" /help "),
+				" ",
+				tabs,
+				" ",
+				"Useful Shortcuts & '/' Commands",
+				" ",
+				library.SubtleStyle.MarginLeft(5).Render("press 'esc' to close   left/right arrows to switch tabs"),
+			),
 	)
 
-	return lipgloss.JoinVertical(
-		lipgloss.Top,
-		headerBar,
-		content,
+	h.viewport.SetContent(
+		lipgloss.JoinVertical(
+			lipgloss.Top,
+			headerBar,
+			content,
+		),
 	)
+
+	return h.viewport.View()
 }

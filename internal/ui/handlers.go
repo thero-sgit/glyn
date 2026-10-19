@@ -3,9 +3,10 @@ package ui
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
-	"github.com/thero-sgit/xyn/internal/config"
-	"github.com/thero-sgit/xyn/internal/ui/library"
-	"github.com/thero-sgit/xyn/internal/ui/submodels"
+	"github.com/thero-sgit/glyn/internal/config"
+	"github.com/thero-sgit/glyn/internal/ui/library"
+	"github.com/thero-sgit/glyn/internal/ui/submodels"
+	"github.com/thero-sgit/glyn/internal/ui/submodels/components"
 )
 
 func (m *Model) handleErrMsg() (tea.Model, tea.Cmd) {
@@ -22,13 +23,6 @@ func (m *Model) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 	}
 
 	m.textarea = library.CreateTextArea(msg.Width, taHeight, m.textarea.Value())
-
-	headerHeight := 2
-	footerHeight := 2
-	middleHeight := m.height - headerHeight - footerHeight
-	promptBoxHeight := taHeight + 1
-	m.viewport.Height = max(middleHeight-promptBoxHeight, 1)
-	m.viewport.Width = m.width - 4
 
 	return m, nil
 }
@@ -95,6 +89,9 @@ func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 	}
+
+	focused := *m.focused
+	focused.Update(msg)
 
 	return m, nil
 }
@@ -215,13 +212,13 @@ func (m *Model) handleUpArrows(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case m.slashCmdCon.Focused:
 		updatedModel, cmd := m.slashCmdCon.Update(msg)
-		m.slashCmdCon = *updatedModel.(*submodels.Selector)
+		m.slashCmdCon = *updatedModel.(*components.Selector)
 
 		return m, cmd
 
 	case m.fileSelector.Focused:
 		updatedModel, cmd := m.fileSelector.Update(msg)
-		m.fileSelector = *updatedModel.(*submodels.FileSelector)
+		m.fileSelector = *updatedModel.(*components.FileSelector)
 
 		return m, cmd
 
@@ -310,7 +307,7 @@ func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 
 		updatedModel, cmd := slashCon.Update(msg)
-		m.slashCmdCon = *updatedModel.(*submodels.Selector)
+		m.slashCmdCon = *updatedModel.(*components.Selector)
 		return m, cmd
 	
 	default:
@@ -364,14 +361,14 @@ func (m *Model) handleGenericKey(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var taCmd, VpCmd tea.Cmd
 	if m.slashCmdCon.Focused {
 		updatedModel, cmd := m.slashCmdCon.Update(msg)
-		m.slashCmdCon = *updatedModel.(*submodels.Selector)
+		m.slashCmdCon = *updatedModel.(*components.Selector)
 
 		return m, cmd
 	}
 
 	if m.fileSelector.Focused {
 		updatedModel, cmd := m.fileSelector.Update(msg)
-		m.fileSelector = *updatedModel.(*submodels.FileSelector)
+		m.fileSelector = *updatedModel.(*components.FileSelector)
 
 		return m, cmd
 	}
@@ -383,7 +380,6 @@ func (m *Model) handleGenericKey(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// }
 
 	m.textarea, taCmd = m.textarea.Update(msg)
-	m.viewport, VpCmd = m.viewport.Update(msg)
 
 	return m, tea.Batch(taCmd, VpCmd)
 }

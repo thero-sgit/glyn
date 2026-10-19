@@ -4,12 +4,12 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/textarea"
-	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
-	"github.com/thero-sgit/xyn/internal/common"
-	"github.com/thero-sgit/xyn/internal/ui/submodels"
+	"github.com/thero-sgit/glyn/internal/common"
+	"github.com/thero-sgit/glyn/internal/ui/submodels"
+	"github.com/thero-sgit/glyn/internal/ui/submodels/components"
 )
 
 type TickMsg50 time.Time
@@ -43,11 +43,10 @@ type Model struct {
 	mHeight        int
 	inputBoxHeight int
 	textarea       textarea.Model
-	viewport       viewport.Model
 
 	//
-	slashCmdCon    submodels.Selector
-	fileSelector   submodels.FileSelector
+	slashCmdCon    components.Selector
+	fileSelector   components.FileSelector
 
 	// Screens
 	chatScreen     tea.Model
@@ -60,8 +59,8 @@ type Model struct {
 
 func InitialModel() *Model {
 	model := Model{
-		slashCmdCon:    submodels.NewSelector("Command", "/", "/", "<command>", common.ListCmdMatches),
-		fileSelector:   submodels.NewFileSelector(),
+		slashCmdCon:    components.NewSelector("Command", "/", "/", "<command>", common.ListCmdMatches),
+		fileSelector:   components.NewFileSelector(),
 		chatScreen:     submodels.NewChatScreen(),
 		helpScreen:     submodels.NewHelpModel(),
 		sessionsScreen: submodels.NewSessions(),
@@ -113,7 +112,7 @@ func (m *Model) View() string {
 
 	// 
 	inputBox := m.inputBox(middleHeight)
-	
+
 	//
 	focused := *m.focused
 	focused.Update(tea.WindowSizeMsg{

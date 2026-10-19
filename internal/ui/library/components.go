@@ -6,10 +6,17 @@ import (
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
-	"github.com/thero-sgit/xyn/internal/config"
+	"github.com/thero-sgit/glyn/internal/config"
 )
 
-const codeLargeText = ` ██████     ██ ██████
+const glynLargeText = `██████ ██  ██  ██ ████  ██
+██  ██ ██  ██  ██ ████  ██
+██  ██ ██  ██  ██ ██ ██ ██
+██████ ██  ██████ ██  ████
+    ██ ██      ██ ██  ████
+`
+
+const codeLargeText = `█████ ██████     ██ ██████
 ██    ██  ██ ██████ ██  ██
 ██    ██  ██ ██  ██ ██████
 ██    ██  ██ ██  ██ ██
@@ -23,19 +30,20 @@ var (
 	SendPromptState = SendPromptBtnStates[0]
 )
 
-func Burner() string {
+func Burner(width int) string {
 	inf := lipgloss.NewStyle().Render(lipgloss.JoinVertical(
 		lipgloss.Top,
-		BoldStyle.Render("xyn ")+SubtleStyle.Bold(true).Render(config.Config.Version),
+		SubtleStyle.Bold(true).Render(config.Config.Version),
+		"",
 		BoldStyle.Foreground(AccentColor).Render("\u27E1 ")+SubtleStyle.Render(config.Config.Model.Name),
 		BoldStyle.Foreground(AccentColor).Render("@ ")+SubtleStyle.Underline(true).Render("console.groq.com"),
 		BoldStyle.Foreground(AccentColor).Render("~")+SubtleStyle.Render(config.Config.WorkingDir),
 	),
 	)
 
-	return lipgloss.NewStyle().MarginBottom(1).Render(lipgloss.JoinHorizontal(
+	return lipgloss.NewStyle().MarginBottom(1).Width(width).AlignHorizontal(lipgloss.Center).Render(lipgloss.JoinHorizontal(
 			lipgloss.Left,
-			lipgloss.JoinHorizontal(lipgloss.Left, HighlighedStyle.Render("  \u29D7  ") + SubtleStyle.Render(codeLargeText)),
+			lipgloss.JoinHorizontal(lipgloss.Left, lipgloss.NewStyle().Foreground(AccentColor).Render(glynLargeText), SubtleStyle.Margin(0, 1, 0, 1).Render(codeLargeText)),
 			inf,
 		),
 	)
