@@ -57,6 +57,7 @@ func Burner(width int) string {
 	return lipgloss.NewStyle().
 		Width(width).
 		AlignHorizontal(lipgloss.Center).
+		MarginBottom(1).
 		Render(
 			lipgloss.JoinVertical(
 				lipgloss.Top,

@@ -1,6 +1,9 @@
 package ui
 
 import (
+	"strings"
+
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
 	"github.com/thero-sgit/glyn/internal/config"
@@ -23,6 +26,9 @@ func (m *Model) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 	}
 
 	m.textarea = library.CreateTextArea(msg.Width, taHeight, m.textarea.Value())
+	m.textarea.KeyMap.InsertNewline = key.NewBinding(
+		key.WithKeys("alt+enter", "ctrl+j"),
+	)
 
 	return m, nil
 }
@@ -186,8 +192,6 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleEscKey()
 	case "ctrl+e":
 		return m.handleCtrlE()
-	case "alt+enter":
-		return m.handleAltEnter()
 	case "pgup", "pgdown", "up", "down", "left", "right", "tab":
 		return m.handleUpArrows(msg)
 	case "/":
@@ -293,6 +297,22 @@ func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// 		}
 	// 	}
 
+	case m.textarea.Focused():
+		if strings.Trim(strings.TrimSpace(m.textarea.Value()), "\n") != "" {
+			m.focused = &m.chatScreen
+			focused := *m.focused
+
+			cmd := submodels.PromptCmd {
+				Message: m.textarea.Value(),
+			}
+			focused.Update(cmd)
+
+			m.textarea.Reset()
+			m.textarea.Blur()
+		}			
+
+		return m, nil
+
 	case m.slashCmdCon.Focused:
 		slashCon := m.slashCmdCon
 		slashCon.Focused = false
@@ -323,7 +343,7 @@ func (m *Model) handleAltEnter() (tea.Model, tea.Cmd) {
 	// 	return m, nil
 	// }
 
-	// prompt := strings.Trim(strings.TrimSpace(m.textarea.Value()), "\n")
+	// prompt := 
 
 	var animateCmd tea.Cmd
 	var cmds tea.Cmd

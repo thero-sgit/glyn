@@ -10,6 +10,10 @@ import (
 )
 
 
+type PromptCmd struct {
+	Message string
+}
+
 type ChatScreen struct {
 	viewport  viewport.Model
 	history   []string
@@ -52,8 +56,11 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "up":			
 
-		case "down":		
+		case "down":
 		}
+
+	case PromptCmd:
+		c.history = append(c.history, msg.Message)
 	}
 
 	return c, nil
