@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/thero-sgit/glyn/internal/ui/library"
+	"github.com/thero-sgit/glyn/internal/ui/submodels/components"
 )
 
 
@@ -15,8 +16,10 @@ type PromptCmd struct {
 }
 
 type ChatScreen struct {
-	viewport  viewport.Model
-	history   []string
+	burner        string
+	viewport      viewport.Model
+	history       []string
+	currentPrompt *components.UserPrompt
 }
 
 func (c *ChatScreen) Init() tea.Cmd {
@@ -27,9 +30,6 @@ func NewChatScreen() tea.Model {
 
 	return &ChatScreen{
 		viewport: viewport.New(0, 0),
-		history: []string{
-			library.Burner(0),
-		},
 	}
 }
 
@@ -37,7 +37,7 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		c.viewport.Width, c.viewport.Height = msg.Width, msg.Height
-		c.history[0] = library.Burner(c.viewport.Width)
+		c.burner = library.Burner(c.viewport.Width)
 		return c, nil
 
 	case tea.MouseMsg:
@@ -59,8 +59,17 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "down":
 		}
 
+	case components.TickMsg20:
+		c.currentPrompt.Update(msg)
+		c.history[0] = c.currentPrompt.View()
+		
+		return c, components.DoTick20()
+
 	case PromptCmd:
-		c.history = append(c.history, msg.Message)
+		c.currentPrompt = components.NewUserPrompt(msg.Message)
+		c.history = append(c.history, c.currentPrompt.View())
+
+		return c, components.DoTick20()
 	}
 
 	return c, nil
@@ -71,7 +80,7 @@ func (c *ChatScreen) View() string {
 		Width(c.viewport.Width).
 		Height(c.viewport.Height)
 
-	if len(c.history) <= 1 {
+	if len(c.history) < 1 {
 		style = style.AlignVertical(lipgloss.Center)
 	}
 

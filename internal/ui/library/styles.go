@@ -1,6 +1,10 @@
 package library
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"fmt"
+
+	"github.com/charmbracelet/lipgloss"
+)
 
 var (
 	SubtleStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
@@ -9,3 +13,10 @@ var (
 	AccentColor     = lipgloss.Color("#dfdedc")
 	BoldStyle       = lipgloss.NewStyle().Bold(true)
 )
+
+func ColorForOffset(offset float64) lipgloss.Style {
+	level := 235 + int((offset+1)/2*23)
+	return lipgloss.NewStyle().Foreground(
+		lipgloss.Color(fmt.Sprintf("%d", level)),
+	)
+}

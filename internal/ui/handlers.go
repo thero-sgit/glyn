@@ -66,7 +66,7 @@ func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 
 		case zone.Get("retry-button").InBounds(msg):
 			m, cmds := CHandler.handlePrompt(m)
-			return m, tea.Batch(cmds, doTick20())
+			return m, tea.Batch(cmds, components.DoTick20())
 
 		// case zone.Get("thought-process-btn").InBounds(msg):
 		// 	tempPrettyHistory := m.prettyHistory()
@@ -114,13 +114,9 @@ func (m *Model) handleTick50() (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m *Model) handleTick20() (tea.Model, tea.Cmd) {
+func (m *Model) handleTick20(msg components.TickMsg20) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
-	// if m.sendingPrompt {
-	// 	m.viewport.SetContent(strings.Join(append(m.prettyHistory(), m.currentUserPrompt.getPretty()), "\n"))
-	// 	m.currentUserPrompt.animate()
-	// 	cmd = doTick20()
-	// }
+	m.chatScreen, cmd = m.chatScreen.Update(msg)
 
 	return m, cmd
 }
@@ -298,18 +294,21 @@ func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// 	}
 
 	case m.textarea.Focused():
-		if strings.Trim(strings.TrimSpace(m.textarea.Value()), "\n") != "" {
-			m.focused = &m.chatScreen
-			focused := *m.focused
+		if strings.Trim(strings.TrimSpace(m.textarea.Value()), "\n") != "" {		
+			var cmd tea.Cmd
 
-			cmd := submodels.PromptCmd {
-				Message: m.textarea.Value(),
-			}
-			focused.Update(cmd)
+			m.chatScreen, cmd = m.chatScreen.Update(
+				submodels.PromptCmd {
+					Message: m.textarea.Value(),
+				},
+			)
 
 			m.textarea.Reset()
 			m.textarea.Blur()
-		}			
+
+			m.focused = &m.chatScreen
+			return m, cmd
+		}
 
 		return m, nil
 

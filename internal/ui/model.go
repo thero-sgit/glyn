@@ -20,14 +20,6 @@ func doTick50() tea.Cmd {
 	})
 }
 
-type TickMsg20 time.Time
-
-func doTick20() tea.Cmd {
-	return tea.Tick(20*time.Millisecond, func(t time.Time) tea.Msg {
-		return TickMsg20(t)
-	})
-}
-
 func sendPromptKeyMsg() tea.Cmd {
 	return func() tea.Msg {
 		return tea.KeyMsg{
@@ -92,6 +84,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case submodels.ModelsCmd:
 		return m.handleModelsCmd(msg)
+
+	case components.TickMsg20:
+		return m.handleTick20(msg)
 
 	default:
 		focused := *m.focused

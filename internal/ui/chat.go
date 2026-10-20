@@ -2,9 +2,7 @@ package ui
 
 import (
 	"fmt"
-	"math"
 	"slices"
-	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
@@ -111,27 +109,6 @@ func newUserPrompt(prompt string, width int) userPrompt {
 	}
 }
 
-func (up *userPrompt) animate() {
-	up.waveIndex++
-
-	var newPretty strings.Builder
-	for i, v := range up.message {
-		phase := float64(up.waveIndex)*0.2 - float64(i)*0.4
-		offset := math.Sin(phase)
-
-		style := colorForOffset(offset)
-		newPretty.WriteString(style.Render(string(v)))
-	}
-
-	up.pretty = lipgloss.NewStyle().
-		MarginBottom(1).
-		Width(up.width).
-		PaddingRight(1).
-		Render(
-			library.HighlighedStyle.Render(" you $ ") + lipgloss.NewStyle().PaddingLeft(1).Render(newPretty.String()),
-		)
-}
-
 func (up *userPrompt) sent() {
 	p := library.HighlighedStyle.Render(" you $ ") + lipgloss.NewStyle().PaddingLeft(1).Render(up.message)
 
@@ -170,13 +147,6 @@ func (up *userPrompt) err() {
 				ed,
 			),
 		)
-}
-
-func colorForOffset(offset float64) lipgloss.Style {
-	level := 235 + int((offset+1)/2*23)
-	return lipgloss.NewStyle().Foreground(
-		lipgloss.Color(fmt.Sprintf("%d", level)),
-	)
 }
 
 type agentResponse struct {
