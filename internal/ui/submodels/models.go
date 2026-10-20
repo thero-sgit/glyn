@@ -1,7 +1,9 @@
 package submodels
 
 import (
+	"cmp"
 	"slices"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -74,6 +76,9 @@ func (l *LLModels) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m = append(m, model.Id)
 			}
 			slices.Sort(m)
+			slices.SortFunc(l.models, func(a, b ai.GroqModelInfo) int {
+				return cmp.Compare(a.Id, b.Id)
+			})
 
 			config.Config.Model.Options = m
 			config.Config.Model.Toggle()
@@ -137,7 +142,7 @@ func (l *LLModels) View() string {
 		lipgloss.JoinVertical(
 			lipgloss.Top,
 			header,
-			lipgloss.JoinHorizontal(lipgloss.Top, modelCards...),
+			strings.Join(modelCards, "\n\n"),
 		),
 	)
 
@@ -153,42 +158,43 @@ func modelCard(modelInfo ai.GroqModelInfo, highlight bool) string {
 			library.SubtleStyle.Render(modelInfo.OwnedBy),
 	)
 
-	c := map[string]string{
-		"tools":     "\u2692",
-		"reasoning": "\u223f",
-	}
+	card := header
 
-	var labels []string
-	for _, s := range modelInfo.SupportedFeatures {
-		val, ok := c[s]
-		if ok {
-			labels = append(
-				labels,
-				library.SubtleStyle.Render(val+" ")+s+"  ",
-			)
-		}
-	}
-
-	capabilities := lipgloss.NewStyle().Render(
-		lipgloss.JoinVertical(
-			lipgloss.Top,
-			library.SubtleStyle.Render("Capabilities"),
-			lipgloss.JoinHorizontal(lipgloss.Left, labels...),
-		),
-	)
-
-	style := lipgloss.NewStyle().Margin(0, 1, 1, 0).Padding(0, 1, 0, 1).Border(lipgloss.RoundedBorder())
 	if highlight {
-		style = lipgloss.NewStyle().Margin(0, 1, 1, 0).Padding(0, 1, 0, 1).Border(lipgloss.RoundedBorder()).BorderForeground(library.AccentColor)
-	}
+			c := map[string]string{
+			"tools":     "\u2692",
+			"reasoning": "\u223f",
+		}
 
-	card := style.Render(
-		lipgloss.JoinVertical(
-			lipgloss.Top,
-			header,
-			capabilities,
-		),
-	)
+		var labels []string
+		for _, s := range modelInfo.SupportedFeatures {
+			val, ok := c[s]
+			if ok {
+				labels = append(
+					labels,
+					library.SubtleStyle.Render(val+" ")+s+"  ",
+				)
+			}
+		}
+
+		capabilities := lipgloss.NewStyle().Render(
+			lipgloss.JoinVertical(
+				lipgloss.Top,
+				library.SubtleStyle.Render("Capabilities"),
+				lipgloss.JoinHorizontal(lipgloss.Left, labels...),
+			),
+		)
+
+		card = lipgloss.JoinHorizontal(
+			lipgloss.Left,
+			library.HighlighedStyle.Height(3).MarginRight(1).Render(library.BoldStyle.Render(" > ")),
+			lipgloss.JoinVertical(
+				lipgloss.Top,
+				header,
+				capabilities,
+			),
+		)
+	}		
 
 	return card
 }

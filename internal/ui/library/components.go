@@ -9,18 +9,18 @@ import (
 	"github.com/thero-sgit/glyn/internal/config"
 )
 
-const glynLargeText = `██████ ██  ██  ██ ████  ██
-██  ██ ██  ██  ██ ████  ██
-██  ██ ██  ██  ██ ██ ██ ██
-██████ ██  ██████ ██  ████
-    ██ ██      ██ ██  ████
+const glynLargeText = `███████ ██    ██   ██ ████████
+██      ██    ██   ██ ██    ██
+██ ████ ██    ██   ██ ██    ██
+██░░░██ ██░░░ ███████ ██░░░░██
+███████ █████ ░░░░░██ ██░░░░██
 `
 
-const codeLargeText = `█████ ██████     ██ ██████
-██    ██  ██ ██████ ██  ██
-██    ██  ██ ██  ██ ██████
-██    ██  ██ ██  ██ ██
-█████ ██████ ██████ ██████`
+const codeLargeText = `██████ ███████      ██ ███████
+██     ██   ██ ███████ ██   ██
+██     ██   ██ ██   ██ ███████
+██░░░░ ██░░░██ ██░░░██ ██░░░░░
+██████ ███████ ███████ ███████`
 
 var (
 	SendPromptBtnStates = []string{
@@ -31,22 +31,39 @@ var (
 )
 
 func Burner(width int) string {
-	inf := lipgloss.NewStyle().Render(lipgloss.JoinVertical(
-		lipgloss.Top,
-		SubtleStyle.Bold(true).Render(config.Config.Version),
-		"",
-		BoldStyle.Foreground(AccentColor).Render("\u27E1 ")+SubtleStyle.Render(config.Config.Model.Name),
-		BoldStyle.Foreground(AccentColor).Render("@ ")+SubtleStyle.Underline(true).Render("console.groq.com"),
-		BoldStyle.Foreground(AccentColor).Render("~")+SubtleStyle.Render(config.Config.WorkingDir),
-	),
-	)
+	inf := lipgloss.NewStyle().
+		Width(width).
+		AlignHorizontal(lipgloss.Center).
+		Render(
+			lipgloss.JoinHorizontal(
+				lipgloss.Left,
+				BoldStyle.Foreground(AccentColor).Render("\u27E1 ")+SubtleStyle.Render(config.Config.Model.Name),
+				" · ",
+				BoldStyle.Foreground(AccentColor).Render("@ ")+SubtleStyle.Underline(true).Render("console.groq.com"),
+			),
+		)
 
-	return lipgloss.NewStyle().MarginBottom(1).Width(width).AlignHorizontal(lipgloss.Center).Render(lipgloss.JoinHorizontal(
-			lipgloss.Left,
-			lipgloss.JoinHorizontal(lipgloss.Left, lipgloss.NewStyle().Foreground(AccentColor).Render(glynLargeText), SubtleStyle.Margin(0, 1, 0, 1).Render(codeLargeText)),
-			inf,
-		),
-	)
+	largeText := lipgloss.NewStyle().
+		Width(width).
+		AlignHorizontal(lipgloss.Center).
+		Render(
+			lipgloss.JoinHorizontal(
+				lipgloss.Left, 
+				lipgloss.NewStyle().Foreground(AccentColor).Render(glynLargeText), 
+				SubtleStyle.Margin(0, 1, 0, 1).Render(codeLargeText),
+			),
+		)
+
+	return lipgloss.NewStyle().
+		Width(width).
+		AlignHorizontal(lipgloss.Center).
+		Render(
+			lipgloss.JoinVertical(
+				lipgloss.Top,
+				largeText,
+				inf,
+			),				
+		)
 }
 
 func CreateTextArea(width, height int, value string) textarea.Model {

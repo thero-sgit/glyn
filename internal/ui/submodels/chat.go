@@ -20,6 +20,7 @@ func (c *ChatScreen) Init() tea.Cmd {
 }
 
 func NewChatScreen() tea.Model {
+
 	return &ChatScreen{
 		viewport: viewport.New(0, 0),
 		history: []string{
