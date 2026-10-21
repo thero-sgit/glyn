@@ -22,18 +22,20 @@ type SentCmd  struct {}
 type ErrorCmd struct {}
 
 type UserPrompt struct {
-	message   string
-	waveIndex int
-	pretty    string
+	message    string
+	waveIndex  int
+	pretty     string
+	HistoryIdx int
 }
 
 func (u *UserPrompt) Init() tea.Cmd {
 	return nil
 }
 
-func NewUserPrompt(message string) tea.Model {
+func NewUserPrompt(message string, index int) *UserPrompt {
 	return &UserPrompt{
-		message: message,
+		message:    message,
+		HistoryIdx: index,
 	}
 }
 

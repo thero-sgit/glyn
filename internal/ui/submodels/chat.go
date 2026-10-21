@@ -16,12 +16,11 @@ type PromptCmd struct {
 }
 
 type ChatScreen struct {
-	burner        string
 	viewport      viewport.Model
-	history       []*tea.Model
+	history       []string
 
 	//
-	currentPrompt *tea.Model
+	currentPrompt *components.UserPrompt
 }
 
 func (c *ChatScreen) Init() tea.Cmd {
@@ -39,7 +38,13 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		c.viewport.Width, c.viewport.Height = msg.Width, msg.Height
-		c.burner = library.Burner(c.viewport.Width)
+
+		if len(c.history) == 0 {
+			c.history = append(c.history, library.Burner(c.viewport.Width))
+		} else {
+			c.history[0] = library.Burner(c.viewport.Width)
+		}
+
 		return c, nil
 
 	case tea.MouseMsg:
@@ -62,15 +67,14 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case components.TickMsg20:
-		p := *c.currentPrompt
-		p.Update(components.ErrorCmd{})
-		
-		return c, nil
+		c.currentPrompt.Update(msg)
+		c.history[c.currentPrompt.HistoryIdx] = c.currentPrompt.View()
+
+		return c, components.DoTick20()
 
 	case PromptCmd:
-		p := components.NewUserPrompt(msg.Message)
-		c.history = append(c.history, &p)
-		c.currentPrompt = &p
+		c.currentPrompt = components.NewUserPrompt(msg.Message, len(c.history))
+		c.history = append(c.history, c.currentPrompt.View())
 
 		return c, components.DoTick20()
 	}
@@ -83,22 +87,12 @@ func (c *ChatScreen) View() string {
 		Width(c.viewport.Width).
 		Height(c.viewport.Height)
 
-	if len(c.history) < 1 {
+	if len(c.history) == 1 {
 		style = style.AlignVertical(lipgloss.Center)
 	}
 
-	content := style.Render(strings.Join(c.prettyHistory(), "\n"))
+	content := style.Render(strings.Join(c.history, "\n"))
 
 	c.viewport.SetContent(content)
 	return c.viewport.View()
-}
-
-func (c *ChatScreen) prettyHistory() []string {
-	var list = []string{c.burner}
-	for i := range c.history {
-		e := *c.history[i]
-		list = append(list, e.View())
-	}
-
-	return list
 }
