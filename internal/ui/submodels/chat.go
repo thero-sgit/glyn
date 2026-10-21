@@ -18,8 +18,10 @@ type PromptCmd struct {
 type ChatScreen struct {
 	burner        string
 	viewport      viewport.Model
-	history       []string
-	currentPrompt *components.UserPrompt
+	history       []*tea.Model
+
+	//
+	currentPrompt *tea.Model
 }
 
 func (c *ChatScreen) Init() tea.Cmd {
@@ -60,14 +62,15 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case components.TickMsg20:
-		c.currentPrompt.Update(msg)
-		c.history[0] = c.currentPrompt.View()
+		p := *c.currentPrompt
+		p.Update(components.ErrorCmd{})
 		
-		return c, components.DoTick20()
+		return c, nil
 
 	case PromptCmd:
-		c.currentPrompt = components.NewUserPrompt(msg.Message)
-		c.history = append(c.history, c.currentPrompt.View())
+		p := components.NewUserPrompt(msg.Message)
+		c.history = append(c.history, &p)
+		c.currentPrompt = &p
 
 		return c, components.DoTick20()
 	}
@@ -84,8 +87,18 @@ func (c *ChatScreen) View() string {
 		style = style.AlignVertical(lipgloss.Center)
 	}
 
-	content := style.Render(strings.Join(c.history, "\n"))
+	content := style.Render(strings.Join(c.prettyHistory(), "\n"))
 
 	c.viewport.SetContent(content)
 	return c.viewport.View()
+}
+
+func (c *ChatScreen) prettyHistory() []string {
+	var list = []string{c.burner}
+	for i := range c.history {
+		e := *c.history[i]
+		list = append(list, e.View())
+	}
+
+	return list
 }

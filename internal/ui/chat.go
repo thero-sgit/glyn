@@ -82,7 +82,6 @@ func (up userPrompt) getPretty() string {
 func (up userPrompt) updated(width int) chatItem {
 	updated := newUserPrompt(up.message, width)
 	updated.index = up.index
-	updated.sent()
 
 	return updated
 }
@@ -107,46 +106,6 @@ func newUserPrompt(prompt string, width int) userPrompt {
 		waveIndex: 0,
 		pretty:    pretty,
 	}
-}
-
-func (up *userPrompt) sent() {
-	p := library.HighlighedStyle.Render(" you $ ") + lipgloss.NewStyle().PaddingLeft(1).Render(up.message)
-
-	up.pretty = lipgloss.NewStyle().
-		MarginBottom(1).
-		Width(up.width).
-		PaddingRight(1).
-		Render(
-			lipgloss.JoinVertical(
-				lipgloss.Top,
-				p,
-				lipgloss.NewStyle().Foreground(lipgloss.Color("#02e696")).PaddingRight(2).Render("\u2713"),
-			),
-		)
-}
-
-func (up *userPrompt) err() {
-	p := library.HighlighedStyle.Render(" you $ ") + lipgloss.NewStyle().Strikethrough(true).PaddingLeft(1).Render(up.message)
-
-	ed := lipgloss.JoinHorizontal(
-		lipgloss.Left,
-		lipgloss.NewStyle().MarginRight(4).Render(
-			library.SubtleStyle.Render("failed to send"),
-		),
-		library.RetryButton(),
-	)
-
-	up.pretty = lipgloss.NewStyle().
-		MarginBottom(1).
-		Width(up.width).
-		PaddingRight(1).
-		Render(
-			lipgloss.JoinVertical(
-				lipgloss.Top,
-				p,
-				ed,
-			),
-		)
 }
 
 type agentResponse struct {
