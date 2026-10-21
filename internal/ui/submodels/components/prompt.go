@@ -28,15 +28,15 @@ type UserPrompt struct {
 	HistoryIdx int
 }
 
-func (u *UserPrompt) Init() tea.Cmd {
-	return nil
-}
-
 func NewUserPrompt(message string, index int) *UserPrompt {
 	return &UserPrompt{
 		message:    message,
 		HistoryIdx: index,
 	}
+}
+
+func (u *UserPrompt) Init() tea.Cmd {
+	return nil
 }
 
 func (u *UserPrompt) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

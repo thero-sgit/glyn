@@ -62,7 +62,7 @@ func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case zone.Get("send-prompt-btn").InBounds(msg):
-			return m, sendPromptKeyMsg()
+			return m.handleEnterKey(tea.KeyMsg{})
 
 		case zone.Get("retry-button").InBounds(msg):
 			m, cmds := CHandler.handlePrompt(m)
@@ -102,19 +102,14 @@ func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *Model) handleTick50() (tea.Model, tea.Cmd) {
+func (m *Model) handleTick20(msg components.TickMsg20) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
-	// if m.isAgentWorking {
-	// 	m.currentAgentRes.agentBgActivity.animate()
-	// 	cmd = doTick50()
-	// } else {
-	// 	// m.renderChat()
-	// }
+	m.chatScreen, cmd = m.chatScreen.Update(msg)
 
 	return m, cmd
 }
 
-func (m *Model) handleTick20(msg components.TickMsg20) (tea.Model, tea.Cmd) {
+func (m *Model) handleTick50(msg components.TickMsg50) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.chatScreen, cmd = m.chatScreen.Update(msg)
 

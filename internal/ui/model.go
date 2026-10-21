@@ -1,8 +1,6 @@
 package ui
 
 import (
-	"time"
-
 	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -11,23 +9,6 @@ import (
 	"github.com/thero-sgit/glyn/internal/ui/submodels"
 	"github.com/thero-sgit/glyn/internal/ui/submodels/components"
 )
-
-type TickMsg50 time.Time
-
-func doTick50() tea.Cmd {
-	return tea.Tick(50*time.Millisecond, func(t time.Time) tea.Msg {
-		return TickMsg50(t)
-	})
-}
-
-func sendPromptKeyMsg() tea.Cmd {
-	return func() tea.Msg {
-		return tea.KeyMsg{
-			Type: tea.KeyEnter,
-			Alt:  true,
-		}
-	}
-}
 
 type Model struct {
 	width          int
@@ -87,6 +68,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case components.TickMsg20:
 		return m.handleTick20(msg)
+
+	case components.TickMsg50:
+		return m.handleTick50(msg)
 
 	default:
 		focused := *m.focused
