@@ -11,13 +11,9 @@ import (
 	zone "github.com/lrstanley/bubblezone"
 	"github.com/thero-sgit/glyn/internal/ai"
 	"github.com/thero-sgit/glyn/internal/config"
+	"github.com/thero-sgit/glyn/internal/ui/api"
 	"github.com/thero-sgit/glyn/internal/ui/library"
 )
-
-type ModelsCmd struct {
-	M []ai.GroqModelInfo
-	C chan []ai.GroqModelInfo
-}
 
 type LLModels struct {
 	viewport viewport.Model
@@ -68,7 +64,7 @@ func (l *LLModels) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		l.viewport, cmd = l.viewport.Update(msg)
 		return l, cmd
 
-	case ModelsCmd:
+	case api.ModelsCmd:
 		if len(msg.M) > 0 {
 			l.models = msg.M
 			var m []string

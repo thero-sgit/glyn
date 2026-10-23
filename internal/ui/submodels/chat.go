@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/thero-sgit/glyn/internal/ui/api"
 	"github.com/thero-sgit/glyn/internal/ui/library"
 	"github.com/thero-sgit/glyn/internal/ui/submodels/components"
 )
@@ -18,6 +19,9 @@ type PromptCmd struct {
 type ChatScreen struct {
 	viewport      viewport.Model
 	history       []string
+
+	//
+	handler api.Handler
 
 	//
 	currentPrompt   *components.UserPrompt
@@ -67,26 +71,26 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "down":
 		}
 
-	case components.TickMsg20:
+	case api.TickMsg20:
 		c.currentPrompt.Update(msg)
 		c.history[c.currentPrompt.HistoryIdx] = c.currentPrompt.View()
 
 		// test
 		c.currentResponse = components.NewAgentResponse(len(c.history))
 		c.history = append(c.history, c.currentResponse.View())
-		return c, components.DoTick50()
+		return c, api.DoTick50()
 
-	case components.TickMsg50:
+	case api.TickMsg50:
 		c.currentResponse.Update(msg)
 		c.history[c.currentResponse.HistoryIdx] = c.currentResponse.View()
 
-		return c, components.DoTick50()
+		return c, api.DoTick50()
 
 	case PromptCmd:
 		c.currentPrompt = components.NewUserPrompt(msg.Message, len(c.history))
 		c.history = append(c.history, c.currentPrompt.View())
 
-		return c, components.DoTick20()
+		return c, api.DoTick20()
 	}
 
 	return c, nil

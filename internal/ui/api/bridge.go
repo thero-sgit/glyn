@@ -1,22 +1,19 @@
-package ui
+package api
 
 import (
 	"context"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/thero-sgit/glyn/internal/ai"
-	"github.com/thero-sgit/glyn/internal/ui/submodels"
 )
-
-var CHandler Handler
 
 type Handler struct {
 	session *ai.Session
 }
 
-func InitHandler() {
-	CHandler = Handler{
-		session: &ai.CSession,
+func NewHandler(session *ai.Session) Handler {
+	return Handler {
+		session: session,
 	}
 }
 
@@ -75,35 +72,25 @@ func awaitSessionInfo(ctx context.Context, c chan ai.Chunk) tea.Cmd {
 	}
 }
 
-func (h *Handler) handlePrompt(m *Model) (*Model, tea.Cmd) {
-	// responseChan := make(chan ai.Chunk)
-	// sessionInfoChan := make(chan ai.Chunk)
-	// errChan := make(chan error, 2)
+func (h *Handler) handlePrompt(prompt string) tea.Cmd {
+	responseChan := make(chan ai.Chunk)
+	sessionInfoChan := make(chan ai.Chunk)
+	errChan := make(chan error, 2)
 
-	// // prompt := m.chatCentre.currentUserPrompt.message
-	// reqCtx := h.session.Ctx
+	reqCtx := h.session.Ctx
 
 	var cmds []tea.Cmd
 
-	// if len(h.session.History) < 1 {
-	// 	h.session.NameSession(prompt, sessionInfoChan, errChan)
-	// 	cmds = append(cmds, awaitSessionInfo(reqCtx, sessionInfoChan))
-	// }
+	if len(h.session.History) < 1 {
+		h.session.NameSession(prompt, sessionInfoChan, errChan)
+		cmds = append(cmds, awaitSessionInfo(reqCtx, sessionInfoChan))
+	}
 
-	// h.session.NewPrompt(prompt, responseChan, errChan)
+	h.session.NewPrompt(prompt, responseChan, errChan)
 
-	// m.textarea.Blur()
-	// m.textarea.Reset()
+	cmds = append(cmds, errorListener(reqCtx, errChan), awaitResponse(reqCtx, responseChan))
 
-	// if m.chatCentre.isChatClear && len(h.session.History) > 0 {
-	// 	m.chatCentre.isChatClear = false
-	// }
-
-	// m.chatCentre.sendingPrompt = true
-
-	// cmds = append(cmds, errorListener(reqCtx, errChan), awaitResponse(reqCtx, responseChan))
-
-	return m, tea.Batch(cmds...)
+	return tea.Batch(cmds...)
 }
 
 func awaitModels(ctx context.Context, c chan []ai.GroqModelInfo) tea.Cmd {
@@ -114,18 +101,18 @@ func awaitModels(ctx context.Context, c chan []ai.GroqModelInfo) tea.Cmd {
 				return nil
 			}
 
-			return submodels.ModelsCmd{M: m, C: c}
+			return ModelsCmd{M: m, C: c}
 		case <-ctx.Done():
 			return nil
 		}
 	}
 }
 
-func (h *Handler) handleGetModels(m *Model) (*Model, tea.Cmd) {
+func (h *Handler) handleGetModels() tea.Cmd {
 	responseChan := make(chan []ai.GroqModelInfo)
 	errChan := make(chan error, 2)
 
 	h.session.RetrieveModels(responseChan, errChan)
 
-	return m, tea.Batch(errorListener(h.session.Ctx, errChan), awaitModels(h.session.Ctx, responseChan))
+	return tea.Batch(errorListener(h.session.Ctx, errChan), awaitModels(h.session.Ctx, responseChan))
 }

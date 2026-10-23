@@ -2,21 +2,12 @@ package components
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/thero-sgit/glyn/internal/ui/api"
 	"github.com/thero-sgit/glyn/internal/ui/library"
 )
-
-
-type TickMsg50 time.Time
-
-func DoTick50() tea.Cmd {
-	return tea.Tick(50*time.Millisecond, func(t time.Time) tea.Msg {
-		return TickMsg50(t)
-	})
-}
 
 type AgentResponse struct {
 	spinner    spinner.Model
@@ -40,7 +31,7 @@ func (a *AgentResponse) Init() tea.Cmd {
 
 func (a *AgentResponse) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg.(type) {
-	case TickMsg50:
+	case api.TickMsg50:
 		var cmd tea.Cmd
 		a.spinner, cmd = a.spinner.Update(spinner.TickMsg{})
 

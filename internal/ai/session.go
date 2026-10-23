@@ -15,8 +15,6 @@ type Chunk struct {
     Reasoning bool
 }
 
-var CSession Session
-
 type Session struct {
     Ctx    context.Context
     cancl  context.CancelFunc
@@ -202,11 +200,4 @@ func (s *Session) RetrieveModels(c chan []GroqModelInfo, errChan chan error){
 
         c <- models
     }()
-}
-
-func InitSession() {
-    CSession = Session{
-        groq: newGroq(),
-    }
-    CSession.SetNewContext()
 }

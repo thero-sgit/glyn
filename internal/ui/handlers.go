@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
 	"github.com/thero-sgit/glyn/internal/config"
+	"github.com/thero-sgit/glyn/internal/ui/api"
 	"github.com/thero-sgit/glyn/internal/ui/library"
 	"github.com/thero-sgit/glyn/internal/ui/submodels"
 	"github.com/thero-sgit/glyn/internal/ui/submodels/components"
@@ -64,10 +65,6 @@ func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		case zone.Get("send-prompt-btn").InBounds(msg):
 			return m.handleEnterKey(tea.KeyMsg{})
 
-		case zone.Get("retry-button").InBounds(msg):
-			m, cmds := CHandler.handlePrompt(m)
-			return m, tea.Batch(cmds, components.DoTick20())
-
 		// case zone.Get("thought-process-btn").InBounds(msg):
 		// 	tempPrettyHistory := m.prettyHistory()
 
@@ -102,59 +99,18 @@ func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *Model) handleTick20(msg components.TickMsg20) (tea.Model, tea.Cmd) {
+func (m *Model) handleTick20(msg api.TickMsg20) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.chatScreen, cmd = m.chatScreen.Update(msg)
 
 	return m, cmd
 }
 
-func (m *Model) handleTick50(msg components.TickMsg50) (tea.Model, tea.Cmd) {
+func (m *Model) handleTick50(msg api.TickMsg50) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.chatScreen, cmd = m.chatScreen.Update(msg)
 
 	return m, cmd
-}
-
-func (m *Model) handleResponse(msg response) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
-	// if m.sendingPrompt {
-	// 	m.sendingPrompt = false
-	// 	m.isAgentWorking = true
-	// 	m.currentUserPrompt.sent()
-	// 	m.history = append(m.history, m.currentUserPrompt)
-	// 	cmd = doTick50()
-	// }
-
-	// if msg.chunk.EOS {
-	// 	m.isAgentWorking = false
-	// 	m.currentAgentRes.agentBgActivity.done(false)
-	// 	library.SendPromptState = library.SendPromptBtnStates[0]
-	// 	m.currentAgentRes.responseBuffer, _ = config.Config.MdRenderer.Render(m.currentAgentRes.responseBuffer)
-	// 	m.history = append(m.history, m.currentAgentRes)
-	// 	return m, doTick50()
-	// }
-
-	// if msg.chunk.Reasoning {
-	// 	if !m.currentAgentRes.showReasoning {
-	// 		m.currentAgentRes.showReasoning = true
-	// 	}
-
-	// 	m.currentAgentRes.reasoningBuffer += msg.chunk.Data
-	// } else {
-	// 	if m.currentAgentRes.showReasoning {
-	// 		m.currentAgentRes.showReasoning = false
-	// 	}
-
-	// 	if m.isAgentWorking {
-	// 		m.currentAgentRes.agentBgActivity.done(false)
-	// 	}
-	// 	m.currentAgentRes.responseBuffer += msg.chunk.Data
-	// }
-
-	// m.viewport.SetContent(strings.Join(append(m.prettyHistory(), m.currentAgentRes.getPretty()), "\n"))
-
-	return m, tea.Batch(awaitResponse(CHandler.session.Ctx, msg.c), cmd)
 }
 
 // func (m *Model) handleSessionInfo(msg sessionInfo) (tea.Model, tea.Cmd) {
@@ -166,7 +122,7 @@ func (m *Model) handleResponse(msg response) (tea.Model, tea.Cmd) {
 // 	return m, awaitSessionInfo(CHandler.session.Ctx, msg.c)
 // }
 
-func (m *Model) handleModelsCmd(msg submodels.ModelsCmd) (tea.Model, tea.Cmd) {
+func (m *Model) handleModelsCmd(msg api.ModelsCmd) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.llmsScreen, cmd = m.llmsScreen.Update(msg)
 	return m, cmd
@@ -176,7 +132,6 @@ func (m *Model) handleModelsCmd(msg submodels.ModelsCmd) (tea.Model, tea.Cmd) {
 func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "ctrl+c":
-		CHandler.session.Close()
 		return m, tea.Quit
 
 	case "esc":

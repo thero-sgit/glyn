@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 	"github.com/thero-sgit/glyn/internal/common"
+	"github.com/thero-sgit/glyn/internal/ui/api"
 	"github.com/thero-sgit/glyn/internal/ui/submodels"
 	"github.com/thero-sgit/glyn/internal/ui/submodels/components"
 )
@@ -41,14 +42,12 @@ func InitialModel() *Model {
 	}
 
 	model.focused = &model.chatScreen
-	InitHandler()
 
 	return &model
 }
 
 func (m *Model) Init() tea.Cmd {
 	var cmd tea.Cmd
-	m, cmd = CHandler.handleGetModels(m)
 	return cmd
 }
 
@@ -63,13 +62,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		return m.handleKeyMsg(msg)
 
-	case submodels.ModelsCmd:
+	case api.ModelsCmd:
 		return m.handleModelsCmd(msg)
 
-	case components.TickMsg20:
+	case api.TickMsg20:
 		return m.handleTick20(msg)
 
-	case components.TickMsg50:
+	case api.TickMsg50:
 		return m.handleTick50(msg)
 
 	default:

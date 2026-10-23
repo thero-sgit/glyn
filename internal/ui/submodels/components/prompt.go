@@ -3,23 +3,12 @@ package components
 import (
 	"math"
 	"strings"
-	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/thero-sgit/glyn/internal/ui/api"
 	"github.com/thero-sgit/glyn/internal/ui/library"
 )
-
-type TickMsg20 time.Time
-
-func DoTick20() tea.Cmd {
-	return tea.Tick(20*time.Millisecond, func(t time.Time) tea.Msg {
-		return TickMsg20(t)
-	})
-}
-
-type SentCmd  struct {}
-type ErrorCmd struct {}
 
 type UserPrompt struct {
 	message    string
@@ -41,14 +30,14 @@ func (u *UserPrompt) Init() tea.Cmd {
 
 func (u *UserPrompt) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg.(type) {
-	case TickMsg20:
+	case api.TickMsg20:
 		u.waveIndex++
 		u.animate()
 
-	case SentCmd:
+	case api.SentCmd:
 		u.sent()
 
-	case ErrorCmd:
+	case api.ErrorCmd:
 		u.error()
 	}
 
