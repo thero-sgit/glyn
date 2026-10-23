@@ -9,7 +9,6 @@ import (
 	"github.com/thero-sgit/glyn/internal/config"
 	"github.com/thero-sgit/glyn/internal/ui/api"
 	"github.com/thero-sgit/glyn/internal/ui/library"
-	"github.com/thero-sgit/glyn/internal/ui/submodels"
 	"github.com/thero-sgit/glyn/internal/ui/submodels/components"
 )
 
@@ -99,6 +98,12 @@ func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m *Model) handleModelsCmd(msg api.ModelsCmd) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	m.llmsScreen, cmd = m.llmsScreen.Update(msg)
+	return m, cmd
+}
+
 func (m *Model) handleTick20(msg api.TickMsg20) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.chatScreen, cmd = m.chatScreen.Update(msg)
@@ -107,6 +112,13 @@ func (m *Model) handleTick20(msg api.TickMsg20) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) handleTick50(msg api.TickMsg50) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	m.chatScreen, cmd = m.chatScreen.Update(msg)
+
+	return m, cmd
+}
+
+func (m *Model) handleResponseChunkCmd(msg api.ResponseChunkCmd) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.chatScreen, cmd = m.chatScreen.Update(msg)
 
@@ -122,11 +134,7 @@ func (m *Model) handleTick50(msg api.TickMsg50) (tea.Model, tea.Cmd) {
 // 	return m, awaitSessionInfo(CHandler.session.Ctx, msg.c)
 // }
 
-func (m *Model) handleModelsCmd(msg api.ModelsCmd) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
-	m.llmsScreen, cmd = m.llmsScreen.Update(msg)
-	return m, cmd
-}
+
 
 // KEYS
 func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -248,7 +256,7 @@ func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			var cmd tea.Cmd
 
 			m.chatScreen, cmd = m.chatScreen.Update(
-				submodels.PromptCmd {
+				api.PromptCmd {
 					Message: m.textarea.Value(),
 				},
 			)

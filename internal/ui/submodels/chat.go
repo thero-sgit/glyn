@@ -11,11 +11,6 @@ import (
 	"github.com/thero-sgit/glyn/internal/ui/submodels/components"
 )
 
-
-type PromptCmd struct {
-	Message string
-}
-
 type ChatScreen struct {
 	viewport      viewport.Model
 	history       []string
@@ -71,10 +66,20 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "down":
 		}
 
+	case api.PromptCmd:
+		c.addNewPropmt(msg.Message)
+		cmd := c.handler.HandlePrompt(msg.Message)
+
+		return c, tea.Batch(cmd, api.DoTick20())
+
 	case api.TickMsg20:
-		c.currentPrompt.Update(msg)
 		c.history[c.currentPrompt.HistoryIdx] = c.currentPrompt.View()
 
+		if c.currentPrompt.IsSent {
+			return c, api.DoTick50()
+		}
+
+		c.currentPrompt.Update(msg)
 		return c, api.DoTick20()
 
 	case api.TickMsg50:
@@ -83,11 +88,21 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return c, api.DoTick50()
 
-	case PromptCmd:
-		c.currentPrompt = components.NewUserPrompt(msg.Message, len(c.history))
-		c.history = append(c.history, c.currentPrompt.View())
+	case api.ResponseChunkCmd:
+		if !c.currentPrompt.IsSent {
+			c.currentPrompt.Update(api.SentCmd{})
+			c.addNewResponse()
+		}
+		
+		c.history[c.currentResponse.HistoryIdx] = c.currentResponse.View()
 
-		return c, api.DoTick20()
+		if msg.Chunk.EOS {
+			c.currentResponse.Update(msg)
+			return c, nil
+		}
+
+		c.currentResponse.Update(msg)
+		return c, api.AwaitResponse(c.handler.Session.Ctx, msg.C)
 	}
 
 	return c, nil
@@ -106,4 +121,14 @@ func (c *ChatScreen) View() string {
 
 	c.viewport.SetContent(content)
 	return c.viewport.View()
+}
+
+func (c *ChatScreen) addNewPropmt(message string) {
+	c.currentPrompt = components.NewUserPrompt(message, len(c.history))
+	c.history = append(c.history, c.currentPrompt.View())
+}
+
+func (c *ChatScreen) addNewResponse() {
+	c.currentResponse = components.NewAgentResponse(len(c.history))
+	c.history = append(c.history, c.currentResponse.View())
 }

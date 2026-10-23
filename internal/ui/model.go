@@ -78,6 +78,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case api.TickMsg50:
 		return m.handleTick50(msg)
 
+	case api.ResponseChunkCmd:
+		return m.handleResponseChunkCmd(msg)
+
 	default:
 		focused := *m.focused
 		focused.Update(msg)

@@ -30,3 +30,13 @@ func DoTick50() tea.Cmd {
 		return TickMsg50(t)
 	})
 }
+
+type PromptCmd struct {
+	Message string
+}
+
+
+type ResponseChunkCmd struct {
+	Chunk ai.Chunk
+	C     chan ai.Chunk
+}
