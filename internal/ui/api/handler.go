@@ -108,11 +108,10 @@ func awaitModels(ctx context.Context, c chan []ai.GroqModelInfo) tea.Cmd {
 	}
 }
 
-func (h *Handler) handleGetModels() tea.Cmd {
+func (h *Handler) HandleGetModels() tea.Cmd {
 	responseChan := make(chan []ai.GroqModelInfo)
 	errChan := make(chan error, 2)
 
 	h.session.RetrieveModels(responseChan, errChan)
-
 	return tea.Batch(errorListener(h.session.Ctx, errChan), awaitModels(h.session.Ctx, responseChan))
 }

@@ -20,7 +20,7 @@ func (s *Sessions) Init() tea.Cmd {
 	return nil
 }
 
-func NewSessions() tea.Model {
+func NewSessionsScreen() tea.Model {
 	chats := []ChatSession{
 		{
 			name: "Refactor Auth", 

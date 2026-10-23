@@ -21,7 +21,7 @@ type ChatScreen struct {
 	history       []string
 
 	//
-	handler api.Handler
+	handler *api.Handler
 
 	//
 	currentPrompt   *components.UserPrompt
@@ -32,10 +32,10 @@ func (c *ChatScreen) Init() tea.Cmd {
 	return nil
 }
 
-func NewChatScreen() tea.Model {
-
+func NewChatScreen(h *api.Handler) tea.Model {
 	return &ChatScreen{
 		viewport: viewport.New(0, 0),
+		handler: h,
 	}
 }
 
@@ -66,7 +66,7 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "enter", " ":
 
-		case "up":			
+		case "up":
 
 		case "down":
 		}
@@ -75,10 +75,7 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		c.currentPrompt.Update(msg)
 		c.history[c.currentPrompt.HistoryIdx] = c.currentPrompt.View()
 
-		// test
-		c.currentResponse = components.NewAgentResponse(len(c.history))
-		c.history = append(c.history, c.currentResponse.View())
-		return c, api.DoTick50()
+		return c, api.DoTick20()
 
 	case api.TickMsg50:
 		c.currentResponse.Update(msg)

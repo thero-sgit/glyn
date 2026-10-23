@@ -5,6 +5,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
+	"github.com/thero-sgit/glyn/internal/ai"
 	"github.com/thero-sgit/glyn/internal/common"
 	"github.com/thero-sgit/glyn/internal/ui/api"
 	"github.com/thero-sgit/glyn/internal/ui/submodels"
@@ -17,6 +18,9 @@ type Model struct {
 	mHeight        int
 	inputBoxHeight int
 	textarea       textarea.Model
+
+	//
+	handler api.Handler
 
 	//
 	slashCmdCon    components.Selector
@@ -32,23 +36,26 @@ type Model struct {
 }
 
 func InitialModel() *Model {
+	s := ai.NewSession()
+	h := api.NewHandler(s)
+
 	model := Model{
+		handler:        h,
 		slashCmdCon:    components.NewSelector("Command", "/", "/", "<command>", common.ListCmdMatches),
 		fileSelector:   components.NewFileSelector(),
-		chatScreen:     submodels.NewChatScreen(),
 		helpScreen:     submodels.NewHelpModel(),
-		sessionsScreen: submodels.NewSessions(),
+		sessionsScreen: submodels.NewSessionsScreen(),
 		llmsScreen:     submodels.NewModelsModel(),
 	}
 
+	model.chatScreen = submodels.NewChatScreen(&model.handler)
 	model.focused = &model.chatScreen
 
 	return &model
 }
 
 func (m *Model) Init() tea.Cmd {
-	var cmd tea.Cmd
-	return cmd
+	return m.handler.HandleGetModels()
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

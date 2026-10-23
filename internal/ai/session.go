@@ -201,3 +201,12 @@ func (s *Session) RetrieveModels(c chan []GroqModelInfo, errChan chan error){
         c <- models
     }()
 }
+
+func NewSession() *Session {
+    s := Session{
+        groq: newGroq(),
+    }
+    s.SetNewContext()
+
+    return &s
+}
