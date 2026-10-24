@@ -62,28 +62,7 @@ func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 
 		case zone.Get("send-prompt-btn").InBounds(msg):
-			return m.handleEnterKey(tea.KeyMsg{})
-
-		// case zone.Get("thought-process-btn").InBounds(msg):
-		// 	tempPrettyHistory := m.prettyHistory()
-
-		// 	if !m.currentAgentRes.showReasoning {
-		// 		m.currentAgentRes.showReasoning = true
-		// 	} else {
-		// 		m.currentAgentRes.showReasoning = false
-		// 	}
-
-		// 	tempPrettyHistory[len(tempPrettyHistory)-1] = m.currentAgentRes.getPretty()
-		// 	m.viewport.SetContent(strings.Join(tempPrettyHistory, "\n"))
-		// 	return m, nil
-
-		// case m.helpScreen.Focused:
-		// 	updatedModel, cmd := m.helpScreen.Update(msg)
-		// 	m.helpScreen = *updatedModel.(*submodels.HelpModel)
-
-		// 	m.viewport.SetContent(m.helpScreen.View())
-
-		// 	return m, cmd
+			return m.sendPromptCmd()
 
 		default:
 			focused := *m.focused
@@ -226,49 +205,8 @@ func (m *Model) handleCtrlE() (tea.Model, tea.Cmd) {
 
 func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch {
-	// case m.fileSelector.Focused:
-	// 	if len(m.fileSelector.Options) > 0 {
-	// 		file := m.fileSelector.Options[m.fileSelector.Cursor]
-	// 		if m.fileSelector.Prompt == "rm " {
-	// 			m.removeFileForContext(file.Path)
-	// 			m.fileSelector.Focused = false
-
-	// 			m.fileSelector.SetPrompt("@")
-	// 			return m, nil
-	// 		}
-
-	// 		if !file.IsDir {
-	// 			m.addFileForContext(file.Path)
-	// 			m.fileSelector.Focused = false
-
-	// 			m.fileSelector.SetPrompt("@")
-	// 			return m, nil
-	// 		} else {
-	// 			updatedModel, cmd := m.fileSelector.Update(msg)
-	// 			m.fileSelector = *updatedModel.(*submodels.FileSelector)
-
-	// 			return m, cmd
-	// 		}
-	// 	}
-
 	case m.textarea.Focused():
-		if strings.Trim(strings.TrimSpace(m.textarea.Value()), "\n") != "" {		
-			var cmd tea.Cmd
-
-			m.chatScreen, cmd = m.chatScreen.Update(
-				api.PromptCmd {
-					Message: m.textarea.Value(),
-				},
-			)
-
-			m.textarea.Reset()
-			m.textarea.Blur()
-
-			m.focused = &m.chatScreen
-			return m, cmd
-		}
-
-		return m, nil
+		return m.sendPromptCmd()
 
 	case m.slashCmdCon.Focused:
 		slashCon := m.slashCmdCon
@@ -293,29 +231,6 @@ func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 		return m, nil
 	}
-}
-
-func (m *Model) handleAltEnter() (tea.Model, tea.Cmd) {
-	// if m.isAgentWorking {
-	// 	return m, nil
-	// }
-
-	// prompt := 
-
-	var animateCmd tea.Cmd
-	var cmds tea.Cmd
-
-	// if prompt != "" {
-	// 	m.currentUserPrompt = newUserPrompt(prompt, m.viewport.Width)
-	// 	m.currentAgentRes = newAgentResponse(m.viewport.Width)
-	// 	m.currentAgentRes.index = max(0, len(m.history)-1)
-	// 	m, cmds = CHandler.handlePrompt(m)
-	// 	m.viewport.GotoBottom()
-
-	// 	animateCmd = doTick20()
-	// }
-
-	return m, tea.Batch(cmds, animateCmd)
 }
 
 func (m *Model) handleEscKey() (tea.Model, tea.Cmd) {
@@ -350,13 +265,27 @@ func (m *Model) handleGenericKey(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	}
 
-	// if m.sendingPrompt {
-	// 	library.SendPromptState = library.SendPromptBtnStates[1]
-	// } else {
-	// 	library.SendPromptState = library.SendPromptBtnStates[0]
-	// }
-
 	m.textarea, taCmd = m.textarea.Update(msg)
 
 	return m, tea.Batch(taCmd, VpCmd)
+}
+
+func (m *Model) sendPromptCmd() (tea.Model, tea.Cmd) {
+	if strings.Trim(strings.TrimSpace(m.textarea.Value()), "\n") != "" {		
+			var cmd tea.Cmd
+
+			m.chatScreen, cmd = m.chatScreen.Update(
+				api.PromptCmd {
+					Message: m.textarea.Value(),
+				},
+			)
+
+			m.textarea.Reset()
+			m.textarea.Blur()
+
+			m.focused = &m.chatScreen
+			return m, cmd
+		}
+
+		return m, nil
 }
