@@ -69,6 +69,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		return m.handleKeyMsg(msg)
 
+	case api.ErrorMsg:
+		return m.handleErrMsg(msg)
+
 	case api.ModelsCmd:
 		return m.handleModelsCmd(msg)
 

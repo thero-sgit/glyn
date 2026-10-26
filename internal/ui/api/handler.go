@@ -17,16 +17,14 @@ func NewHandler(session *ai.Session) Handler {
 	}
 }
 
-type errMsg struct{ err error }
-
 func errorListener(ctx context.Context, errChan <-chan error) tea.Cmd {
 	return func() tea.Msg {
 		select {
-		case e, ok := <-errChan:
-			if !ok || e == nil {
+		case err, ok := <-errChan:
+			if !ok || err == nil {
 				return nil
 			}
-			return errMsg{err: e}
+			return ErrorMsg{E: err, C: errChan}
 		case <-ctx.Done():
 			return errorListener(ctx, errChan)()
 		}

@@ -27,7 +27,7 @@ var (
 		HighlighedStyle.PaddingLeft(1).PaddingRight(1).Bold(true).Render("send " + "\u27A4"),
 		BwLabelStyle.PaddingLeft(1).PaddingRight(1).Bold(true).Render("stop " + "\u25A0"),
 	}
-	SendPromptState = SendPromptBtnStates[0]
+	SendPromptBtnState = SendPromptBtnStates[0]
 )
 
 func Burner(width int) string {

@@ -8,7 +8,11 @@ import (
 )
 
 type SentCmd  struct {}
-type ErrorCmd struct {}
+
+type ErrorMsg struct{ 
+	E error
+	C <-chan error
+}
 
 type ModelsCmd struct {
 	M []ai.GroqModelInfo

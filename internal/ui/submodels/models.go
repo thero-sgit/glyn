@@ -80,6 +80,7 @@ func (l *LLModels) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			config.Config.Model.Toggle()
 		}
 
+		close(msg.C)
 		return l, nil	
 
 	case tea.KeyMsg:

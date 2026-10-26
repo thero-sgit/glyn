@@ -12,7 +12,11 @@ import (
 	"github.com/thero-sgit/glyn/internal/ui/submodels/components"
 )
 
-func (m *Model) handleErrMsg() (tea.Model, tea.Cmd) {
+func (m *Model) handleErrMsg(msg api.ErrorMsg) (tea.Model, tea.Cmd) {
+	library.SendPromptBtnState = library.SendPromptBtnStates[0]
+	focused := *m.focused
+	focused.Update(msg)
+
 	return m, nil
 }
 
@@ -98,6 +102,10 @@ func (m *Model) handleTick50(msg api.TickMsg50) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) handleResponseChunkCmd(msg api.ResponseChunkCmd) (tea.Model, tea.Cmd) {
+	if msg.Chunk.EOS {
+		library.SendPromptBtnState = library.SendPromptBtnStates[0]
+	}
+
 	var cmd tea.Cmd
 	m.chatScreen, cmd = m.chatScreen.Update(msg)
 
@@ -112,7 +120,6 @@ func (m *Model) handleResponseChunkCmd(msg api.ResponseChunkCmd) (tea.Model, tea
 
 // 	return m, awaitSessionInfo(CHandler.session.Ctx, msg.c)
 // }
-
 
 
 // KEYS
@@ -272,20 +279,21 @@ func (m *Model) handleGenericKey(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *Model) sendPromptCmd() (tea.Model, tea.Cmd) {
 	if strings.Trim(strings.TrimSpace(m.textarea.Value()), "\n") != "" {		
-			var cmd tea.Cmd
+		var cmd tea.Cmd
 
-			m.chatScreen, cmd = m.chatScreen.Update(
-				api.PromptCmd {
-					Message: m.textarea.Value(),
-				},
-			)
+		m.chatScreen, cmd = m.chatScreen.Update(
+			api.PromptCmd {
+				Message: m.textarea.Value(),
+			},
+		)
 
-			m.textarea.Reset()
-			m.textarea.Blur()
+		m.textarea.Reset()
+		m.textarea.Blur()
 
-			m.focused = &m.chatScreen
-			return m, cmd
-		}
+		m.focused = &m.chatScreen
+		library.SendPromptBtnState = library.SendPromptBtnStates[1]
+		return m, cmd
+	}
 
-		return m, nil
+	return m, nil
 }

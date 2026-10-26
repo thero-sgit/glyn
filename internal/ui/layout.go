@@ -48,7 +48,7 @@ func (m *Model) inputBox(h int) string {
 
 	textArea := lipgloss.JoinHorizontal(lipgloss.Left, prompt, m.textarea.View())
 	textArea = zone.Mark("text-area", textArea)
-	sendStopBtn := zone.Mark("send-prompt-btn", library.SendPromptState)
+	sendStopBtn := zone.Mark("send-prompt-btn", library.SendPromptBtnState)
 
 	var inputBoxContent string
 	if m.fileSelector.Focused {

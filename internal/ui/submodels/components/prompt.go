@@ -15,7 +15,8 @@ type UserPrompt struct {
 	waveIndex  int
 	pretty     string
 	HistoryIdx int
-	IsSent       bool
+	IsSent      bool
+	Errored    bool
 }
 
 func NewUserPrompt(message string, index int) *UserPrompt {
@@ -39,7 +40,8 @@ func (u *UserPrompt) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		u.IsSent = true
 		u.sent()
 
-	case api.ErrorCmd:
+	case api.ErrorMsg:
+		u.Errored = true
 		u.error()
 	}
 

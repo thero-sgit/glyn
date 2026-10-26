@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/thero-sgit/glyn/internal/config"
 	"github.com/thero-sgit/glyn/internal/ui/api"
 	"github.com/thero-sgit/glyn/internal/ui/library"
 	"github.com/thero-sgit/glyn/internal/ui/submodels/components"
@@ -45,12 +46,21 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			c.history[0] = library.Burner(c.viewport.Width)
 		}
 
+		config.Config.SetRenderer(c.viewport.Width)
+
 		return c, nil
 
 	case tea.MouseMsg:
 		var cmd tea.Cmd
 		if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
 			switch {
+			default:
+				cr := *c.currentResponse
+				updated, cmd := cr.Update(msg)
+				c.currentResponse = updated.(*components.AgentResponse)
+
+				c.history[c.currentResponse.HistoryIdx] = c.currentResponse.View()
+				return c, cmd
 			}
 		}
 
@@ -66,6 +76,14 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "down":
 		}
 
+	case api.ErrorMsg:
+		if c.currentPrompt != nil {
+			c.currentPrompt.Update(msg)
+		}		
+		c.history = append(c.history, msg.E.Error())
+
+		return c, nil
+
 	case api.PromptCmd:
 		c.addNewPropmt(msg.Message)
 		cmd := c.handler.HandlePrompt(msg.Message)
@@ -75,6 +93,10 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case api.TickMsg20:
 		c.history[c.currentPrompt.HistoryIdx] = c.currentPrompt.View()
 
+		if c.currentPrompt.Errored {
+			return c, nil
+		}
+
 		if c.currentPrompt.IsSent {
 			return c, api.DoTick50()
 		}
@@ -83,10 +105,14 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return c, api.DoTick20()
 
 	case api.TickMsg50:
-		c.currentResponse.Update(msg)
 		c.history[c.currentResponse.HistoryIdx] = c.currentResponse.View()
 
-		return c, api.DoTick50()
+		if c.currentResponse.Working {
+			c.currentResponse.Update(msg)
+			return c, api.DoTick50()
+		}	
+
+		return c, nil
 
 	case api.ResponseChunkCmd:
 		if !c.currentPrompt.IsSent {
@@ -129,6 +155,6 @@ func (c *ChatScreen) addNewPropmt(message string) {
 }
 
 func (c *ChatScreen) addNewResponse() {
-	c.currentResponse = components.NewAgentResponse(len(c.history))
+	c.currentResponse = components.NewAgentResponse(len(c.history), c.viewport.Width)
 	c.history = append(c.history, c.currentResponse.View())
 }
