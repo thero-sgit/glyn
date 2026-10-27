@@ -5,6 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/thero-sgit/glyn/internal/ai"
+	"github.com/thero-sgit/glyn/internal/ai/agent"
 )
 
 type Handler struct {
@@ -66,9 +67,10 @@ func awaitSessionInfo(ctx context.Context, c chan ai.Chunk) tea.Cmd {
 }
 
 func (h *Handler) HandlePrompt(prompt string) tea.Cmd {
-	responseChan := make(chan ai.Chunk)
+	responseChan    := make(chan ai.Chunk)
 	sessionInfoChan := make(chan ai.Chunk)
-	errChan := make(chan error, 2)
+	eventsChan      := make(chan agent.Events)
+	errChan         := make(chan error, 2)
 
 	reqCtx := h.Session.Ctx
 
@@ -79,7 +81,7 @@ func (h *Handler) HandlePrompt(prompt string) tea.Cmd {
 		cmds = append(cmds, awaitSessionInfo(reqCtx, sessionInfoChan))
 	}
 
-	h.Session.NewPrompt(prompt, responseChan, errChan)
+	h.Session.NewPrompt(prompt, responseChan, errChan, eventsChan)
 
 	cmds = append(cmds, errorListener(reqCtx, errChan), AwaitResponse(reqCtx, responseChan))
 

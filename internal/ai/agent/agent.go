@@ -14,10 +14,15 @@ func NewAgent(role string, maxTurns int) Agent {
 	}
 }
 
-func (a *Agent) Run(ctx context.Context, history []Message, eventsChan chan<- Events) ([]Message, error) {
+func (a *Agent) Run(ctx context.Context, stream *ChatCompletionStream, history []Message, eventsChan chan<- Events) ([]Message, error) {
 	for turn := 0; turn < a.maxTurns; turn++ {
 		
 	}
 
 	return history, nil
+}
+
+func (a *Agent) streamTurn(ctx context.Context, stream *ChatCompletionStream, history []Message, eventsChan chan<- Events) (Message, error) {
+
+	
 }

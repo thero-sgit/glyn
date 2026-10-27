@@ -22,6 +22,7 @@ type Session struct {
     cancl  context.CancelFunc
     groq   *groq
     Wg     sync.WaitGroup
+    agent  *agent.Agent
 
     History []agent.Message
 }
@@ -44,7 +45,7 @@ func (s *Session) Close() {
 }
 
 func (s *Session) NameSession(message string, c chan Chunk, errChan chan error) {
-    req := GroqStreamRequest {
+    req := StreamRequest {
         Model: "openai/gpt-oss-20b",
         Messages: []agent.Message{
             {Role: "system", Content: "Generate a 3-5 word title for this prompt. Return ONLY the title. MUST BE 3 TO 5 WORDS!"},
@@ -98,7 +99,7 @@ func (s *Session) NameSession(message string, c chan Chunk, errChan chan error) 
     }()
 }
 
-func (s *Session) NewPrompt(message string, c chan Chunk, errChan chan error) {
+func (s *Session) NewPrompt(message string, c chan Chunk, errChan chan error, eventsChan chan<- agent.Events) {
     h := append(s.History, agent.Message{
         Role:    "user",
         Content: message,
@@ -112,12 +113,6 @@ func (s *Session) NewPrompt(message string, c chan Chunk, errChan chan error) {
         requestCtx, cancel := context.WithCancel(s.Ctx)
         defer cancel()
 
-        const idleTimeout = 15 * time.Second
-        timer := time.AfterFunc(idleTimeout, cancel)
-        defer timer.Stop()
-
-        var responseBuffer string
-
         stream, err := s.groq.handlePrompt(requestCtx, h)
         if err != nil {
             s.handleError(err, errChan)
@@ -125,48 +120,10 @@ func (s *Session) NewPrompt(message string, c chan Chunk, errChan chan error) {
         }
         defer stream.Close()
 
-        for {
-            select {
-            case <-requestCtx.Done():
-                return
-            default:
-            }
-
-            response, err := stream.Recv()
-            if err != nil {
-                if errors.Is(err, io.EOF) {
-                    c <- Chunk{Data: "", EOS: true}
-                    s.History = append(s.History, agent.Message{
-                        Role:    "user",
-                        Content: message,
-                    })
-                    s.History = append(s.History, agent.Message{
-                        Role:    "assistant",
-                        Content: responseBuffer,
-                    })
-                    return
-                }
-                s.handleError(err, errChan)
-                return
-            }
-
-            timer.Reset(idleTimeout)
-
-            if len(response.Choices) > 0 {
-                reasoningContent := response.Choices[0].Delta.ReasoningContent
-                if reasoningContent == "" {
-                    reasoningContent = response.Choices[0].Delta.Reasoning
-                }
-
-                if reasoningContent != "" {
-                    c <- Chunk{Data: reasoningContent, EOS: false, Reasoning: true}
-                    continue
-                }
-
-                content := response.Choices[0].Delta.Content
-                c <- Chunk{Data: content, EOS: false}
-                responseBuffer += content
-            }
+        s.History, err = s.agent.Run(requestCtx, &stream, h, eventsChan)
+        if err != nil {
+            s.handleError(err, errChan)
+            return
         }
     }()
 }
@@ -205,8 +162,11 @@ func (s *Session) RetrieveModels(c chan []GroqModelInfo, errChan chan error){
 }
 
 func NewSession() *Session {
+    a := agent.NewAgent("Main", 25)
+
     s := Session{
-        groq: newGroq(),
+        groq:  newGroq(),
+        agent: &a,
     }
     s.SetNewContext()
 
