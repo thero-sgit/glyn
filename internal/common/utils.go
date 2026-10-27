@@ -1,6 +1,12 @@
 package common
 
 import (
+	"bytes"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -34,4 +40,29 @@ func ListCmdMatches(token string) []Match {
 	}
 
 	return r
+}
+
+func SafePath(root, path string) (string, error) {
+	abs := filepath.Join(root, path)
+	if filepath.IsAbs(abs) {
+		abs = filepath.Clean(abs)
+	}
+
+	rel, err := filepath.Rel(root, abs)
+	if err != nil || strings.HasPrefix(rel, "..") {
+		return  "", fmt.Errorf("path %q is outside the workspace", path)
+	}
+
+	return abs, nil
+}
+
+func BinaryCheck(file *os.File) (*os.File, error) {
+	head := make([]byte, 8192)
+	n, _ := file.Read(head)
+	if bytes.IndexByte(head[:n], 0) >= 0 {
+		return nil, errors.New("binary file, not shown")
+	}
+	file.Seek(0, io.SeekStart)
+
+	return file, nil
 }

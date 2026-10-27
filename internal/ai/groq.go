@@ -1,29 +1,25 @@
 package ai
 
 import (
-	"context"
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 
+	"github.com/thero-sgit/glyn/internal/ai/agent"
 	"github.com/thero-sgit/glyn/internal/config"
 )
 
-type GroqChatCompletionMessage struct {
-	Role 	string `json:"role"`
-	Content string `json:"content"`
-}
-
 type GroqStreamRequest struct {
-	Model 			string 						`json:"model"`
-	Messages 		[]GroqChatCompletionMessage `json:"messages"`
-	ReasoningFormat string 						`json:"reasoning_format,omitempty"`
-	ReasoningEffort string                      `json:"reasoning_effort,omitempty"`
-	Stream          bool   						`json:"stream"`
+	Model 			string 		    `json:"model"`
+	Messages 		[]agent.Message `json:"messages"`
+	ReasoningFormat string 		    `json:"reasoning_format,omitempty"`
+	ReasoningEffort string          `json:"reasoning_effort,omitempty"`
+	Stream          bool   		    `json:"stream"`
 }
 
 type GroqStreamChunk struct {
@@ -116,7 +112,7 @@ func (g groq) CreateChatCompletionStream(ctx context.Context, reqBody GroqStream
 	}, nil
 }
 
-func (g groq) handlePrompt(ctx context.Context, messages []GroqChatCompletionMessage) (GroqChatCompletionStream, error) {
+func (g groq) handlePrompt(ctx context.Context, messages []agent.Message) (GroqChatCompletionStream, error) {
 	req := GroqStreamRequest{
 		Model: config.Config.Model.Name,
 		Messages:  messages,

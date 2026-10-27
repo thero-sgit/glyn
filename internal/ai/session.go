@@ -7,6 +7,8 @@ import (
 	"slices"
 	"sync"
 	"time"
+
+	"github.com/thero-sgit/glyn/internal/ai/agent"
 )
 
 type Chunk struct {
@@ -21,7 +23,7 @@ type Session struct {
     groq   *groq
     Wg     sync.WaitGroup
 
-    History []GroqChatCompletionMessage
+    History []agent.Message
 }
 
 func (s *Session) SetNewContext() {
@@ -44,7 +46,7 @@ func (s *Session) Close() {
 func (s *Session) NameSession(message string, c chan Chunk, errChan chan error) {
     req := GroqStreamRequest {
         Model: "openai/gpt-oss-20b",
-        Messages: []GroqChatCompletionMessage{
+        Messages: []agent.Message{
             {Role: "system", Content: "Generate a 3-5 word title for this prompt. Return ONLY the title. MUST BE 3 TO 5 WORDS!"},
             {Role: "user", Content: message},
         },
@@ -97,7 +99,7 @@ func (s *Session) NameSession(message string, c chan Chunk, errChan chan error) 
 }
 
 func (s *Session) NewPrompt(message string, c chan Chunk, errChan chan error) {
-    h := append(s.History, GroqChatCompletionMessage{
+    h := append(s.History, agent.Message{
         Role:    "user",
         Content: message,
     })
@@ -134,11 +136,11 @@ func (s *Session) NewPrompt(message string, c chan Chunk, errChan chan error) {
             if err != nil {
                 if errors.Is(err, io.EOF) {
                     c <- Chunk{Data: "", EOS: true}
-                    s.History = append(s.History, GroqChatCompletionMessage{
+                    s.History = append(s.History, agent.Message{
                         Role:    "user",
                         Content: message,
                     })
-                    s.History = append(s.History, GroqChatCompletionMessage{
+                    s.History = append(s.History, agent.Message{
                         Role:    "assistant",
                         Content: responseBuffer,
                     })
