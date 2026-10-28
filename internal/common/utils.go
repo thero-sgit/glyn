@@ -66,3 +66,20 @@ func BinaryCheck(file *os.File) (*os.File, error) {
 
 	return file, nil
 }
+
+
+func Truncate(s string, max int) string {
+    if len(s) <= max {
+        return s
+    }
+    cut := s[:max]
+    if i := strings.LastIndexByte(cut, '\n'); i > 0 {
+        cut = cut[:i] // drop the partial last line
+    }
+    // avoid splitting a multi-byte UTF-8 character
+    cut = strings.ToValidUTF8(cut, "")
+    return cut + fmt.Sprintf(
+        "\n\n[output truncated: showed %d of %d bytes. Narrow your search or read a smaller range.]",
+        len(cut), len(s),
+    )
+}

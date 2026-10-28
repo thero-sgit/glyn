@@ -47,9 +47,10 @@ func (s *ChatCompletionStream) Recv() (GroqStreamChunk, error) {
 type GroqStreamChunk struct {
 	Choices []struct {
 		Delta struct {
-			Content 		 string `json:"content"`
-			ReasoningContent string `json:"reasoning_content"`
-			Reasoning 		 string `json:"reasoning"`
+			Content 		 string      `json:"content"`
+			ReasoningContent string      `json:"reasoning_content"`
+			Reasoning 		 string      `json:"reasoning"`
+			ToolCalls        []ToolCall  `json:"tool_calls,omitempty"`
 		} `json:"delta"`
 	} `json:"choices"`
 }
@@ -78,3 +79,10 @@ type TextDelta  struct{ Text string }
 type ToolStart  struct{ ID, Name, Args string }
 type ToolDone   struct{ ID, Name, Result string }
 type TurnDone   struct{}
+
+
+type Chunk struct {
+    Data      string
+    EOS       bool
+    Reasoning bool
+}

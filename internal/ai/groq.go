@@ -14,11 +14,12 @@ import (
 )
 
 type StreamRequest struct {
-	Model 			string 		    `json:"model"`
-	Messages 		[]agent.Message `json:"messages"`
-	ReasoningFormat string 		    `json:"reasoning_format,omitempty"`
-	ReasoningEffort string          `json:"reasoning_effort,omitempty"`
-	Stream          bool   		    `json:"stream"`
+	Model 			string 		          `json:"model"`
+	Messages 		[]agent.Message       `json:"messages"`
+	ReasoningFormat string 		          `json:"reasoning_format,omitempty"`
+	ReasoningEffort string                `json:"reasoning_effort,omitempty"`
+	Stream          bool   		          `json:"stream"`
+	Tools           []map[string]any      `json:"tools,omitempty"`
 }
 
 type groq struct {
@@ -63,13 +64,14 @@ func (g groq) CreateChatCompletionStream(ctx context.Context, reqBody StreamRequ
 	}, nil
 }
 
-func (g groq) handlePrompt(ctx context.Context, messages []agent.Message) (agent.ChatCompletionStream, error) {
+func (g groq) handlePrompt(ctx context.Context, a *agent.Agent, messages []agent.Message) (agent.ChatCompletionStream, error) {
 	req := StreamRequest{
 		Model: config.Config.Model.Name,
 		Messages:  messages,
 		ReasoningEffort: config.Config.Effort.Name,
 		ReasoningFormat: "parsed",
 		Stream: true,
+		Tools: a.ToolSchemas(),
 	}
 
 	stream, err := g.CreateChatCompletionStream(ctx, req)

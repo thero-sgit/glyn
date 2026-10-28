@@ -32,7 +32,7 @@ func errorListener(ctx context.Context, errChan <-chan error) tea.Cmd {
 	}
 }
 
-func AwaitResponse(ctx context.Context, c chan ai.Chunk) tea.Cmd {
+func AwaitResponse(ctx context.Context, c chan agent.Chunk) tea.Cmd {
 	return func() tea.Msg {
 		select {
 		case completion, ok := <-c:
@@ -48,11 +48,11 @@ func AwaitResponse(ctx context.Context, c chan ai.Chunk) tea.Cmd {
 }
 
 type sessionInfo struct {
-	chunk ai.Chunk
-	c     chan ai.Chunk
+	chunk agent.Chunk
+	c     chan agent.Chunk
 }
 
-func awaitSessionInfo(ctx context.Context, c chan ai.Chunk) tea.Cmd {
+func awaitSessionInfo(ctx context.Context, c chan agent.Chunk) tea.Cmd {
 	return func() tea.Msg {
 		select {
 		case chunk, ok := <-c:
@@ -67,8 +67,8 @@ func awaitSessionInfo(ctx context.Context, c chan ai.Chunk) tea.Cmd {
 }
 
 func (h *Handler) HandlePrompt(prompt string) tea.Cmd {
-	responseChan    := make(chan ai.Chunk)
-	sessionInfoChan := make(chan ai.Chunk)
+	responseChan    := make(chan agent.Chunk)
+	sessionInfoChan := make(chan agent.Chunk)
 	eventsChan      := make(chan agent.Events)
 	errChan         := make(chan error, 2)
 

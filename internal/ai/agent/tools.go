@@ -103,12 +103,12 @@ func (r ReadFile) Schema() map[string]any {
 					},
 
 					"offset": map[string]any {
-						"type": "int",
+						"type": "integer",
 						"description": "line in file to start from (1-based start line)",
 					},
 
 					"limit": map[string]any {
-						"type": "int",
+						"type": "integer",
 						"description": "line in file to stop at",
 					},
 

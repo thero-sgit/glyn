@@ -11,12 +11,6 @@ import (
 	"github.com/thero-sgit/glyn/internal/ai/agent"
 )
 
-type Chunk struct {
-    Data      string
-    EOS       bool
-    Reasoning bool
-}
-
 type Session struct {
     Ctx    context.Context
     cancl  context.CancelFunc
@@ -44,7 +38,7 @@ func (s *Session) Close() {
     s.Wg.Wait()
 }
 
-func (s *Session) NameSession(message string, c chan Chunk, errChan chan error) {
+func (s *Session) NameSession(message string, c chan agent.Chunk, errChan chan error) {
     req := StreamRequest {
         Model: "openai/gpt-oss-20b",
         Messages: []agent.Message{
@@ -83,7 +77,7 @@ func (s *Session) NameSession(message string, c chan Chunk, errChan chan error) 
             response, err := stream.Recv()
             if err != nil {
                 if errors.Is(err, io.EOF) {
-                    c <- Chunk{Data: "", EOS: true}
+                    c <- agent.Chunk{Data: "", EOS: true}
                     return
                 }
                 s.handleError(err, errChan)
@@ -91,7 +85,7 @@ func (s *Session) NameSession(message string, c chan Chunk, errChan chan error) 
             }
 
             if len(response.Choices) > 0 {
-                c <- Chunk{Data: response.Choices[0].Delta.Content, EOS: false}
+                c <- agent.Chunk{Data: response.Choices[0].Delta.Content, EOS: false}
             }
 
             timer.Reset(idleTimeout)
@@ -99,7 +93,7 @@ func (s *Session) NameSession(message string, c chan Chunk, errChan chan error) 
     }()
 }
 
-func (s *Session) NewPrompt(message string, c chan Chunk, errChan chan error, eventsChan chan<- agent.Events) {
+func (s *Session) NewPrompt(message string, c chan agent.Chunk, errChan chan error, eventsChan chan<- agent.Events) {
     h := append(s.History, agent.Message{
         Role:    "user",
         Content: message,
@@ -113,18 +107,19 @@ func (s *Session) NewPrompt(message string, c chan Chunk, errChan chan error, ev
         requestCtx, cancel := context.WithCancel(s.Ctx)
         defer cancel()
 
-        stream, err := s.groq.handlePrompt(requestCtx, h)
+        stream, err := s.groq.handlePrompt(requestCtx, s.agent, h)
         if err != nil {
             s.handleError(err, errChan)
             return
         }
         defer stream.Close()
 
-        s.History, err = s.agent.Run(requestCtx, &stream, h, eventsChan)
+        h, err = s.agent.Run(requestCtx, &stream, h, c, eventsChan)
         if err != nil {
             s.handleError(err, errChan)
             return
         }
+        s.History = h
     }()
 }
 
