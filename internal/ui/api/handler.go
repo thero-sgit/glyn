@@ -18,18 +18,18 @@ func NewHandler(session *ai.Session) Handler {
 	}
 }
 
-func errorListener(ctx context.Context, errChan <-chan error) tea.Cmd {
-	return func() tea.Msg {
-		select {
-		case err, ok := <-errChan:
-			if !ok || err == nil {
-				return nil
-			}
-			return ErrorMsg{E: err, C: errChan}
-		case <-ctx.Done():
-			return errorListener(ctx, errChan)()
-		}
-	}
+func errorListener(ctx context.Context, ch <-chan error) tea.Cmd {
+    return func() tea.Msg {
+        select {
+        case err, ok := <-ch:
+            if !ok {
+                return nil
+            }
+            return ErrorMsg{err, ch}
+        case <-ctx.Done():
+            return nil
+        }
+    }
 }
 
 func AwaitResponse(ctx context.Context, c chan agent.Chunk) tea.Cmd {

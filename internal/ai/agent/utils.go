@@ -52,6 +52,7 @@ type GroqStreamChunk struct {
 			Reasoning 		 string      `json:"reasoning"`
 			ToolCalls        []ToolCall  `json:"tool_calls,omitempty"`
 		} `json:"delta"`
+		FinishReason *string `json:"finish_reason"`
 	} `json:"choices"`
 }
 

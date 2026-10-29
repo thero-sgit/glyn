@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 	"sync"
 	"github.com/thero-sgit/glyn/internal/common"
@@ -32,24 +31,30 @@ func NewAgent(role string, maxTurns int) Agent {
 	}
 }
 
-func (a *Agent) Run(ctx context.Context, stream *ChatCompletionStream, history []Message, c chan Chunk, eventsChan chan<- Events) ([]Message, error) {
+func (a *Agent) Run(
+	ctx context.Context, 
+	streamFunc func(ctx context.Context, a *Agent, messages []Message) (ChatCompletionStream, error), 
+	history []Message, 
+	c chan Chunk, 
+	eventsChan chan<- Events,
+) ([]Message, error) {
 	for turn := 0; turn < a.maxTurns; turn++ {
-		msg, err := a.streamTurn(ctx, stream, c, eventsChan)
+		msg, finish, err := a.streamTurn(ctx, streamFunc, history, c, eventsChan)
 		if err != nil {
 			return history, err
 		}
 
 		history = append(history, msg)
 
-		if len(msg.ToolCalls) == 0 {
+		if len(msg.ToolCalls) == 0 && finish != "tool_calls" {
 			return history, nil
-		}
+		}	
 
 		//
 		results := a.executeTools(ctx, msg.ToolCalls, eventsChan)
 		history = append(history, results...)
 
-		 if ctx.Err() != nil {
+		if ctx.Err() != nil {
             return history, ctx.Err()
         }
 	}
@@ -57,22 +62,33 @@ func (a *Agent) Run(ctx context.Context, stream *ChatCompletionStream, history [
 	return history, errors.New("max turns reached")
 }
 
-func (a *Agent) streamTurn(ctx context.Context, stream *ChatCompletionStream, c chan Chunk, eventsChan chan<- Events) (Message, error) {
-	var text  strings.Builder
-	var calls []ToolCall
+func (a *Agent) streamTurn(
+	ctx context.Context,
+	streamFunc func(ctx context.Context, a *Agent, messages []Message) (ChatCompletionStream, error),
+	history []Message,
+	c chan Chunk,
+	eventsChan chan<- Events,
+) (Message, string, error) {
+
+	stream, err := streamFunc(ctx, a, history)
+	if err != nil {
+		return Message{}, "", err
+	}
+	defer stream.Close()
+
+	var text   strings.Builder
+	var calls  []ToolCall
+	var finish string
 
 	for {
 		select {
 		case <-ctx.Done():
-			return Message{ Role: "assistant", Content: text.String(), ToolCalls: calls}, nil
+			return Message{ Role: "assistant", Content: text.String(), ToolCalls: calls}, finish, nil
 		default:
 		}
 
 		chunk, err := stream.Recv()
 		if err != nil {
-			if errors.Is(err, io.EOF) {
-				c <- Chunk{Data: "", EOS: true}
-			}
 			break
 		}
 
@@ -97,7 +113,7 @@ func (a *Agent) streamTurn(ctx context.Context, stream *ChatCompletionStream, c 
 
 		for _, tc := range delta.ToolCalls {
 			for len(calls) <= tc.Index {
-				calls = append(calls, ToolCall{Type: "functions"})
+				calls = append(calls, ToolCall{Type: "function"})
 			}
 
 			call := &calls[tc.Index]
@@ -110,11 +126,14 @@ func (a *Agent) streamTurn(ctx context.Context, stream *ChatCompletionStream, c 
 
 			call.Function.Arguments = call.Function.Arguments + tc.Function.Arguments
 		}
+
+		if chunk.Choices[0].FinishReason != nil && *chunk.Choices[0].FinishReason != "" {
+			finish = *chunk.Choices[0].FinishReason
+			break
+		}
 	}
 
-	eventsChan <- TurnDone{}
-
-	return Message{ Role: "assistant", Content: text.String(), ToolCalls: calls}, nil
+	return Message{ Role: "assistant", Content: text.String(), ToolCalls: calls}, finish, nil
 }
 
 func (a *Agent) executeTools(ctx context.Context, calls []ToolCall, eventsChan chan<- Events) []Message {
@@ -125,7 +144,7 @@ func (a *Agent) executeTools(ctx context.Context, calls []ToolCall, eventsChan c
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			eventsChan <- ToolStart{call.Id, call.Function.Name, call.Function.Arguments}
+			// eventsChan <- ToolStart{call.Id, call.Function.Name, call.Function.Arguments}
 
 			var result string
 			tool, ok := a.Tools[call.Function.Name]
@@ -143,11 +162,11 @@ func (a *Agent) executeTools(ctx context.Context, calls []ToolCall, eventsChan c
 					result = common.Truncate(r, 20_000)
 				}
 
-				eventsChan <- ToolDone{
-					call.Id,
-					call.Function.Name,
-					result,
-				}
+				// eventsChan <- ToolDone{
+				// 	call.Id,
+				// 	call.Function.Name,
+				// 	result,
+				// }
 
 				outputs[i] = Message{Role: "tool", ToolCallId: call.Id, Content: result}
 			}

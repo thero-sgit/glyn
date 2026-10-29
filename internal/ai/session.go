@@ -80,7 +80,7 @@ func (s *Session) NameSession(message string, c chan agent.Chunk, errChan chan e
                     c <- agent.Chunk{Data: "", EOS: true}
                     return
                 }
-                s.handleError(err, errChan)
+                errChan <- err
                 return
             }
 
@@ -107,14 +107,7 @@ func (s *Session) NewPrompt(message string, c chan agent.Chunk, errChan chan err
         requestCtx, cancel := context.WithCancel(s.Ctx)
         defer cancel()
 
-        stream, err := s.groq.handlePrompt(requestCtx, s.agent, h)
-        if err != nil {
-            s.handleError(err, errChan)
-            return
-        }
-        defer stream.Close()
-
-        h, err = s.agent.Run(requestCtx, &stream, h, c, eventsChan)
+        h, err := s.agent.Run(requestCtx, s.groq.handlePrompt, h, c, eventsChan)
         if err != nil {
             s.handleError(err, errChan)
             return
