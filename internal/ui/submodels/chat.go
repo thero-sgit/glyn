@@ -121,6 +121,11 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case api.TickMsg60:
 		c.currentEvent.Update(msg)
 		c.history[c.currentEvent.HistoryIdx] = c.currentEvent.View()
+
+		if c.currentEvent.Done {
+			return c, nil
+		}
+
 		return c, api.DoTick60()
 
 	case api.ResponseChunkCmd:
@@ -140,13 +145,22 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		c.currentResponse.Update(msg)
 		return c, api.AwaitResponse(c.handler.Session.Ctx, msg.C)
 
-	case agent.Event:
-		c.addNewEvent(msg)
-		c.currentEvent.Update(msg)
+	case api.EventMsg:
+		switch msg.Event.(type) {
+		case agent.ToolStart:
+			c.addNewEvent(msg.Event)
+			c.currentEvent.Update(msg.Event)
+			c.history[c.currentEvent.HistoryIdx] = c.currentEvent.View()
 
-		c.history[c.currentEvent.HistoryIdx] = c.currentEvent.View()
+			return c, tea.Batch(api.DoTick60(), api.AwaitEvent(msg.Ctx, msg.C))
 
-		return c, api.DoTick60()
+		case agent.ToolDone:
+			c.currentEvent.Done = true
+			c.currentEvent.Update(msg.Event)
+			c.addNewResponse()
+
+			return c, api.AwaitEvent(msg.Ctx, msg.C)
+		}		
 	}
 
 	return c, nil

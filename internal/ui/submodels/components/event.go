@@ -11,6 +11,8 @@ import (
 
 type UIEvent struct {
 	HistoryIdx int
+	Done       bool
+	//
 	spinner    spinner.Model
 	e          agent.Event
 }
@@ -40,7 +42,7 @@ func (u *UIEvent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case agent.Event:
 		switch e := msg.(type) {
-		case agent.ToolStart:
+		case agent.ToolDone:
 			u.e = e
 		}
 

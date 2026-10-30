@@ -104,9 +104,9 @@ func (a *AgentResponse) View() string {
 
 	return lipgloss.JoinVertical(
 		lipgloss.Top,
+		header,
 		reasoning,
 		a.responseBuffer,
-		header,
 		"",
 	)
 }

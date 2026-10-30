@@ -144,7 +144,7 @@ func (a *Agent) executeTools(ctx context.Context, calls []ToolCall, eventsChan c
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			eventsChan <- ToolStart{call.Id, "Reading", call.Function.Name, call.Function.Arguments}
+			eventsChan <- ToolStart{call.Id, call.Function.Name, call.Function.Arguments}
 
 			var result string
 			tool, ok := a.Tools[call.Function.Name]
@@ -161,15 +161,14 @@ func (a *Agent) executeTools(ctx context.Context, calls []ToolCall, eventsChan c
 				} else {
 					result = common.Truncate(r, 20_000)
 				}
-
-				// eventsChan <- ToolDone{
-				// 	call.Id,
-				// 	call.Function.Name,
-				// 	result,
-				// }
-
-				outputs[i] = Message{Role: "tool", ToolCallId: call.Id, Content: result}
 			}
+
+			eventsChan <- ToolDone{
+				call.Id,
+				call.Function.Name,
+				result,
+			}
+			outputs[i] = Message{Role: "tool", ToolCallId: call.Id, Content: result}
 		}()
 	}
 

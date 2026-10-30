@@ -6,7 +6,6 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
-	"github.com/thero-sgit/glyn/internal/ai/agent"
 	"github.com/thero-sgit/glyn/internal/config"
 	"github.com/thero-sgit/glyn/internal/ui/api"
 	"github.com/thero-sgit/glyn/internal/ui/library"
@@ -120,7 +119,7 @@ func (m *Model) handleResponseChunkCmd(msg api.ResponseChunkCmd) (tea.Model, tea
 	return m, cmd
 }
 
-func (m *Model) handleEvent(msg agent.Event) (tea.Model, tea.Cmd) {
+func (m *Model) handleEvent(msg api.EventMsg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.chatScreen, cmd = m.chatScreen.Update(msg)
 	return m, cmd

@@ -40,7 +40,7 @@ func AwaitEvent(ctx context.Context, ch <-chan agent.Event) tea.Cmd {
 				return nil
 			}
 
-			return event
+			return EventMsg{Event: event, Ctx: ctx, C: ch}
 		case <-ctx.Done():
 			return nil
 		}

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -52,4 +53,10 @@ type PromptCmd struct {
 type ResponseChunkCmd struct {
 	Chunk agent.Chunk
 	C     chan agent.Chunk
+}
+
+type EventMsg struct {
+	Event agent.Event
+	Ctx   context.Context
+	C     <-chan agent.Event
 }

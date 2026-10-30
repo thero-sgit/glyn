@@ -80,13 +80,17 @@ type Event interface {
 	Pretty() string
 }
 
-type ToolStart struct{ ID, Action, Name, Args string }
+type ToolStart struct{ ID, Name, Args string }
 func (t ToolStart) Pretty() string {
-	return fmt.Sprintf("%s %s", t.Action, t.Args)
+	return fmt.Sprintf("%s %s", t.Name, t.Args)
 }
 
 
 type ToolDone struct{ ID, Name, Result string }
+func (t ToolDone) Pretty() string {
+	return fmt.Sprintf("%s", t.Name)
+}
+
 type TurnDone struct{}
 
 

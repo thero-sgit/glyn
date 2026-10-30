@@ -6,7 +6,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 	"github.com/thero-sgit/glyn/internal/ai"
-	"github.com/thero-sgit/glyn/internal/ai/agent"
 	"github.com/thero-sgit/glyn/internal/common"
 	"github.com/thero-sgit/glyn/internal/ui/api"
 	"github.com/thero-sgit/glyn/internal/ui/submodels"
@@ -88,7 +87,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case api.ResponseChunkCmd:
 		return m.handleResponseChunkCmd(msg)
 
-	case agent.Event:
+	case api.EventMsg:
 		return m.handleEvent(msg)
 
 	default:

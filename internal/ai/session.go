@@ -103,6 +103,7 @@ func (s *Session) NewPrompt(message string, c chan agent.Chunk, errChan chan err
     go func() {
         defer s.Wg.Done()
         defer close(c)
+        defer close(eventsChan)
 
         requestCtx, cancel := context.WithCancel(s.Ctx)
         defer cancel()
