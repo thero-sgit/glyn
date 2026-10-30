@@ -3,6 +3,7 @@ package agent
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"io"
 	"strings"
 )
@@ -75,11 +76,18 @@ type Message struct {
 }
 
 // UI Events
-type Events interface {}
-type TextDelta  struct{ Text string }
-type ToolStart  struct{ ID, Name, Args string }
-type ToolDone   struct{ ID, Name, Result string }
-type TurnDone   struct{}
+type Event interface {
+	Pretty() string
+}
+
+type ToolStart struct{ ID, Action, Name, Args string }
+func (t ToolStart) Pretty() string {
+	return fmt.Sprintf("%s %s", t.Action, t.Args)
+}
+
+
+type ToolDone struct{ ID, Name, Result string }
+type TurnDone struct{}
 
 
 type Chunk struct {

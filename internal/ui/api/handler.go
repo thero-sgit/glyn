@@ -32,15 +32,30 @@ func errorListener(ctx context.Context, ch <-chan error) tea.Cmd {
     }
 }
 
-func AwaitResponse(ctx context.Context, c chan agent.Chunk) tea.Cmd {
+func AwaitEvent(ctx context.Context, ch <-chan agent.Event) tea.Cmd {
 	return func() tea.Msg {
 		select {
-		case completion, ok := <-c:
+		case event, ok := <-ch:
 			if !ok {
 				return nil
 			}
 
-			return ResponseChunkCmd{Chunk: completion, C: c}
+			return event
+		case <-ctx.Done():
+			return nil
+		}
+	}
+}
+
+func AwaitResponse(ctx context.Context, ch chan agent.Chunk) tea.Cmd {
+	return func() tea.Msg {
+		select {
+		case completion, ok := <-ch:
+			if !ok {
+				return nil
+			}
+
+			return ResponseChunkCmd{Chunk: completion, C: ch}
 		case <-ctx.Done():
 			return nil
 		}
@@ -69,7 +84,7 @@ func awaitSessionInfo(ctx context.Context, c chan agent.Chunk) tea.Cmd {
 func (h *Handler) HandlePrompt(prompt string) tea.Cmd {
 	responseChan    := make(chan agent.Chunk)
 	sessionInfoChan := make(chan agent.Chunk)
-	eventsChan      := make(chan agent.Events)
+	eventsChan      := make(chan agent.Event)
 	errChan         := make(chan error, 2)
 
 	reqCtx := h.Session.Ctx
@@ -83,7 +98,7 @@ func (h *Handler) HandlePrompt(prompt string) tea.Cmd {
 
 	h.Session.NewPrompt(prompt, responseChan, errChan, eventsChan)
 
-	cmds = append(cmds, errorListener(reqCtx, errChan), AwaitResponse(reqCtx, responseChan))
+	cmds = append(cmds, errorListener(reqCtx, errChan), AwaitEvent(reqCtx, eventsChan), AwaitResponse(reqCtx, responseChan))
 
 	return tea.Batch(cmds...)
 }

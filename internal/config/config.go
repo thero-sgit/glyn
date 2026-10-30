@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/glamour"
+	"github.com/thero-sgit/glyn/internal/common"
 )
 
 var modes = []string{"agent", "ask "}
@@ -78,24 +79,6 @@ func getWd() string {
 	return cleanPath
 }
 
-func workingDirSanitized() string {
-	path := Config.WorkingDir
-	splitPath := strings.Split(path, "/")
-
-	if len(splitPath) < 2 {
-		return path
-	}
-
-	return strings.Join(
-		[]string{
-			"...",
-			splitPath[len(splitPath)-2],
-			splitPath[len(splitPath)-1],
-		},
-		"/",
-	)
-}
-
 func apiKey() string {
 	apiKey := os.Getenv("GROQ_API_KEY")
 	if apiKey == "" {
@@ -126,6 +109,6 @@ func Init() {
 		Effort:     NewToggle("\u26CF", []string{"medium", "high", "low"}),
 	}
 
-	Config.SanitizedWd = workingDirSanitized()
+	Config.SanitizedWd = common.RelativePath(Config.WorkingDir)
 	Config.Mode = NewToggle("\u2726", modes)
 }

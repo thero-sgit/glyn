@@ -83,3 +83,20 @@ func Truncate(s string, max int) string {
         len(cut), len(s),
     )
 }
+
+func RelativePath(path string) string {
+	splitPath := strings.Split(path, "/")
+
+	if len(splitPath) < 2 {
+		return path
+	}
+
+	return strings.Join(
+		[]string{
+			"...",
+			splitPath[len(splitPath)-2],
+			splitPath[len(splitPath)-1],
+		},
+		"/",
+	)
+}

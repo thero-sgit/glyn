@@ -36,7 +36,7 @@ func (a *Agent) Run(
 	streamFunc func(ctx context.Context, a *Agent, messages []Message) (ChatCompletionStream, error), 
 	history []Message, 
 	c chan Chunk, 
-	eventsChan chan<- Events,
+	eventsChan chan<- Event,
 ) ([]Message, error) {
 	for turn := 0; turn < a.maxTurns; turn++ {
 		msg, finish, err := a.streamTurn(ctx, streamFunc, history, c, eventsChan)
@@ -67,7 +67,7 @@ func (a *Agent) streamTurn(
 	streamFunc func(ctx context.Context, a *Agent, messages []Message) (ChatCompletionStream, error),
 	history []Message,
 	c chan Chunk,
-	eventsChan chan<- Events,
+	eventsChan chan<- Event,
 ) (Message, string, error) {
 
 	stream, err := streamFunc(ctx, a, history)
@@ -136,7 +136,7 @@ func (a *Agent) streamTurn(
 	return Message{ Role: "assistant", Content: text.String(), ToolCalls: calls}, finish, nil
 }
 
-func (a *Agent) executeTools(ctx context.Context, calls []ToolCall, eventsChan chan<- Events) []Message {
+func (a *Agent) executeTools(ctx context.Context, calls []ToolCall, eventsChan chan<- Event) []Message {
 	outputs := make([]Message, len(calls))
 	var wg sync.WaitGroup
 
@@ -144,7 +144,7 @@ func (a *Agent) executeTools(ctx context.Context, calls []ToolCall, eventsChan c
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			// eventsChan <- ToolStart{call.Id, call.Function.Name, call.Function.Arguments}
+			eventsChan <- ToolStart{call.Id, "Reading", call.Function.Name, call.Function.Arguments}
 
 			var result string
 			tool, ok := a.Tools[call.Function.Name]

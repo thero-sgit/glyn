@@ -93,7 +93,7 @@ func (s *Session) NameSession(message string, c chan agent.Chunk, errChan chan e
     }()
 }
 
-func (s *Session) NewPrompt(message string, c chan agent.Chunk, errChan chan error, eventsChan chan<- agent.Events) {
+func (s *Session) NewPrompt(message string, c chan agent.Chunk, errChan chan error, eventsChan chan<- agent.Event) {
     h := append(s.History, agent.Message{
         Role:    "user",
         Content: message,

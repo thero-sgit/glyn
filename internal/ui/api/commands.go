@@ -36,6 +36,14 @@ func DoTick50() tea.Cmd {
 	})
 }
 
+type TickMsg60 time.Time
+
+func DoTick60() tea.Cmd {
+	return tea.Tick(60*time.Millisecond, func(t time.Time) tea.Msg {
+		return TickMsg60(t)
+	})
+}
+
 type PromptCmd struct {
 	Message string
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
+	"github.com/thero-sgit/glyn/internal/ai/agent"
 	"github.com/thero-sgit/glyn/internal/config"
 	"github.com/thero-sgit/glyn/internal/ui/api"
 	"github.com/thero-sgit/glyn/internal/ui/library"
@@ -101,6 +102,13 @@ func (m *Model) handleTick50(msg api.TickMsg50) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+func (m *Model) handleTick60(msg api.TickMsg60) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	m.chatScreen, cmd = m.chatScreen.Update(msg)
+
+	return m, cmd
+}
+
 func (m *Model) handleResponseChunkCmd(msg api.ResponseChunkCmd) (tea.Model, tea.Cmd) {
 	if msg.Chunk.EOS {
 		library.SendPromptBtnState = library.SendPromptBtnStates[0]
@@ -109,6 +117,12 @@ func (m *Model) handleResponseChunkCmd(msg api.ResponseChunkCmd) (tea.Model, tea
 	var cmd tea.Cmd
 	m.chatScreen, cmd = m.chatScreen.Update(msg)
 
+	return m, cmd
+}
+
+func (m *Model) handleEvent(msg agent.Event) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	m.chatScreen, cmd = m.chatScreen.Update(msg)
 	return m, cmd
 }
 

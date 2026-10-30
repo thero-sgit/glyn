@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/thero-sgit/glyn/internal/ai/agent"
 	"github.com/thero-sgit/glyn/internal/config"
 	"github.com/thero-sgit/glyn/internal/ui/api"
 	"github.com/thero-sgit/glyn/internal/ui/library"
@@ -22,6 +23,7 @@ type ChatScreen struct {
 	//
 	currentPrompt   *components.UserPrompt
 	currentResponse *components.AgentResponse
+	currentEvent    *components.UIEvent
 }
 
 func (c *ChatScreen) Init() tea.Cmd {
@@ -55,11 +57,14 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
 			switch {
 			default:
-				cr := *c.currentResponse
-				updated, cmd := cr.Update(msg)
-				c.currentResponse = updated.(*components.AgentResponse)
-
-				c.history[c.currentResponse.HistoryIdx] = c.currentResponse.View()
+				if cr := c.currentResponse; cr != nil {
+					cr := *cr
+					updated, uCmd := cr.Update(msg)
+					c.currentResponse = updated.(*components.AgentResponse)
+					c.history[c.currentResponse.HistoryIdx] = c.currentResponse.View()
+					cmd = uCmd
+				}
+				
 				return c, cmd
 			}
 		}
@@ -69,7 +74,6 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "enter", " ":
 
 		case "up":
 
@@ -114,6 +118,11 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return c, nil
 
+	case api.TickMsg60:
+		c.currentEvent.Update(msg)
+		c.history[c.currentEvent.HistoryIdx] = c.currentEvent.View()
+		return c, api.DoTick60()
+
 	case api.ResponseChunkCmd:
 		if !c.currentPrompt.IsSent {
 			c.currentPrompt.Update(api.SentCmd{})
@@ -127,8 +136,17 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return c, nil
 		}
 
+		c.viewport.GotoBottom()
 		c.currentResponse.Update(msg)
 		return c, api.AwaitResponse(c.handler.Session.Ctx, msg.C)
+
+	case agent.Event:
+		c.addNewEvent(msg)
+		c.currentEvent.Update(msg)
+
+		c.history[c.currentEvent.HistoryIdx] = c.currentEvent.View()
+
+		return c, api.DoTick60()
 	}
 
 	return c, nil
@@ -157,4 +175,9 @@ func (c *ChatScreen) addNewPropmt(message string) {
 func (c *ChatScreen) addNewResponse() {
 	c.currentResponse = components.NewAgentResponse(len(c.history), c.viewport.Width)
 	c.history = append(c.history, c.currentResponse.View())
+}
+
+func (c *ChatScreen) addNewEvent(event agent.Event) {
+	c.currentEvent = components.NewUIEvent(len(c.history), event)
+	c.history = append(c.history, c.currentEvent.View())
 }
