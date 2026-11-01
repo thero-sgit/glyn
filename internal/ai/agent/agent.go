@@ -79,6 +79,7 @@ func (a *Agent) streamTurn(
 		return Message{}, "", err
 	}
 	defer stream.Close()
+	c <- Chunk{TurnStart: true}
 
 	var text strings.Builder
 	var calls []ToolCall

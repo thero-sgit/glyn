@@ -2,6 +2,7 @@ package components
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
@@ -19,13 +20,28 @@ type AgentResponse struct {
 	HistoryIdx int
 	Working    bool
 
-	showReasoning    bool
-	reasoningBuffer  string
-	responseBuffer   string
+	blocks       []*agentResponseBlock
+	activeBlock  *agentResponseBlock
+	toolEvents   map[string]*UIEvent
+	failureError string
+}
+
+type agentResponseBlockKind uint8
+
+const (
+	reasoningBlock agentResponseBlockKind = iota
+	responseBlock
+	toolBlock
+)
+
+type agentResponseBlock struct {
+	kind             agentResponseBlockKind
+	reasoning        strings.Builder
+	response         strings.Builder
 	renderedResponse string
 	renderError      string
-	toolEvents       map[string]*UIEvent
-	toolOrder        []*UIEvent
+	showReasoning    bool
+	tool             *UIEvent
 }
 
 func NewAgentResponse(index, width int) *AgentResponse {
@@ -47,16 +63,18 @@ func (a *AgentResponse) Init() tea.Cmd {
 func (a *AgentResponse) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.MouseMsg:
-		var cmd tea.Cmd
 		if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
-			switch {
-			case zone.Get(fmt.Sprintf("%d-thought-process-btn", a.HistoryIdx)).InBounds(msg):
-				a.showReasoning = !a.showReasoning
-				return a, cmd
+			for index, block := range a.blocks {
+				if block.kind != reasoningBlock {
+					continue
+				}
+				if zone.Get(a.reasoningZone(index)).InBounds(msg) {
+					block.showReasoning = !block.showReasoning
+					return a, nil
+				}
 			}
 		}
-
-		return a, cmd
+		return a, nil
 
 	case api.TickMsg50:
 		var cmd tea.Cmd
@@ -66,11 +84,11 @@ func (a *AgentResponse) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case api.TickMsg60:
 		var cmds []tea.Cmd
-		for _, event := range a.toolOrder {
-			if event.Done {
+		for _, block := range a.blocks {
+			if block.kind != toolBlock || block.tool.Done {
 				continue
 			}
-			_, cmd := event.Update(msg)
+			_, cmd := block.tool.Update(msg)
 			if cmd != nil {
 				cmds = append(cmds, cmd)
 			}
@@ -78,8 +96,14 @@ func (a *AgentResponse) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, tea.Batch(cmds...)
 
 	case api.ResponseChunkCmd:
+		if msg.Chunk.TurnStart {
+			a.activeBlock = nil
+			a.status = "Thinking"
+			return a, nil
+		}
 		if msg.Chunk.Reasoning {
-			a.reasoningBuffer = a.reasoningBuffer + msg.Chunk.Data
+			block := a.ensureBlock(reasoningBlock)
+			block.reasoning.WriteString(msg.Chunk.Data)
 			a.status = "Thinking"
 			return a, nil
 		}
@@ -90,7 +114,8 @@ func (a *AgentResponse) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		a.status = "Responding"
-		a.responseBuffer = a.responseBuffer + msg.Chunk.Data
+		block := a.ensureBlock(responseBlock)
+		block.response.WriteString(msg.Chunk.Data)
 		return a, nil
 
 	case agent.Event:
@@ -101,7 +126,8 @@ func (a *AgentResponse) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			uiEvent := NewUIEvent(a.HistoryIdx, event)
 			a.toolEvents[event.ID] = uiEvent
-			a.toolOrder = append(a.toolOrder, uiEvent)
+			a.activeBlock = &agentResponseBlock{kind: toolBlock, tool: uiEvent}
+			a.blocks = append(a.blocks, a.activeBlock)
 			a.status = "Using tools"
 		case agent.ToolDone:
 			if uiEvent, ok := a.toolEvents[event.ID]; ok {
@@ -121,21 +147,26 @@ func (a *AgentResponse) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (a *AgentResponse) Finish() {
 	a.Working = false
 	a.status = "Complete"
-	r, err := config.Config.MdRenderer.Render(a.responseBuffer)
-	if err != nil {
-		a.renderError = err.Error()
-		return
+	for _, block := range a.blocks {
+		if block.kind != responseBlock || block.renderedResponse != "" || block.response.Len() == 0 {
+			continue
+		}
+		r, err := config.Config.MdRenderer.Render(block.response.String())
+		if err != nil {
+			block.renderError = err.Error()
+		} else {
+			block.renderedResponse = r
+		}
 	}
-	a.renderedResponse = r
 }
 
 func (a *AgentResponse) Fail(err error) {
 	a.Working = false
 	a.status = "Failed"
-	a.renderError = err.Error()
-	for _, event := range a.toolOrder {
-		if !event.Done {
-			event.Done = true
+	a.failureError = err.Error()
+	for _, block := range a.blocks {
+		if block.kind == toolBlock && !block.tool.Done {
+			block.tool.Done = true
 		}
 	}
 	clear(a.toolEvents)
@@ -152,33 +183,35 @@ func (a *AgentResponse) View() string {
 	header := fmt.Sprintf("%s %s", library.BwLabelStyle.Render(" glyn $ "), library.SubtleStyle.Render(status))
 	sections := []string{header}
 
-	if a.reasoningBuffer != "" {
-		toggle := "›"
-		if a.showReasoning {
-			toggle = "⌄"
+	for index, block := range a.blocks {
+		switch block.kind {
+		case reasoningBlock:
+			toggle := "›"
+			if block.showReasoning {
+				toggle = "⌄"
+			}
+			button := library.SubtleStyle.Render(toggle + " Thought process")
+			sections = append(sections, zone.Mark(a.reasoningZone(index), button))
+			if block.showReasoning {
+				sections = append(sections, library.SubtleStyle.MarginLeft(2).Render(block.reasoning.String()))
+			}
+		case toolBlock:
+			sections = append(sections, block.tool.View())
+		case responseBlock:
+			response := block.response.String()
+			if block.renderedResponse != "" {
+				response = block.renderedResponse
+			}
+			if response != "" {
+				sections = append(sections, response)
+			}
+			if block.renderError != "" {
+				sections = append(sections, library.SubtleStyle.Render("Markdown rendering failed; showing plain text: "+block.renderError))
+			}
 		}
-		thoughtProcessBtn := library.SubtleStyle.Render(toggle + " Thought process")
-		thoughtProcessBtn = zone.Mark(fmt.Sprintf("%d-thought-process-btn", a.HistoryIdx), thoughtProcessBtn)
-		sections = append(sections, thoughtProcessBtn)
-
-		if a.showReasoning {
-			sections = append(sections, library.SubtleStyle.MarginLeft(2).Render(a.reasoningBuffer))
-		}
 	}
-
-	for _, event := range a.toolOrder {
-		sections = append(sections, event.View())
-	}
-
-	response := a.responseBuffer
-	if a.renderedResponse != "" {
-		response = a.renderedResponse
-	}
-	if response != "" {
-		sections = append(sections, response)
-	}
-	if a.renderError != "" {
-		sections = append(sections, library.SubtleStyle.Render("Markdown rendering failed; showing plain text: "+a.renderError))
+	if a.failureError != "" {
+		sections = append(sections, library.SubtleStyle.Render(a.failureError))
 	}
 
 	return lipgloss.NewStyle().MarginBottom(1).Render(lipgloss.JoinVertical(lipgloss.Top, sections...))
@@ -186,4 +219,17 @@ func (a *AgentResponse) View() string {
 
 func (a *AgentResponse) HasActiveTools() bool {
 	return len(a.toolEvents) > 0
+}
+
+func (a *AgentResponse) ensureBlock(kind agentResponseBlockKind) *agentResponseBlock {
+	if a.activeBlock != nil && a.activeBlock.kind == kind {
+		return a.activeBlock
+	}
+	a.activeBlock = &agentResponseBlock{kind: kind}
+	a.blocks = append(a.blocks, a.activeBlock)
+	return a.activeBlock
+}
+
+func (a *AgentResponse) reasoningZone(index int) string {
+	return fmt.Sprintf("%d-thought-process-%d", a.HistoryIdx, index)
 }

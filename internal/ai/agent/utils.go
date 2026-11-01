@@ -98,4 +98,5 @@ type Chunk struct {
     Data      string
     EOS       bool
     Reasoning bool
+    TurnStart bool
 }
