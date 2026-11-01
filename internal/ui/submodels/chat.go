@@ -14,8 +14,8 @@ import (
 )
 
 type ChatScreen struct {
-	viewport      viewport.Model
-	history       []string
+	viewport viewport.Model
+	history  []string
 
 	//
 	handler *api.Handler
@@ -23,7 +23,8 @@ type ChatScreen struct {
 	//
 	currentPrompt   *components.UserPrompt
 	currentResponse *components.AgentResponse
-	currentEvent    *components.UIEvent
+	responseTicking bool
+	eventTicking    bool
 }
 
 func (c *ChatScreen) Init() tea.Cmd {
@@ -33,7 +34,7 @@ func (c *ChatScreen) Init() tea.Cmd {
 func NewChatScreen(h *api.Handler) tea.Model {
 	return &ChatScreen{
 		viewport: viewport.New(0, 0),
-		handler: h,
+		handler:  h,
 	}
 }
 
@@ -64,7 +65,7 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					c.history[c.currentResponse.HistoryIdx] = c.currentResponse.View()
 					cmd = uCmd
 				}
-				
+
 				return c, cmd
 			}
 		}
@@ -83,18 +84,25 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case api.ErrorMsg:
 		if c.currentPrompt != nil {
 			c.currentPrompt.Update(msg)
-		}		
+		}
+		if c.currentResponse != nil {
+			c.currentResponse.Fail(msg.E)
+			c.history[c.currentResponse.HistoryIdx] = c.currentResponse.View()
+		}
 		c.history = append(c.history, msg.E.Error())
 
 		return c, nil
 
 	case api.PromptCmd:
-		c.addNewPropmt(msg.Message)
+		c.addNewPrompt(msg.Message)
 		cmd := c.handler.HandlePrompt(msg.Message)
 
 		return c, tea.Batch(cmd, api.DoTick20())
 
 	case api.TickMsg20:
+		if c.currentPrompt == nil {
+			return c, nil
+		}
 		c.history[c.currentPrompt.HistoryIdx] = c.currentPrompt.View()
 
 		if c.currentPrompt.Errored {
@@ -102,65 +110,95 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		if c.currentPrompt.IsSent {
-			return c, api.DoTick50()
+			return c, nil
 		}
 
 		c.currentPrompt.Update(msg)
 		return c, api.DoTick20()
 
 	case api.TickMsg50:
-		c.history[c.currentResponse.HistoryIdx] = c.currentResponse.View()
+		if c.currentResponse == nil {
+			c.responseTicking = false
+			return c, nil
+		}
 
+		c.currentResponse.Update(msg)
+		c.history[c.currentResponse.HistoryIdx] = c.currentResponse.View()
 		if c.currentResponse.Working {
-			c.currentResponse.Update(msg)
 			return c, api.DoTick50()
-		}	
+		}
+		c.responseTicking = false
 
 		return c, nil
 
 	case api.TickMsg60:
-		c.currentEvent.Update(msg)
-		c.history[c.currentEvent.HistoryIdx] = c.currentEvent.View()
-
-		if c.currentEvent.Done {
+		if c.currentResponse == nil {
+			c.eventTicking = false
 			return c, nil
 		}
-
-		return c, api.DoTick60()
+		c.currentResponse.Update(msg)
+		c.history[c.currentResponse.HistoryIdx] = c.currentResponse.View()
+		c.eventTicking = c.currentResponse.HasActiveTools()
+		if c.eventTicking {
+			return c, api.DoTick60()
+		}
+		return c, nil
 
 	case api.ResponseChunkCmd:
-		if !c.currentPrompt.IsSent {
+		if c.currentPrompt != nil && !c.currentPrompt.IsSent {
 			c.currentPrompt.Update(api.SentCmd{})
-			c.addNewResponse()
 		}
-		
-		c.history[c.currentResponse.HistoryIdx] = c.currentResponse.View()
 
-		if msg.Chunk.EOS {
-			c.currentResponse.Update(msg)
+		if c.currentResponse == nil {
 			return c, nil
 		}
 
-		c.viewport.GotoBottom()
 		c.currentResponse.Update(msg)
-		return c, api.AwaitResponse(c.handler.Session.Ctx, msg.C)
+		c.history[c.currentResponse.HistoryIdx] = c.currentResponse.View()
+		c.viewport.GotoBottom()
+		if msg.Chunk.EOS {
+			c.responseTicking = false
+			return c, nil
+		}
+		if c.handler == nil || c.handler.Session == nil {
+			return c, nil
+		}
+		cmds := []tea.Cmd{api.AwaitResponse(c.handler.Session.Ctx, msg.C)}
+		if !c.responseTicking {
+			c.responseTicking = true
+			cmds = append(cmds, api.DoTick50())
+		}
+		return c, tea.Batch(cmds...)
 
 	case api.EventMsg:
 		switch msg.Event.(type) {
 		case agent.ToolStart:
-			c.addNewEvent(msg.Event)
-			c.currentEvent.Update(msg.Event)
-			c.history[c.currentEvent.HistoryIdx] = c.currentEvent.View()
-
-			return c, tea.Batch(api.DoTick60(), api.AwaitEvent(msg.Ctx, msg.C))
+			if c.currentResponse == nil {
+				return c, api.AwaitEvent(msg.Ctx, msg.C)
+			}
+			if c.currentPrompt != nil && !c.currentPrompt.IsSent {
+				c.currentPrompt.Update(api.SentCmd{})
+			}
+			c.currentResponse.Update(msg.Event)
+			c.history[c.currentResponse.HistoryIdx] = c.currentResponse.View()
+			cmds := []tea.Cmd{api.AwaitEvent(msg.Ctx, msg.C)}
+			if !c.responseTicking {
+				c.responseTicking = true
+				cmds = append(cmds, api.DoTick50())
+			}
+			if !c.eventTicking {
+				c.eventTicking = true
+				cmds = append(cmds, api.DoTick60())
+			}
+			return c, tea.Batch(cmds...)
 
 		case agent.ToolDone:
-			c.currentEvent.Done = true
-			c.currentEvent.Update(msg.Event)
-			c.addNewResponse()
-
+			if c.currentResponse != nil {
+				c.currentResponse.Update(msg.Event)
+				c.history[c.currentResponse.HistoryIdx] = c.currentResponse.View()
+			}
 			return c, api.AwaitEvent(msg.Ctx, msg.C)
-		}		
+		}
 	}
 
 	return c, nil
@@ -181,17 +219,11 @@ func (c *ChatScreen) View() string {
 	return c.viewport.View()
 }
 
-func (c *ChatScreen) addNewPropmt(message string) {
+func (c *ChatScreen) addNewPrompt(message string) {
 	c.currentPrompt = components.NewUserPrompt(message, len(c.history))
 	c.history = append(c.history, c.currentPrompt.View())
-}
-
-func (c *ChatScreen) addNewResponse() {
 	c.currentResponse = components.NewAgentResponse(len(c.history), c.viewport.Width)
 	c.history = append(c.history, c.currentResponse.View())
-}
-
-func (c *ChatScreen) addNewEvent(event agent.Event) {
-	c.currentEvent = components.NewUIEvent(len(c.history), event)
-	c.history = append(c.history, c.currentEvent.View())
+	c.responseTicking = false
+	c.eventTicking = false
 }

@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"sync"
+
 	"github.com/thero-sgit/glyn/internal/common"
 	"github.com/thero-sgit/glyn/internal/config"
 )
@@ -18,8 +20,8 @@ type Agent struct {
 }
 
 func NewAgent(role string, maxTurns int) Agent {
-    tools := map[string]Tool {
-		"read_file":  ReadFile{
+	tools := map[string]Tool{
+		"read_file": ReadFile{
 			config.Config.WorkingDir,
 		},
 	}
@@ -27,15 +29,15 @@ func NewAgent(role string, maxTurns int) Agent {
 	return Agent{
 		role:     role,
 		maxTurns: maxTurns,
-		Tools: tools,
+		Tools:    tools,
 	}
 }
 
 func (a *Agent) Run(
-	ctx context.Context, 
-	streamFunc func(ctx context.Context, a *Agent, messages []Message) (ChatCompletionStream, error), 
-	history []Message, 
-	c chan Chunk, 
+	ctx context.Context,
+	streamFunc func(ctx context.Context, a *Agent, messages []Message) (ChatCompletionStream, error),
+	history []Message,
+	c chan Chunk,
 	eventsChan chan<- Event,
 ) ([]Message, error) {
 	for turn := 0; turn < a.maxTurns; turn++ {
@@ -46,17 +48,19 @@ func (a *Agent) Run(
 
 		history = append(history, msg)
 
-		if len(msg.ToolCalls) == 0 && finish != "tool_calls" {
+		if len(msg.ToolCalls) == 0 && finish == "stop" {
 			return history, nil
-		}	
+		}
+		if len(msg.ToolCalls) == 0 {
+			continue
+		}
 
-		//
 		results := a.executeTools(ctx, msg.ToolCalls, eventsChan)
 		history = append(history, results...)
 
 		if ctx.Err() != nil {
-            return history, ctx.Err()
-        }
+			return history, ctx.Err()
+		}
 	}
 
 	return history, errors.New("max turns reached")
@@ -76,20 +80,23 @@ func (a *Agent) streamTurn(
 	}
 	defer stream.Close()
 
-	var text   strings.Builder
-	var calls  []ToolCall
+	var text strings.Builder
+	var calls []ToolCall
 	var finish string
 
 	for {
 		select {
 		case <-ctx.Done():
-			return Message{ Role: "assistant", Content: text.String(), ToolCalls: calls}, finish, nil
+			return Message{Role: "assistant", Content: text.String(), ToolCalls: calls}, finish, nil
 		default:
 		}
 
 		chunk, err := stream.Recv()
 		if err != nil {
-			break
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return Message{}, "", err
 		}
 
 		if len(chunk.Choices) == 0 {
@@ -104,12 +111,13 @@ func (a *Agent) streamTurn(
 
 		if reasoningContent != "" {
 			c <- Chunk{Data: reasoningContent, EOS: false, Reasoning: true}
-			continue
 		}
 
 		content := delta.Content
-		c <- Chunk{Data: content, EOS: false}
-		text.WriteString(content)
+		if content != "" {
+			c <- Chunk{Data: content, EOS: false}
+			text.WriteString(content)
+		}
 
 		for _, tc := range delta.ToolCalls {
 			for len(calls) <= tc.Index {
@@ -130,13 +138,13 @@ func (a *Agent) streamTurn(
 		if chunk.Choices[0].FinishReason != nil && *chunk.Choices[0].FinishReason != "" {
 			finish = *chunk.Choices[0].FinishReason
 			if finish == "stop" {
-				c <- Chunk{Data: content, EOS: true}
-			}			
+				c <- Chunk{EOS: true}
+			}
 			break
 		}
 	}
 
-	return Message{ Role: "assistant", Content: text.String(), ToolCalls: calls}, finish, nil
+	return Message{Role: "assistant", Content: text.String(), ToolCalls: calls}, finish, nil
 }
 
 func (a *Agent) executeTools(ctx context.Context, calls []ToolCall, eventsChan chan<- Event) []Message {
