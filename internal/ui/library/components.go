@@ -26,8 +26,8 @@ const codeLargeText = `                                ▄█
 
 var (
 	SendPromptBtnStates = []string{
-		HighlighedStyle.PaddingLeft(1).PaddingRight(1).Bold(true).Render("send " + "\u27A4"),
-		BwLabelStyle.PaddingLeft(1).PaddingRight(1).Bold(true).Render("stop " + "\u25A0"),
+		HighlighedStyle.PaddingLeft(1).PaddingRight(1).Render("send " + "\u27A4"),
+		BwLabelStyle.PaddingLeft(1).PaddingRight(1).Render("stop " + "\u25A0"),
 	}
 	SendPromptBtnState = SendPromptBtnStates[0]
 )
@@ -123,12 +123,10 @@ func dirAndSessionLabel(directoryPath, sessionName string) string {
 
 func LabelValueBand(label, value, secondaryValue string) string {
 	label = HighlighedStyle.
-		Bold(true).
 		PaddingLeft(1).
 		Render(label)
 
 	value = HighlighedStyle.
-		Bold(true).
 		PaddingLeft(1).
 		PaddingRight(1).
 		Render(value)
