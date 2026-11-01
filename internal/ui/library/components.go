@@ -10,19 +10,19 @@ import (
 )
 
 const glynLargeText = `
-███████████ ██        ██       ██ ████████████
+ ▄███████▄  ▄█        ▄█       █▄  ▄████████▄
 ██          ██        ██       ██ ██        ██
 ██   ██████ ██        ██       ██ ██        ██
 ██░░░░░░░██ ██░░░░░░░ ██░░░░░░░██ ██░░░░░░░░██
-███████████ █████████ ███████████ ██        ██
-                               ██`
+ ▀███████▀  ▀███████▀ ▀██████████ ██        ██
+                               ▀█`
 
-const codeLargeText = `                                ██
-██████████ ███████████ ███████████ ███████████
+const codeLargeText = `                                ▄█
+ ▄███████▄  ▄███████▄   ▄█████████  ▄███████▄
 ██         ██       ██ ██       ██ ██       ██
 ██         ██       ██ ██       ██ ███████████
 ██░░░░░░░░ ██░░░░░░░██ ██░░░░░░░██ ██░░░░░░░░░
-██████████ ███████████ ███████████ ███████████`
+▀███████▀  ▀███████▀   ▀███████▀   ▀███████▀ `
 
 var (
 	SendPromptBtnStates = []string{
@@ -50,11 +50,15 @@ func Burner(width int) string {
 		AlignHorizontal(lipgloss.Center).
 		Render(
 			lipgloss.JoinHorizontal(
-				lipgloss.Left, 
-				lipgloss.NewStyle().Foreground(AccentColor).Render(glynLargeText), 
-				SubtleStyle.Margin(0, 1, 0, 1).Render(codeLargeText),
+				lipgloss.Left,
+				lipgloss.NewStyle().Bold(true).Foreground(AccentColor).Render(glynLargeText),
+				SubtleStyle.Margin(0, 1, 0, 1).Bold(true).Render(codeLargeText),
 			),
 		)
+	largeText = lipgloss.JoinVertical(
+		lipgloss.Center,
+		largeText,
+	)
 
 	return lipgloss.NewStyle().
 		Width(width).
@@ -65,7 +69,7 @@ func Burner(width int) string {
 				lipgloss.Top,
 				largeText,
 				inf,
-			),				
+			),
 		)
 }
 
@@ -131,12 +135,11 @@ func LabelValueBand(label, value, secondaryValue string) string {
 
 	if secondaryValue != "" {
 		secondaryValue = lipgloss.NewStyle().
-		Background(AccentColor).
-		Foreground(lipgloss.Color("#282828")).
-		PaddingRight(1).
-		Render(secondaryValue)
+			Background(AccentColor).
+			Foreground(lipgloss.Color("#282828")).
+			PaddingRight(1).
+			Render(secondaryValue)
 	}
-	
 
 	joined := lipgloss.JoinHorizontal(lipgloss.Left, label, value, secondaryValue)
 
