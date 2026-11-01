@@ -53,5 +53,5 @@ func (u *UIEvent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (u *UIEvent) View() string {
-	return fmt.Sprintf("%s %s", u.spinner.View(), u.e.Pretty())
+	return fmt.Sprintf("%s %s\n", u.spinner.View(), u.e.Pretty())
 }

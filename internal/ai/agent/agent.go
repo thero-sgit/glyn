@@ -129,6 +129,9 @@ func (a *Agent) streamTurn(
 
 		if chunk.Choices[0].FinishReason != nil && *chunk.Choices[0].FinishReason != "" {
 			finish = *chunk.Choices[0].FinishReason
+			if finish == "stop" {
+				c <- Chunk{Data: content, EOS: true}
+			}			
 			break
 		}
 	}

@@ -47,7 +47,7 @@ func (a *AgentResponse) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
 			switch {
-			case zone.Get("thought-process-btn").InBounds(msg):
+			case zone.Get(fmt.Sprintf("%d-thought-process-btn", a.HistoryIdx)).InBounds(msg):
 				a.showReasoning = !a.showReasoning
 				return a, cmd
 			}
@@ -89,7 +89,7 @@ func (a *AgentResponse) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (a *AgentResponse) View() string {
 	thoughtProcessBtn := library.SubtleStyle.Render("Thought process ") + library.BoldStyle.Render(">")
-	thoughtProcessBtn = zone.Mark("thought-process-btn", thoughtProcessBtn)
+	thoughtProcessBtn = zone.Mark(fmt.Sprintf("%d-thought-process-btn", a.HistoryIdx), thoughtProcessBtn)
 
 	reasoning := thoughtProcessBtn
 	if a.showReasoning {
@@ -107,6 +107,5 @@ func (a *AgentResponse) View() string {
 		header,
 		reasoning,
 		a.responseBuffer,
-		"",
 	)
 }
