@@ -158,7 +158,7 @@ func modelCard(modelInfo ai.GroqModelInfo, highlight bool) string {
 	card := header
 
 	if highlight {
-			c := map[string]string{
+		c := map[string]string{
 			"tools":     "\u2692",
 			"reasoning": "\u223f",
 		}

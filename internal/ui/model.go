@@ -27,6 +27,7 @@ type Model struct {
 	fileSelector   components.FileSelector
 
 	// Screens
+	homeScreen     tea.Model
 	chatScreen     tea.Model
 	helpScreen     tea.Model
 	sessionsScreen tea.Model
@@ -43,13 +44,14 @@ func InitialModel() *Model {
 		handler:        h,
 		slashCmdCon:    components.NewSelector("Command", "/", "/", "<command>", common.ListCmdMatches),
 		fileSelector:   components.NewFileSelector(),
+		homeScreen:     submodels.NewHomeScreen(),
 		helpScreen:     submodels.NewHelpModel(),
 		sessionsScreen: submodels.NewSessionsScreen(),
 		llmsScreen:     submodels.NewModelsModel(),
 	}
 
 	model.chatScreen = submodels.NewChatScreen(&model.handler)
-	model.focused = &model.chatScreen
+	model.focused = &model.homeScreen
 
 	return &model
 }

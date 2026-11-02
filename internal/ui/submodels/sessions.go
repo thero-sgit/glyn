@@ -7,12 +7,13 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/thero-sgit/glyn/internal/config"
+	"github.com/thero-sgit/glyn/internal/persistence"
 	"github.com/thero-sgit/glyn/internal/ui/library"
 )
 
 type Sessions struct {
 	viewport viewport.Model
-	chats    []ChatSession
+	chats    []persistence.ChatSession
 	cursor   int	
 }
 
@@ -21,30 +22,10 @@ func (s *Sessions) Init() tea.Cmd {
 }
 
 func NewSessionsScreen() tea.Model {
-	chats := []ChatSession{
-		{
-			name: "Refactor Auth", 
-			changes: [2]string{"19", "3"},
-			tokenUsage: "12,032",
-			lastUpdated: "2 hours ago",
-		},
-		{
-			name: "Refactor Auth", 
-			changes: [2]string{"19", "3"},
-			tokenUsage: "12,032",
-			lastUpdated: "2 hours ago",
-		},
-		{
-			name: "Refactor Auth", 
-			changes: [2]string{"19", "3"},
-			tokenUsage: "12,032",
-			lastUpdated: "2 hours ago",
-		},
-	}
 
 	return &Sessions{
 		viewport: viewport.New(0, 0),
-		chats: chats,
+		chats: persistence.DummySessions(),
 	}
 }
 
@@ -99,7 +80,7 @@ func (s *Sessions) View() string {
 
 	var content []string
 	for i, chat := range s.chats {
-		content = append(content, chat.pretty(s.viewport.Width, i == s.cursor, i == s.cursor))
+		content = append(content, chat.Pretty(s.viewport.Width, i == s.cursor, i == s.cursor))
 	}
 
 	s.viewport.SetContent(
@@ -111,41 +92,4 @@ func (s *Sessions) View() string {
 	)
 
 	return s.viewport.View()
-}
-
-type ChatSession struct {
-	name        string
-	changes     [2]string
-	tokenUsage  string
-	lastUpdated string
-}
-
-func (c ChatSession) pretty(width int, highlight, current bool) string {
-	header := "\u25CB  " + c.name
-	if current {
-		header = "\u25CF  " + c.name
-	}
-
-	style := lipgloss.NewStyle()
-	if highlight {
-		style = library.HighlighedStyle
-	}
-
-	inf := style.Render(
-		lipgloss.JoinHorizontal(
-			lipgloss.Left,
-			"   ",
-			style.Render("+"+c.changes[0] + " -"+c.changes[1]),
-			style.Render(" · " + c.lastUpdated),
-			style.Render(" · " + c.tokenUsage + " tokens"),
-		),
-	)
-
-	return style.Width(width-4).MarginBottom(1).PaddingLeft(1).Render(
-		lipgloss.JoinVertical(
-			lipgloss.Top,
-			header,
-			inf,
-		),
-	)
 }

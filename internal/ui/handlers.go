@@ -145,6 +145,8 @@ func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleEscKey()
 	case "ctrl+e":
 		return m.handleCtrlE()
+	case "ctrl+n":
+		return m.handleCtrlEnter(msg)
 	case "pgup", "pgdown", "up", "down", "left", "right", "tab":
 		return m.handleUpArrows(msg)
 	case "/":
@@ -220,6 +222,12 @@ func (m *Model) handleCtrlE() (tea.Model, tea.Cmd) {
 	} else {
 		m.textarea.Blur()
 	}
+	return m, nil
+}
+
+func (m *Model) handleCtrlEnter(msg tea.Msg) (tea.Model, tea.Cmd) {
+	focused := *m.focused
+	focused.Update(msg)
 	return m, nil
 }
 
