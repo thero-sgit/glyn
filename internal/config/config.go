@@ -37,14 +37,15 @@ func (m toggle) Pretty() string {
 var Config configuration
 
 type configuration struct {
-	Version          string
-	WorkingDir       string
-	SanitizedWd      string
-	GroqApiKey       string
-	Model 			 toggle
-	Effort           toggle
-	Mode             toggle
-	MdRenderer       glamour.TermRenderer
+	Version     string
+	WorkingDir  string
+	DataBaseDir string
+	SanitizedWd string
+	GroqApiKey  string
+	Model       toggle
+	Effort      toggle
+	Mode        toggle
+	MdRenderer  glamour.TermRenderer
 }
 
 func getWd() string {

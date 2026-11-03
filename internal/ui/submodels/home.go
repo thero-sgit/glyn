@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/thero-sgit/glyn/internal/config"
 	"github.com/thero-sgit/glyn/internal/persistence"
+	"github.com/thero-sgit/glyn/internal/ui/api"
 	"github.com/thero-sgit/glyn/internal/ui/library"
 )
 
@@ -16,20 +17,24 @@ type Home struct {
 	height   int
 	width    int
 	chats    []persistence.ChatSession
-	cursor   int	
+	cursor   int
+
+	//
+	handler  *api.Handler
 }
 
 func (h *Home) Init() tea.Cmd {
 	return nil
 }
 
-func NewHomeScreen() tea.Model {
+func NewHomeScreen(handler *api.Handler) tea.Model {
 	v := viewport.New(0, 0)
 	v.Style.AlignHorizontal(lipgloss.Center)
 
 	return &Home{
 		viewport: v,
-		chats: persistence.DummySessions(),
+		chats:    persistence.DummySessions(),
+		handler:  handler,
 	}
 }
 
@@ -58,7 +63,6 @@ func (h *Home) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter", " ":
 
 		case "ctrl+n":
-			h.chats = append(h.chats, persistence.NewChatSession("Test Session"))
 			return h, nil
 
 		case "up":
@@ -103,7 +107,7 @@ func (h *Home) View() string {
 		lipgloss.NewStyle().
 			Width(h.viewport.Width/2).
 			AlignHorizontal(lipgloss.Right).
-			Render(library.SubtleStyle.Render("press 'esc' to close")),
+			Render(library.SubtleStyle.Render("ctrl+n to open a new session")),
 	)
 
 	h.viewport.SetContent(

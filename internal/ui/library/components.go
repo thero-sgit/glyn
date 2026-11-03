@@ -78,7 +78,6 @@ func CreateTextArea(width, height int, value string) textarea.Model {
 	ta.Placeholder = ` Try "how does <filename> work?"`
 	ta.ShowLineNumbers = false
 	ta.Prompt = ""
-	ta.Focus()
 
 	ta.SetWidth(width - 20)
 	ta.SetValue(value)

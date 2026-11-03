@@ -5,7 +5,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
-	"github.com/thero-sgit/glyn/internal/ai"
 	"github.com/thero-sgit/glyn/internal/common"
 	"github.com/thero-sgit/glyn/internal/ui/api"
 	"github.com/thero-sgit/glyn/internal/ui/submodels"
@@ -37,21 +36,20 @@ type Model struct {
 }
 
 func InitialModel() *Model {
-	s := ai.NewSession()
-	h := api.NewHandler(s)
+	h := api.NewHandler()
 
 	model := Model{
 		handler:        h,
 		slashCmdCon:    components.NewSelector("Command", "/", "/", "<command>", common.ListCmdMatches),
 		fileSelector:   components.NewFileSelector(),
-		homeScreen:     submodels.NewHomeScreen(),
 		helpScreen:     submodels.NewHelpModel(),
 		sessionsScreen: submodels.NewSessionsScreen(),
 		llmsScreen:     submodels.NewModelsModel(),
 	}
 
+	model.homeScreen = submodels.NewHomeScreen(&model.handler)
 	model.chatScreen = submodels.NewChatScreen(&model.handler)
-	model.focused = &model.homeScreen
+	model.focused    = &model.homeScreen
 
 	return &model
 }

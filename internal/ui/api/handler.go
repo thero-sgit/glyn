@@ -12,10 +12,8 @@ type Handler struct {
 	Session *ai.Session
 }
 
-func NewHandler(session *ai.Session) Handler {
-	return Handler {
-		Session: session,
-	}
+func NewHandler() Handler {
+	return Handler {}
 }
 
 func errorListener(ctx context.Context, ch <-chan error) tea.Cmd {
