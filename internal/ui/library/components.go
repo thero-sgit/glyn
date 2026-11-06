@@ -9,20 +9,11 @@ import (
 	"github.com/thero-sgit/glyn/internal/config"
 )
 
-const glynLargeText = `
-█████████▄  ██        ██       █▄ ██████████▄
-██          ██        ██       ██ ██        ██
-██   ██████ ██        ██       ██ ██        ██
-██░░░░░░░██ ██░░░░░░░ ██░░░░░░░██ ██░░░░░░░░██
- ▀███████▀  ▀███████▀ ▀██████████ ██        ██
-                               ▀█`
-
-const codeLargeText = `                                ▄█
-█████████▄ █████████▄  ███████████ █████████▄
-██         ██       ██ ██       ██ ██       ██
-██         ██       ██ ██       ██ ███████████
-██░░░░░░░░ ██░░░░░░░██ ██░░░░░░░██ ██░░░░░░░░░
-▀███████▀  ▀███████▀   ▀███████▀   ▀███████▀ `
+const glynSmallText = `
+███ █   █ █ █ █
+█   █    █  ███
+█ █ █    █  ███
+███ ███  █  █ █`
 
 var (
 	SendPromptBtnStates = []string{
@@ -33,43 +24,21 @@ var (
 )
 
 func Burner(width int) string {
-	inf := lipgloss.NewStyle().
-		Width(width).
-		AlignHorizontal(lipgloss.Center).
-		Render(
-			lipgloss.JoinHorizontal(
-				lipgloss.Left,
-				BoldStyle.Foreground(AccentColor).Render("\u27E1 ")+SubtleStyle.Render(config.Config.Model.Name),
-				" · ",
-				BoldStyle.Foreground(AccentColor).Render("@ ")+SubtleStyle.Underline(true).Render("console.groq.com"),
-			),
-		)
+	logo := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(AccentColor).
+		Render(glynSmallText)
 
-	largeText := lipgloss.NewStyle().
+	model := lipgloss.NewStyle().
 		Width(width).
 		AlignHorizontal(lipgloss.Center).
-		Render(
-			lipgloss.JoinHorizontal(
-				lipgloss.Left,
-				lipgloss.NewStyle().Bold(true).Foreground(AccentColor).Render(glynLargeText),
-				SubtleStyle.Margin(0, 1, 0, 1).Bold(true).Render(codeLargeText),
-			),
-		)
-	largeText = lipgloss.JoinVertical(
-		lipgloss.Center,
-		largeText,
-	)
+		Render(SubtleStyle.Render("\u27E1 " + config.Config.Model.Name))
 
 	return lipgloss.NewStyle().
 		Width(width).
 		AlignHorizontal(lipgloss.Center).
-		MarginBottom(1).
 		Render(
-			lipgloss.JoinVertical(
-				lipgloss.Top,
-				largeText,
-				inf,
-			),
+			lipgloss.JoinVertical(lipgloss.Center, logo, model),
 		)
 }
 

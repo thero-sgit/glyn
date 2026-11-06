@@ -26,7 +26,6 @@ type Model struct {
 	fileSelector   components.FileSelector
 
 	// Screens
-	homeScreen     tea.Model
 	chatScreen     tea.Model
 	helpScreen     tea.Model
 	sessionsScreen tea.Model
@@ -46,10 +45,8 @@ func InitialModel() *Model {
 		sessionsScreen: submodels.NewSessionsScreen(),
 		llmsScreen:     submodels.NewModelsModel(),
 	}
-
-	model.homeScreen = submodels.NewHomeScreen(&model.handler)
 	model.chatScreen = submodels.NewChatScreen(&model.handler)
-	model.focused    = &model.homeScreen
+	model.focused    = &model.chatScreen
 
 	return &model
 }

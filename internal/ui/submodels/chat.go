@@ -32,9 +32,11 @@ func (c *ChatScreen) Init() tea.Cmd {
 }
 
 func NewChatScreen(h *api.Handler) tea.Model {
+	hist := []string{library.Burner(0)}
 	return &ChatScreen{
 		viewport: viewport.New(0, 0),
 		handler:  h,
+		history: hist,
 	}
 }
 
@@ -43,13 +45,8 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		c.viewport.Width, c.viewport.Height = msg.Width, msg.Height
 
-		if len(c.history) == 0 {
-			c.history = append(c.history, library.Burner(c.viewport.Width))
-		} else {
-			c.history[0] = library.Burner(c.viewport.Width)
-		}
-
 		config.Config.SetRenderer(c.viewport.Width)
+		c.history[0] = library.Burner(c.viewport.Width)
 
 		return c, nil
 

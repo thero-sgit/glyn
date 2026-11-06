@@ -29,7 +29,11 @@ func (m *Model) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 		taHeight = 6
 	}
 
+	wasFocused := m.textarea.Focused()
 	m.textarea = library.CreateTextArea(msg.Width, taHeight, m.textarea.Value())
+	if wasFocused {
+		m.textarea.Focus()
+	}
 	m.textarea.KeyMap.InsertNewline = key.NewBinding(
 		key.WithKeys("alt+enter", "ctrl+j"),
 	)
@@ -252,7 +256,7 @@ func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		updatedModel, cmd := slashCon.Update(msg)
 		m.slashCmdCon = *updatedModel.(*components.Selector)
 		return m, cmd
-	
+
 	default:
 		focused := *m.focused
 		focused.Update(msg)
@@ -291,6 +295,13 @@ func (m *Model) handleGenericKey(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.fileSelector = *updatedModel.(*components.FileSelector)
 
 		return m, cmd
+	}
+
+	if !m.textarea.Focused() {
+		if keyMsg, ok := msg.(tea.KeyMsg); ok &&
+			(keyMsg.Type == tea.KeyRunes || keyMsg.Type == tea.KeySpace) {
+			m.textarea.Focus()
+		}
 	}
 
 	m.textarea, taCmd = m.textarea.Update(msg)

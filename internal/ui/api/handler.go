@@ -13,7 +13,8 @@ type Handler struct {
 }
 
 func NewHandler() Handler {
-	return Handler {}
+	s := ai.NewSession()
+	return Handler {Session: s}
 }
 
 func errorListener(ctx context.Context, ch <-chan error) tea.Cmd {
