@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	zone "github.com/lrstanley/bubblezone"
 	"github.com/thero-sgit/glyn/internal/ai/agent"
 	"github.com/thero-sgit/glyn/internal/ui/api"
 	"github.com/thero-sgit/glyn/internal/ui/library"
@@ -16,6 +17,7 @@ import (
 type UIEvent struct {
 	HistoryIdx int
 	Done       bool
+	showResult bool
 	//
 	spinner spinner.Model
 	e       agent.Event
@@ -40,6 +42,14 @@ func (u *UIEvent) Init() tea.Cmd {
 
 func (u *UIEvent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.MouseMsg:
+		if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
+			if result, ok := u.e.(agent.ToolDone); ok && result.Result != "" &&
+				zone.Get(u.resultZone()).InBounds(msg) {
+				u.showResult = !u.showResult
+			}
+		}
+
 	case api.TickMsg60:
 		var cmd tea.Cmd
 		u.spinner, cmd = u.spinner.Update(spinner.TickMsg{})
@@ -79,13 +89,21 @@ func (u *UIEvent) View() string {
 		status = "✓"
 	}
 
-	line := fmt.Sprintf("%s %s", status, name)
+	line := fmt.Sprintf("  %s %s", status, name)
 	if detail != "" {
 		line += " " + library.SubtleStyle.Render(detail)
 	}
 	if result, ok := u.e.(agent.ToolDone); ok && result.Result != "" {
-		resultLine := library.SubtleStyle.MarginLeft(2).Render("⎿ " + truncateDetail(result.Result, 320))
-		line = lipgloss.JoinVertical(lipgloss.Left, line, resultLine)
+		toggle := "› Result"
+		if u.showResult {
+			toggle = "⌄ Result"
+		}
+		resultToggle := zone.Mark(u.resultZone(), library.SubtleStyle.MarginLeft(4).Render(toggle))
+		line = lipgloss.JoinVertical(lipgloss.Left, line, resultToggle)
+		if u.showResult {
+			resultLine := library.SubtleStyle.MarginLeft(6).Render("⎿ " + truncateDetail(result.Result, 320))
+			line = lipgloss.JoinVertical(lipgloss.Left, line, resultLine)
+		}
 	}
 	return lipgloss.NewStyle().MarginBottom(1).Render(line)
 }
@@ -95,6 +113,17 @@ func toolStartArgs(event agent.Event) string {
 		return start.Args
 	}
 	return ""
+}
+
+func (u *UIEvent) resultZone() string {
+	var id string
+	switch event := u.e.(type) {
+	case agent.ToolStart:
+		id = event.ID
+	case agent.ToolDone:
+		id = event.ID
+	}
+	return fmt.Sprintf("%d-tool-result-%s", u.HistoryIdx, id)
 }
 
 func toolLabel(name string) string {

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/thero-sgit/glyn/internal/ai/agent"
+	"github.com/thero-sgit/glyn/internal/persistence"
 )
 
 type Session struct {
@@ -18,7 +19,9 @@ type Session struct {
     Wg     sync.WaitGroup
     agent  *agent.Agent
 
-    History []agent.Message
+    History       []agent.Message
+    chatSession   *persistence.ChatSession
+
 }
 
 func (s *Session) SetNewContext() {
@@ -38,7 +41,7 @@ func (s *Session) Close() {
     s.Wg.Wait()
 }
 
-func (s *Session) NameSession(message string, c chan agent.Chunk, errChan chan error) {
+func (s *Session) NameSession(message string, errChan chan error) {
     req := StreamRequest {
         Model: "openai/gpt-oss-20b",
         Messages: []agent.Message{
@@ -49,9 +52,10 @@ func (s *Session) NameSession(message string, c chan agent.Chunk, errChan chan e
     }
 
     s.Wg.Add(1)
+    
+    var name string
     go func() {
         defer s.Wg.Done()
-        defer close(c)
 
         requestCtx, cancel := context.WithCancel(s.Ctx)
         defer cancel()
@@ -77,7 +81,7 @@ func (s *Session) NameSession(message string, c chan agent.Chunk, errChan chan e
             response, err := stream.Recv()
             if err != nil {
                 if errors.Is(err, io.EOF) {
-                    c <- agent.Chunk{Data: "", EOS: true}
+                    s.chatSession = persistence.NewChatSession(name).New()
                     return
                 }
                 errChan <- err
@@ -85,12 +89,12 @@ func (s *Session) NameSession(message string, c chan agent.Chunk, errChan chan e
             }
 
             if len(response.Choices) > 0 {
-                c <- agent.Chunk{Data: response.Choices[0].Delta.Content, EOS: false}
+                name += response.Choices[0].Delta.Content
             }
 
             timer.Reset(idleTimeout)
         }
-    }()
+    }()    
 }
 
 func (s *Session) NewPrompt(message string, c chan agent.Chunk, errChan chan error, eventsChan chan<- agent.Event) {

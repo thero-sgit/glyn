@@ -1,6 +1,8 @@
 package persistence
 
 import (
+	"os"
+
 	"github.com/charmbracelet/lipgloss"
 	"github.com/thero-sgit/glyn/internal/ui/library"
 )
@@ -10,14 +12,18 @@ type ChatSession struct {
 	changes     [2]string
 	tokenUsage  string
 	lastUpdated string
+	file        *os.File
+
+	//
+	id  string
+	key string
 }
 
-func NewChatSession(name string) ChatSession {
-	return ChatSession {
-			Name: name, 
-			changes: [2]string{"19", "3"},
-			tokenUsage: "12,032",
-			lastUpdated: "2 hours ago",
+func NewChatSession(name string) *ChatSession {
+	return &ChatSession {
+		Name: name,
+		tokenUsage: "12,032",
+		lastUpdated: "2 hours ago",
 	}
 }
 

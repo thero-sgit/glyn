@@ -24,6 +24,7 @@ type AgentResponse struct {
 	activeBlock  *agentResponseBlock
 	toolEvents   map[string]*UIEvent
 	failureError string
+	showSteps    bool
 }
 
 type agentResponseBlockKind uint8
@@ -53,6 +54,7 @@ func NewAgentResponse(index, width int) *AgentResponse {
 		status:     "Thinking",
 		HistoryIdx: index,
 		Working:    true,
+		showSteps:  true,
 	}
 }
 
@@ -64,13 +66,23 @@ func (a *AgentResponse) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.MouseMsg:
 		if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
+			if zone.Get(a.stepsZone()).InBounds(msg) {
+				a.showSteps = !a.showSteps
+				return a, nil
+			}
 			for index, block := range a.blocks {
-				if block.kind != reasoningBlock {
-					continue
-				}
-				if zone.Get(a.reasoningZone(index)).InBounds(msg) {
+				if block.kind == reasoningBlock && a.showSteps &&
+					zone.Get(a.reasoningZone(index)).InBounds(msg) {
 					block.showReasoning = !block.showReasoning
 					return a, nil
+				}
+				if block.kind != toolBlock {
+					continue
+				}
+				updated, cmd := block.tool.Update(msg)
+				block.tool = updated.(*UIEvent)
+				if zone.Get(block.tool.resultZone()).InBounds(msg) {
+					return a, cmd
 				}
 			}
 		}
@@ -113,6 +125,9 @@ func (a *AgentResponse) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, nil
 		}
 
+		if msg.Chunk.Data != "" && len(a.toolEvents) == 0 {
+			a.showSteps = false
+		}
 		a.status = "Responding"
 		block := a.ensureBlock(responseBlock)
 		block.response.WriteString(msg.Chunk.Data)
@@ -183,20 +198,39 @@ func (a *AgentResponse) View() string {
 	header := fmt.Sprintf("%s %s", library.BwLabelStyle.Render(" glyn $ "), library.SubtleStyle.Render(status))
 	sections := []string{header}
 
+	stepCount := 0
+	for _, block := range a.blocks {
+		if block.kind == reasoningBlock || block.kind == toolBlock {
+			stepCount++
+		}
+	}
+	if stepCount > 0 {
+		toggle := "›"
+		if a.showSteps {
+			toggle = "⌄"
+		}
+		stepsLabel := fmt.Sprintf("%s Steps (%d)", toggle, stepCount)
+		sections = append(sections, zone.Mark(a.stepsZone(), library.SubtleStyle.Render(stepsLabel)))
+	}
+
 	for index, block := range a.blocks {
 		switch block.kind {
 		case reasoningBlock:
-			toggle := "›"
-			if block.showReasoning {
-				toggle = "⌄"
-			}
-			button := library.SubtleStyle.Render(toggle + " Thought process")
-			sections = append(sections, zone.Mark(a.reasoningZone(index), button))
-			if block.showReasoning {
-				sections = append(sections, library.SubtleStyle.MarginLeft(2).Render(block.reasoning.String()))
+			if a.showSteps {
+				toggle := "›"
+				if block.showReasoning {
+					toggle = "⌄"
+				}
+				label := library.SubtleStyle.Render("  " + toggle + " Thought process")
+				sections = append(sections, zone.Mark(a.reasoningZone(index), label))
+				if block.showReasoning {
+					sections = append(sections, library.SubtleStyle.MarginLeft(4).Render(block.reasoning.String()))
+				}
 			}
 		case toolBlock:
-			sections = append(sections, block.tool.View())
+			if a.showSteps {
+				sections = append(sections, block.tool.View())
+			}
 		case responseBlock:
 			response := block.response.String()
 			if block.renderedResponse != "" {
@@ -228,6 +262,10 @@ func (a *AgentResponse) ensureBlock(kind agentResponseBlockKind) *agentResponseB
 	a.activeBlock = &agentResponseBlock{kind: kind}
 	a.blocks = append(a.blocks, a.activeBlock)
 	return a.activeBlock
+}
+
+func (a *AgentResponse) stepsZone() string {
+	return fmt.Sprintf("%d-steps", a.HistoryIdx)
 }
 
 func (a *AgentResponse) reasoningZone(index int) string {

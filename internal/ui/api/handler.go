@@ -61,28 +61,8 @@ func AwaitResponse(ctx context.Context, ch chan agent.Chunk) tea.Cmd {
 	}
 }
 
-type sessionInfo struct {
-	chunk agent.Chunk
-	c     chan agent.Chunk
-}
-
-func awaitSessionInfo(ctx context.Context, c chan agent.Chunk) tea.Cmd {
-	return func() tea.Msg {
-		select {
-		case chunk, ok := <-c:
-			if !ok {
-				return nil
-			}
-			return sessionInfo{chunk: chunk, c: c}
-		case <-ctx.Done():
-			return nil
-		}
-	}
-}
-
 func (h *Handler) HandlePrompt(prompt string) tea.Cmd {
 	responseChan    := make(chan agent.Chunk)
-	sessionInfoChan := make(chan agent.Chunk)
 	eventsChan      := make(chan agent.Event)
 	errChan         := make(chan error, 2)
 
@@ -91,8 +71,7 @@ func (h *Handler) HandlePrompt(prompt string) tea.Cmd {
 	var cmds []tea.Cmd
 
 	if len(h.Session.History) < 1 {
-		h.Session.NameSession(prompt, sessionInfoChan, errChan)
-		cmds = append(cmds, awaitSessionInfo(reqCtx, sessionInfoChan))
+		h.Session.NameSession(prompt, errChan)
 	}
 
 	h.Session.NewPrompt(prompt, responseChan, errChan, eventsChan)
