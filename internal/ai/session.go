@@ -20,8 +20,10 @@ type Session struct {
     agent  *agent.Agent
 
     History       []agent.Message
-    chatSession   *persistence.ChatSession
 
+    //
+    chatSession   *persistence.ChatSession
+    msgToDiscChan chan agent.Message
 }
 
 func (s *Session) SetNewContext() {
@@ -94,7 +96,7 @@ func (s *Session) NameSession(message string, errChan chan error) {
 
             timer.Reset(idleTimeout)
         }
-    }()    
+    }()
 }
 
 func (s *Session) NewPrompt(message string, c chan agent.Chunk, errChan chan error, eventsChan chan<- agent.Event) {
@@ -112,13 +114,32 @@ func (s *Session) NewPrompt(message string, c chan agent.Chunk, errChan chan err
         requestCtx, cancel := context.WithCancel(s.Ctx)
         defer cancel()
 
-        h, err := s.agent.Run(requestCtx, s.groq.handlePrompt, h, c, eventsChan)
+        h, err := s.agent.Run(requestCtx, s.groq.handlePrompt, h, c, eventsChan, s.msgToDiscChan)
         if err != nil {
             s.handleError(err, errChan)
             return
         }
         s.History = h
     }()
+}
+
+func (s *Session) writeToDiscLoop() {
+    for {
+        if s.chatSession != nil {
+            break
+        }
+    }
+
+    for {
+        select {
+        case msg := <-s.msgToDiscChan:
+            s.chatSession.Append(msg)
+        case <-s.Ctx.Done():
+            return
+        default:
+            continue
+        }
+    }
 }
 
 func (s *Session) handleError(err error, errChan chan error) {
@@ -156,12 +177,16 @@ func (s *Session) RetrieveModels(c chan []GroqModelInfo, errChan chan error){
 
 func NewSession() *Session {
     a := agent.NewAgent("Main", 25)
+    msgDC := make(chan agent.Message, 2)
 
     s := Session{
         groq:  newGroq(),
         agent: &a,
+        msgToDiscChan: msgDC,
     }
+
     s.SetNewContext()
+    go s.writeToDiscLoop()
 
     return &s
 }

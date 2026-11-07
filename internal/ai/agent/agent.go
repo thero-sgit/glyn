@@ -39,14 +39,18 @@ func (a *Agent) Run(
 	history []Message,
 	c chan Chunk,
 	eventsChan chan<- Event,
+	wtdc chan<- Message,
 ) ([]Message, error) {
 	for turn := 0; turn < a.maxTurns; turn++ {
-		msg, finish, err := a.streamTurn(ctx, streamFunc, history, c, eventsChan)
+		msg, finish, err := a.streamTurn(ctx, streamFunc, history, c, wtdc)
 		if err != nil {
 			return history, err
 		}
 
 		history = append(history, msg)
+		go func ()  {
+			wtdc <- msg
+		}()
 
 		if len(msg.ToolCalls) == 0 && finish == "stop" {
 			return history, nil
@@ -57,6 +61,9 @@ func (a *Agent) Run(
 
 		results := a.executeTools(ctx, msg.ToolCalls, eventsChan)
 		history = append(history, results...)
+		go func ()  {
+			for _, msg := range results { wtdc <- msg }
+		}()
 
 		if ctx.Err() != nil {
 			return history, ctx.Err()
@@ -71,7 +78,7 @@ func (a *Agent) streamTurn(
 	streamFunc func(ctx context.Context, a *Agent, messages []Message) (ChatCompletionStream, error),
 	history []Message,
 	c chan Chunk,
-	eventsChan chan<- Event,
+	wtdc chan<- Message,
 ) (Message, string, error) {
 
 	stream, err := streamFunc(ctx, a, history)
@@ -145,6 +152,12 @@ func (a *Agent) streamTurn(
 		}
 	}
 
+	if msg := history[len(history)-1]; msg.Role == "user" {
+		go func ()  {
+			wtdc <- msg
+		}()
+	}
+	
 	return Message{Role: "assistant", Content: text.String(), ToolCalls: calls}, finish, nil
 }
 

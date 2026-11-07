@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/thero-sgit/glyn/internal/ai/agent"
 	"github.com/thero-sgit/glyn/internal/config"
 )
 
@@ -13,12 +14,18 @@ func (c *ChatSession) New() *ChatSession {
 	c.id, _ = newSessionId(ts)
 	f, _ := openSession(config.Config.WorkingDir, c.key, c.id) // temp dir
 	c.file = f
-	c.AppendHeaders(ts)
+	c.appendHeaders(ts)
 
 	return c
 }
 
-func (c *ChatSession) AppendHeaders(time string) {
+func (c *ChatSession) Append(msg agent.Message) {
+	if _, err := c.file.Write(append(must(json.Marshal(msg)), '\n')); err != nil {
+		return
+	}
+}
+
+func (c *ChatSession) appendHeaders(time string) {
 	headers := map[string]string{
 		"type": "header",
 		"v": config.Config.Version,

@@ -10,7 +10,7 @@ import (
 	"github.com/thero-sgit/glyn/internal/common"
 )
 
-var modes = []string{"agent", "ask "}
+var modes = []string{"ask ", "agent"}
 
 type toggle struct {
 	Icon    string

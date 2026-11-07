@@ -69,9 +69,6 @@ func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 
-		case zone.Get("send-prompt-btn").InBounds(msg):
-			return m.sendPromptCmd()
-
 		default:
 			focused := *m.focused
 			focused.Update(msg)
