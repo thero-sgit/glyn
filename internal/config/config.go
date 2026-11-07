@@ -111,5 +111,5 @@ func Init() {
 	}
 
 	Config.SanitizedWd = common.RelativePath(Config.WorkingDir)
-	Config.Mode = NewToggle("\u2726", modes)
+	Config.Mode = NewToggle(" ?", modes)
 }
