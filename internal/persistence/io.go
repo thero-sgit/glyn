@@ -12,7 +12,7 @@ func (c *ChatSession) New() *ChatSession {
 	ts := time.Now().Local().UTC().Format("20060102-150405")
 	c.key, _ = ProjectKey(config.Config.WorkingDir)
 	c.id, _ = newSessionId(ts)
-	f, _ := openSession(config.Config.WorkingDir, c.key, c.id) // temp dir
+	f, _ := openSession(c.key, c.id)
 	c.file = f
 	c.appendHeaders(ts)
 

@@ -8,9 +8,16 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/thero-sgit/glyn/internal/config"
 )
 
 var noSlug = regexp.MustCompile(`[^a-z0-9]+`)
+
+type TitleEntry struct {
+	Type  string  `json:"type"`
+	Value string `json:"value,omitempty"`
+}
 
 func dataBaseDir() (string, error) {
 	if d := os.Getenv("GLYN_HOME"); d != "" {
@@ -29,8 +36,8 @@ func dataBaseDir() (string, error) {
 	return filepath.Join(home, ".local", "share", "glyn"), nil
 }
 
-func openSession(base, projectKey, id string) (*os.File, error) {
-	dir := filepath.Join(base, "sessions", projectKey)
+func openSession(projectKey, id string) (*os.File, error) {
+	dir := filepath.Join(config.Config.DataBaseDir, projectKey)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, err
 	}

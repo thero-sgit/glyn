@@ -103,11 +103,12 @@ func (c *configuration) SetRenderer(width int) {
 
 func Init() {
 	Config = configuration {
-		Version:    "v1.0.0",
-		WorkingDir: getWd(),
-		GroqApiKey: apiKey(),
-		Model:		NewToggle("\u27E1", []string{""}),
-		Effort:     NewToggle("\u26CF", []string{"medium", "high", "low"}),
+		Version:     "v1.0.0",
+		WorkingDir:  getWd(),
+		DataBaseDir: getWd() + "/sessions", // TO-D: change temp dir
+		GroqApiKey:  apiKey(),
+		Model:		 NewToggle("\u27E1", []string{""}),
+		Effort:      NewToggle("\u26CF", []string{"medium", "high", "low"}),
 	}
 
 	Config.SanitizedWd = common.RelativePath(Config.WorkingDir)

@@ -1,6 +1,8 @@
 package submodels
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/viewport"
@@ -14,7 +16,10 @@ import (
 type Sessions struct {
 	viewport viewport.Model
 	chats    []persistence.ChatSession
-	cursor   int	
+	cursor   int
+
+	//
+	projectKey string
 }
 
 func (s *Sessions) Init() tea.Cmd {
@@ -22,11 +27,14 @@ func (s *Sessions) Init() tea.Cmd {
 }
 
 func NewSessionsScreen() tea.Model {
-
-	return &Sessions{
+	key, _ := persistence.ProjectKey(config.Config.WorkingDir)
+	s := &Sessions{
 		viewport: viewport.New(0, 0),
-		chats: persistence.DummySessions(),
+		projectKey: key,
 	}
+
+	s.loadChatSessions()
+	return s
 }
 
 func (s *Sessions) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -92,4 +100,21 @@ func (s *Sessions) View() string {
 	)
 
 	return s.viewport.View()
+}
+
+func (s *Sessions) loadChatSessions() {
+	destination, err := os.ReadDir(filepath.Join(config.Config.DataBaseDir, s.projectKey))
+	if err != nil {
+		return
+	}
+
+	var entries []persistence.ChatSession
+	for _, e := range destination {
+		id := strings.Split(e.Name(), ".")[0]
+		if e, err := persistence.NewChatSessionFromId(s.projectKey, id); err == nil {
+			entries = append(entries, *e)
+		}
+	}
+
+	s.chats = entries
 }
