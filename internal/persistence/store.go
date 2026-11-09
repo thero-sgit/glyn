@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/thero-sgit/glyn/internal/ai/agent"
 	"github.com/thero-sgit/glyn/internal/config"
 	_ "modernc.org/sqlite"
 )
@@ -27,7 +28,7 @@ var migrations = []string{
 		session_id   INTEGER NOT NULL REFERENCES session(id) ON DELETE CASCADE,
 		role 		 TEXT NOT NULL,
 		content      TEXT,
-		tool_calls   TEXT,
+		tool_calls   BOOLEAN,
 		tool_call_id TEXT,
 		created_at   TEXT NOT NULL
 	);
@@ -35,7 +36,7 @@ var migrations = []string{
 	CREATE INDEX idx_sessions_project ON sessions(project_key, updated_at DESC);`,
 }
 
-type Store struct { db *sql.DB }
+type Store struct{ db *sql.DB }
 
 func Open(ctx context.Context) (*Store, error) {
 	base := config.Config.DataBaseDir
@@ -46,7 +47,7 @@ func Open(ctx context.Context) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
- 	db.SetMaxOpenConns(1)
+	db.SetMaxOpenConns(1)
 
 	if err := db.PingContext(ctx); err != nil {
 		db.Close()
@@ -58,15 +59,25 @@ func Open(ctx context.Context) (*Store, error) {
 		return nil, err
 	}
 
-	return &Store{db: db,}, nil
+	return &Store{db: db}, nil
+}
+
+func (s *Store) GetSessions() []ChatSession {
+	sessions := []ChatSession {
+		*NewChatSession("dummy session 1", "1", "2hrs"),
+		*NewChatSession("dummy session 2", "2", "3hrs"),
+	}
+
+	return sessions
 }
 
 func (s *Store) StartNewSession(ctx context.Context, title string) (ChatSession, error) {
 	now := time.Now().Format("20060102-150405")
 
-	result, err := s.db.ExecContext(ctx, 
+	result, err := s.db.ExecContext(
+		ctx,
 		`INSERT INTO sessions (project_key, cwd, model, title, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?)`,
+		 VALUES (?, ?, ?, ?, ?, ?);`,
 		config.Config.ProjectKey, config.Config.WorkingDir, config.Config.Model.Name, title, now, now,
 	)
 	if err != nil {
@@ -75,6 +86,29 @@ func (s *Store) StartNewSession(ctx context.Context, title string) (ChatSession,
 
 	id, _ := result.LastInsertId()
 	return *NewChatSession(title, string(id), now), nil
+}
+
+func (s *Store) AppendMessage(ctx context.Context, sessionId string, msg agent.Message) error {
+	now := time.Now().Format("20060102-150405")
+
+	hasToolCalls := len(msg.ToolCalls) > 0
+
+	result, err := s.db.ExecContext(
+		ctx,
+		`INSERT INTO messages (session_id, role, content, tool_calls, tool_call_id, created_at)
+		 VALUES (?, ?, ?, ?, ?, ?);`,
+		sessionId, msg.Role, msg.Content, hasToolCalls, msg.ToolCallId, now,
+	)
+
+	if hasToolCalls {
+		seq, _ := result.LastInsertId()
+		s.appendToolCalls(ctx, seq, msg.ToolCalls)
+	}
+
+	return err
+}
+
+func (s *Store) appendToolCalls(ctx context.Context, seq int64, calls []agent.ToolCall) {
 }
 
 func migrate(ctx context.Context, db *sql.DB) error {
@@ -88,7 +122,7 @@ func migrate(ctx context.Context, db *sql.DB) error {
 		if err != nil {
 			return err
 		}
-		
+
 		if _, err := tx.ExecContext(ctx, migrations[i]); err != nil {
 			tx.Rollback()
 			return fmt.Errorf("migrations %d: %w", i+1, err)
@@ -104,5 +138,5 @@ func migrate(ctx context.Context, db *sql.DB) error {
 		}
 	}
 
-	return nil	
+	return nil
 }

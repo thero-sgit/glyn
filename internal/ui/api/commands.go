@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/thero-sgit/glyn/internal/ai"
 	"github.com/thero-sgit/glyn/internal/ai/agent"
+	"github.com/thero-sgit/glyn/internal/persistence"
 )
 
 type SentCmd  struct {}
@@ -49,14 +50,17 @@ type PromptCmd struct {
 	Message string
 }
 
-
 type ResponseChunkCmd struct {
 	Chunk agent.Chunk
 	C     chan agent.Chunk
 }
 
-type EventMsg struct {
+type EventCmd struct {
 	Event agent.Event
 	Ctx   context.Context
 	C     <-chan agent.Event
+}
+
+type SessionsReadMsg struct {
+	Sessions []persistence.ChatSession
 }

@@ -84,7 +84,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case api.ResponseChunkCmd:
 		return m.handleResponseChunkCmd(msg)
 
-	case api.EventMsg:
+	case api.EventCmd:
 		return m.handleEvent(msg)
 
 	default:

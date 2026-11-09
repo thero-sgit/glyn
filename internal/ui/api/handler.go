@@ -39,7 +39,7 @@ func AwaitEvent(ctx context.Context, ch <-chan agent.Event) tea.Cmd {
 				return nil
 			}
 
-			return EventMsg{Event: event, Ctx: ctx, C: ch}
+			return EventCmd{Event: event, Ctx: ctx, C: ch}
 		case <-ctx.Done():
 			return nil
 		}
@@ -102,4 +102,8 @@ func (h *Handler) HandleGetModels() tea.Cmd {
 
 	h.Session.RetrieveModels(responseChan, errChan)
 	return tea.Batch(errorListener(h.Session.Ctx, errChan), awaitModels(h.Session.Ctx, responseChan))
+}
+
+func (h *Handler) HandleReadSessions() tea.Msg {
+	return SessionsReadMsg { Sessions: h.Session.ReadSessions() }
 }

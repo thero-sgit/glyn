@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/thero-sgit/glyn/internal/config"
 	"github.com/thero-sgit/glyn/internal/persistence"
+	"github.com/thero-sgit/glyn/internal/ui/api"
 	"github.com/thero-sgit/glyn/internal/ui/library"
 )
 
@@ -38,6 +39,10 @@ func (s *Sessions) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		s.viewport.Width, s.viewport.Height = msg.Width, msg.Height
+		return s, nil
+
+	case api.SessionsReadMsg:
+		s.chats = msg.Sessions
 		return s, nil
 
 	case tea.MouseMsg:

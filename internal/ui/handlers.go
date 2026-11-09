@@ -120,7 +120,7 @@ func (m *Model) handleResponseChunkCmd(msg api.ResponseChunkCmd) (tea.Model, tea
 	return m, cmd
 }
 
-func (m *Model) handleEvent(msg api.EventMsg) (tea.Model, tea.Cmd) {
+func (m *Model) handleEvent(msg api.EventCmd) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.chatScreen, cmd = m.chatScreen.Update(msg)
 	return m, cmd
@@ -238,6 +238,8 @@ func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.sendPromptCmd()
 
 	case m.slashCmdCon.Focused:
+		var cmd, slashConCmd tea.Cmd
+
 		slashCon := m.slashCmdCon
 		slashCon.Focused = false
 
@@ -246,13 +248,14 @@ func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.focused = &m.helpScreen
 		case"/sessions":
 			m.focused = &m.sessionsScreen
+			cmd = m.handler.HandleReadSessions
 		case"/model":
 			m.focused = &m.llmsScreen
 		}
 
-		updatedModel, cmd := slashCon.Update(msg)
+		updatedModel, slashConCmd := slashCon.Update(msg)
 		m.slashCmdCon = *updatedModel.(*components.Selector)
-		return m, cmd
+		return m, tea.Batch(cmd, slashConCmd)
 
 	default:
 		focused := *m.focused

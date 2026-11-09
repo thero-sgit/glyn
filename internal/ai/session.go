@@ -87,6 +87,7 @@ func (s *Session) NameSession(message string, errChan chan error) {
                 if errors.Is(err, io.EOF) {
                     c, _ := s.sessionStore.StartNewSession(s.Ctx, name)
                     s.currentChatSession = &c
+                    go s.writeToDbWorker()
                     return
                 }
                 errChan <- err
@@ -126,24 +127,22 @@ func (s *Session) NewPrompt(message string, c chan agent.Chunk, errChan chan err
     }()
 }
 
-// func (s *Session) writeToDiscLoop() {
-//     for {
-//         if s.chatSession != nil {
-//             break
-//         }
-//     }
+func (s *Session) ReadSessions() []persistence.ChatSession {
+    return s.sessionStore.GetSessions()
+}
 
-//     for {
-//         select {
-//         case msg := <-s.msgToDiscChan:
-//              s.chatSession.Append(msg)
-//         case <-s.Ctx.Done():
-//             return
-//         default:
-//             continue
-//         }
-//     }
-// }
+func (s *Session) writeToDbWorker() {
+    for {
+        select {
+        case msg := <-s.msgToDiscChan:
+             s.sessionStore.AppendMessage(s.Ctx, s.currentChatSession.Id, msg)
+        case <-s.Ctx.Done():
+            return
+        default:
+            continue
+        }
+    }
+}
 
 func (s *Session) handleError(err error, errChan chan error) {
     if errChan != nil {

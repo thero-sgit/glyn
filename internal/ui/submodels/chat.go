@@ -167,7 +167,7 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return c, tea.Batch(cmds...)
 
-	case api.EventMsg:
+	case api.EventCmd:
 		switch msg.Event.(type) {
 		case agent.ToolStart:
 			if c.currentResponse == nil {
