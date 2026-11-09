@@ -1,9 +1,12 @@
 package config
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/charmbracelet/glamour"
@@ -11,6 +14,7 @@ import (
 )
 
 var modes = []string{"ask ", "agent"}
+var noSlug = regexp.MustCompile(`[^a-z0-9]+`)
 
 type toggle struct {
 	Icon    string
@@ -46,6 +50,7 @@ type configuration struct {
 	Effort      toggle
 	Mode        toggle
 	MdRenderer  glamour.TermRenderer
+	ProjectKey  string
 }
 
 func getWd() string {
@@ -101,6 +106,64 @@ func (c *configuration) SetRenderer(width int) {
 	c.MdRenderer = *r
 }
 
+func projectRoot(start string) string {
+	dir := start
+	for {
+		if _, err :=  os.Stat(filepath.Join(dir, ".git")); err == nil {
+			return dir
+		}
+
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return start
+		}
+
+		dir = parent
+	}
+}
+
+func projectKey(cwd string) (string, error) {
+	abs, err := filepath.Abs(cwd)
+	if err != nil {
+		return "", err
+	}
+
+	if resolved, err := filepath.EvalSymlinks(abs); err == nil {
+		abs = resolved
+	}
+
+	root := projectRoot(abs)
+
+	slug := noSlug.ReplaceAllString(strings.ToLower(filepath.Base(root)), "-")
+	slug = strings.Trim(slug, "-")
+	if slug == "" {
+		slug = "root"
+	}
+	if len(slug) > 40 {
+		slug = slug[:40]
+	}
+
+	sum := sha256.Sum256([]byte(root))
+	return slug + "-" + hex.EncodeToString(sum[:4]), nil
+}
+
+func dataBaseDir() (string, error) {
+	if d := os.Getenv("GLYN_HOME"); d != "" {
+		return d, nil
+	}
+
+	if d := os.Getenv("XDG_DATA_HOME"); d != "" {
+		return filepath.Join(d, "glyn"), nil
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(home, ".local", "share", "glyn", "data"), nil
+}
+
 func Init() {
 	Config = configuration {
 		Version:     "v1.0.0",
@@ -112,5 +175,6 @@ func Init() {
 	}
 
 	Config.SanitizedWd = common.RelativePath(Config.WorkingDir)
+	Config.ProjectKey, _ = projectKey(Config.WorkingDir)
 	Config.Mode = NewToggle(" ?", modes)
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log"
 	"slices"
 	"sync"
 	"time"
@@ -22,8 +23,9 @@ type Session struct {
     History       []agent.Message
 
     //
-    chatSession   *persistence.ChatSession
-    msgToDiscChan chan agent.Message
+    sessionStore   *persistence.Store
+    currentChatSession *persistence.ChatSession
+    msgToDiscChan  chan agent.Message
 }
 
 func (s *Session) SetNewContext() {
@@ -83,7 +85,8 @@ func (s *Session) NameSession(message string, errChan chan error) {
             response, err := stream.Recv()
             if err != nil {
                 if errors.Is(err, io.EOF) {
-                    s.chatSession = persistence.NewChatSession(name).New()
+                    c, _ := s.sessionStore.StartNewSession(s.Ctx, name)
+                    s.currentChatSession = &c
                     return
                 }
                 errChan <- err
@@ -123,24 +126,24 @@ func (s *Session) NewPrompt(message string, c chan agent.Chunk, errChan chan err
     }()
 }
 
-func (s *Session) writeToDiscLoop() {
-    for {
-        if s.chatSession != nil {
-            break
-        }
-    }
+// func (s *Session) writeToDiscLoop() {
+//     for {
+//         if s.chatSession != nil {
+//             break
+//         }
+//     }
 
-    for {
-        select {
-        case msg := <-s.msgToDiscChan:
-            s.chatSession.Append(msg)
-        case <-s.Ctx.Done():
-            return
-        default:
-            continue
-        }
-    }
-}
+//     for {
+//         select {
+//         case msg := <-s.msgToDiscChan:
+//              s.chatSession.Append(msg)
+//         case <-s.Ctx.Done():
+//             return
+//         default:
+//             continue
+//         }
+//     }
+// }
 
 func (s *Session) handleError(err error, errChan chan error) {
     if errChan != nil {
@@ -186,7 +189,14 @@ func NewSession() *Session {
     }
 
     s.SetNewContext()
-    go s.writeToDiscLoop()
+    store, err := persistence.Open(s.Ctx)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    s.sessionStore = store
+
+    // go s.writeToDiscLoop()
 
     return &s
 }
