@@ -58,8 +58,8 @@ type GroqStreamChunk struct {
 }
 
 type ToolCall struct {
-	Index    int    `json:"index"`
 	Id       string `json:"id"`
+	Index    int    `json:"index"`
 	Type     string `json:"type"`
 
 	Function struct {

@@ -87,7 +87,7 @@ func (s *Session) NameSession(message string, errChan chan error) {
                 if errors.Is(err, io.EOF) {
                     c, _ := s.sessionStore.StartNewSession(s.Ctx, name)
                     s.currentChatSession = &c
-                    go s.writeToDbWorker()
+                    go s.writeToDbWorker(errChan)
                     return
                 }
                 errChan <- err
@@ -131,11 +131,13 @@ func (s *Session) ReadSessions() []persistence.ChatSession {
     return s.sessionStore.GetSessions()
 }
 
-func (s *Session) writeToDbWorker() {
+func (s *Session) writeToDbWorker(errChan chan<- error) {
     for {
         select {
         case msg := <-s.msgToDiscChan:
-             s.sessionStore.AppendMessage(s.Ctx, s.currentChatSession.Id, msg)
+            if err := s.sessionStore.AppendMessage(s.Ctx, s.currentChatSession.Id, msg); err != nil {
+                errChan <- err
+            }
         case <-s.Ctx.Done():
             return
         default:

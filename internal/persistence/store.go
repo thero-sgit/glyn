@@ -25,13 +25,22 @@ var migrations = []string{
 	);
 	CREATE TABLE messages (
 		seq 		 INTEGER PRIMARY KEY AUTOINCREMENT,
-		session_id   INTEGER NOT NULL REFERENCES session(id) ON DELETE CASCADE,
+		session_id   INTEGER NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
 		role 		 TEXT NOT NULL,
 		content      TEXT,
 		tool_calls   BOOLEAN,
 		tool_call_id TEXT,
 		created_at   TEXT NOT NULL
 	);
+	CREATE TABLE tool_calls (
+		id          TEXT PRIMARY KEY NOT NULL,
+		idx         INTEGER NOT NULL,
+		type        TEXT NOT NULL,
+		name        TEXT NOT NULL,
+		args        TEXT NOT NULL,
+		message_seq INTEGER NOT NULL REFERENCES messages(seq) ON DELETE CASCADE
+	);
+	CREATE INDEX idx_tool_calls_message ON 	tool_calls(message_seq, id);
 	CREATE INDEX idx_messages_session ON messages(session_id, seq);
 	CREATE INDEX idx_sessions_project ON sessions(project_key, updated_at DESC);`,
 }
@@ -85,7 +94,7 @@ func (s *Store) StartNewSession(ctx context.Context, title string) (ChatSession,
 	}
 
 	id, _ := result.LastInsertId()
-	return *NewChatSession(title, string(id), now), nil
+	return *NewChatSession(title, fmt.Sprint(id), now), nil
 }
 
 func (s *Store) AppendMessage(ctx context.Context, sessionId string, msg agent.Message) error {
@@ -100,15 +109,31 @@ func (s *Store) AppendMessage(ctx context.Context, sessionId string, msg agent.M
 		sessionId, msg.Role, msg.Content, hasToolCalls, msg.ToolCallId, now,
 	)
 
+	if err != nil {
+		return  err
+	}	
+
 	if hasToolCalls {
 		seq, _ := result.LastInsertId()
-		s.appendToolCalls(ctx, seq, msg.ToolCalls)
+		return s.appendToolCalls(ctx, seq, msg.ToolCalls)
 	}
 
-	return err
+	return nil
 }
 
-func (s *Store) appendToolCalls(ctx context.Context, seq int64, calls []agent.ToolCall) {
+func (s *Store) appendToolCalls(ctx context.Context, seq int64, calls []agent.ToolCall) error {
+	for _, call := range calls {
+		if _, err := s.db.ExecContext(
+			ctx,
+			`INSERT INTO tool_calls (id, idx, type, name, args, message_seq)
+			VALUES (?, ?, ?, ?, ?, ?);`,
+			call.Id, call.Index, call.Type, call.Function.Name, call.Function.Arguments, seq,
+		); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func migrate(ctx context.Context, db *sql.DB) error {
