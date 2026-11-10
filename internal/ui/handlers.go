@@ -9,6 +9,7 @@ import (
 	"github.com/thero-sgit/glyn/internal/config"
 	"github.com/thero-sgit/glyn/internal/ui/api"
 	"github.com/thero-sgit/glyn/internal/ui/library"
+	"github.com/thero-sgit/glyn/internal/ui/submodels"
 	"github.com/thero-sgit/glyn/internal/ui/submodels/components"
 )
 
@@ -124,6 +125,18 @@ func (m *Model) handleEvent(msg api.EventCmd) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.chatScreen, cmd = m.chatScreen.Update(msg)
 	return m, cmd
+}
+
+func (m *Model) handleGetSessionHistory(msg api.GetSessionHistory) (tea.Model, tea.Cmd) {
+	return m, func() tea.Msg {
+		return m.handler.HandleContinueSession(msg.SessionId)
+	}
+}
+
+func (m *Model) handleContinueSession(msg api.ContinueSessionMsg) (tea.Model, tea.Cmd) {
+	m.chatScreen = submodels.ContinueChat(&m.handler, msg)
+	m.focused = &m.chatScreen
+	return m, nil
 }
 
 // KEYS
@@ -261,10 +274,11 @@ func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, cmd
 
 	default:
+		var cmd tea.Cmd
 		focused := *m.focused
-		focused.Update(msg)
+		focused, cmd = focused.Update(msg)
 
-		return m, nil
+		return m, cmd
 	}
 }
 

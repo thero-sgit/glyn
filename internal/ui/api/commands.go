@@ -65,3 +65,18 @@ type SessionsReadMsg struct {
 	Sessions []persistence.ChatSession
 	Error    error
 }
+
+type GetSessionHistory struct {
+	SessionId string
+}
+
+func GoGetSessionHistory(id string) tea.Cmd {
+	return func() tea.Msg {
+		return GetSessionHistory{SessionId: id}
+	}
+}
+
+type ContinueSessionMsg struct {
+	Messages []agent.Message
+	Error    error
+}

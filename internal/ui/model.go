@@ -88,6 +88,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case api.EventCmd:
 		return m.handleEvent(msg)
 
+	case api.GetSessionHistory:
+		return m.handleGetSessionHistory(msg)
+
+	case api.ContinueSessionMsg:
+		return m.handleContinueSession(msg)
+
 	default:
 		focused := *m.focused
 		focused.Update(msg)

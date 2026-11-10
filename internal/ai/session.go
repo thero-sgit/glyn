@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/thero-sgit/glyn/internal/ai/agent"
+	"github.com/thero-sgit/glyn/internal/common"
 	"github.com/thero-sgit/glyn/internal/persistence"
 )
 
@@ -107,6 +108,7 @@ func (s *Session) NewPrompt(message string, c chan agent.Chunk, errChan chan err
     h := append(s.History, agent.Message{
         Role:    "user",
         Content: message,
+        CreatedAt: time.Now().Format(common.TsFormat),
     })
 
     s.Wg.Add(1)
@@ -129,6 +131,13 @@ func (s *Session) NewPrompt(message string, c chan agent.Chunk, errChan chan err
 
 func (s *Session) ReadSessions() ([]persistence.ChatSession, error) {
     return s.sessionStore.ListSessions(s.Ctx)
+}
+
+func (s *Session) ContinueSession(sessionId string) ([]agent.Message, error) {
+    h, err := s.sessionStore.ListMessagesInSession(s.Ctx, sessionId)
+    if err == nil { s.History = h }
+
+    return h, err
 }
 
 func (s *Session) writeToDbWorker(errChan chan<- error) {
@@ -196,8 +205,5 @@ func NewSession() *Session {
     }
 
     s.sessionStore = store
-
-    // go s.writeToDiscLoop()
-
     return &s
 }

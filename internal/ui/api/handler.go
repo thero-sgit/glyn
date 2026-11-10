@@ -108,3 +108,8 @@ func (h *Handler) HandleReadSessions() tea.Msg {
 	s, err := h.Session.ReadSessions()
 	return SessionsReadMsg { Sessions: s, Error: err  }
 }
+
+func (h *Handler) HandleContinueSession(sessionId string) tea.Msg {
+	m, err := h.Session.ContinueSession(sessionId)
+	return ContinueSessionMsg { Messages: m, Error: err}
+}

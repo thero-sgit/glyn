@@ -40,6 +40,17 @@ func NewChatScreen(h *api.Handler) tea.Model {
 	}
 }
 
+func ContinueChat(h *api.Handler, from api.ContinueSessionMsg) tea.Model {
+	hist := []string{library.Burner(0)}
+	hist = reconstructHistory(hist, from)
+	
+	return &ChatScreen{
+		viewport: viewport.New(0, 0),
+		handler:  h,
+		history: hist,
+	}
+}
+
 func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -223,4 +234,17 @@ func (c *ChatScreen) addNewPrompt(message string) {
 	c.history = append(c.history, c.currentResponse.View())
 	c.responseTicking = false
 	c.eventTicking = false
+}
+
+
+func reconstructHistory(h []string, from api.ContinueSessionMsg) []string {
+	if from.Error == nil {
+		for _, m := range from.Messages {
+			h = append(h, m.Content)
+		}
+
+		return h
+	}
+
+	return append(h, from.Error.Error())
 }

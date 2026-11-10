@@ -8,6 +8,7 @@ import (
 	"io"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/thero-sgit/glyn/internal/common"
 	"github.com/thero-sgit/glyn/internal/config"
@@ -88,6 +89,12 @@ func (a *Agent) streamTurn(
 	defer stream.Close()
 	c <- Chunk{TurnStart: true}
 
+	if msg := history[len(history)-1]; msg.Role == "user" {
+		go func() {
+			wtdc <- msg
+		}()
+	}
+
 	var text strings.Builder
 	var calls []ToolCall
 	var finish string
@@ -151,14 +158,8 @@ func (a *Agent) streamTurn(
 			break
 		}
 	}
-
-	if msg := history[len(history)-1]; msg.Role == "user" {
-		go func ()  {
-			wtdc <- msg
-		}()
-	}
 	
-	return Message{Role: "assistant", Content: text.String(), ToolCalls: calls}, finish, nil
+	return Message{Role: "assistant", Content: text.String(), ToolCalls: calls, CreatedAt: time.Now().Format(common.TsFormat)}, finish, nil
 }
 
 func (a *Agent) executeTools(ctx context.Context, calls []ToolCall, eventsChan chan<- Event) []Message {

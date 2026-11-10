@@ -116,14 +116,13 @@ func (s *Store) StartNewSession(ctx context.Context, title string) (ChatSession,
 }
 
 func (s *Store) AppendMessage(ctx context.Context, sessionId string, msg agent.Message) error {
-	now := time.Now().Format(common.TsFormat)
 	hasToolCalls := len(msg.ToolCalls) > 0
 
 	result, err := s.db.ExecContext(
 		ctx,
 		`INSERT INTO messages (session_id, role, content, tool_calls, tool_call_id, created_at)
 		 VALUES (?, ?, ?, ?, ?, ?);`,
-		sessionId, msg.Role, msg.Content, hasToolCalls, msg.ToolCallId, now,
+		sessionId, msg.Role, msg.Content, hasToolCalls, msg.ToolCallId, msg.CreatedAt,
 	)
 
 	if err != nil {
@@ -136,6 +135,35 @@ func (s *Store) AppendMessage(ctx context.Context, sessionId string, msg agent.M
 	}
 
 	return nil
+}
+
+func (s *Store) ListMessagesInSession(ctx context.Context, sessionId string) ([]agent.Message, error) {
+	rows, err := s.db.QueryContext(
+		ctx,
+		`SELECT role, content, tool_calls, tool_call_id
+		 FROM messages
+		 WHERE session_id = ?
+		 ORDER BY created_at ASC`,
+		 sessionId,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []agent.Message
+	for rows.Next() {
+		var m agent.Message
+		var has_tool_calls int8
+
+		if err := rows.Scan(&m.Role, &m.Content, &has_tool_calls, &m.ToolCallId); err != nil {
+			return nil, err
+		}
+
+		out = append(out, m)
+	}
+
+	return out, rows.Err()
 }
 
 func (s *Store) appendToolCalls(ctx context.Context, seq int64, calls []agent.ToolCall) error {
