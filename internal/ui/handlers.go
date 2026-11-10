@@ -126,22 +126,11 @@ func (m *Model) handleEvent(msg api.EventCmd) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-// func (m *Model) handleSessionInfo(msg sessionInfo) (tea.Model, tea.Cmd) {
-// 	m.sessionName += msg.chunk.Data
-// 	if msg.chunk.EOS {
-// 		return m, nil
-// 	}
-
-// 	return m, awaitSessionInfo(CHandler.session.Ctx, msg.c)
-// }
-
-
 // KEYS
 func (m *Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "ctrl+c":
 		return m, tea.Quit
-
 	case "esc":
 		return m.handleEscKey()
 	case "ctrl+e":
@@ -256,6 +245,20 @@ func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		updatedModel, slashConCmd := slashCon.Update(msg)
 		m.slashCmdCon = *updatedModel.(*components.Selector)
 		return m, tea.Batch(cmd, slashConCmd)
+
+	case m.fileSelector.Focused:
+		updatedModel, cmd := m.fileSelector.Update(msg)
+		m.fileSelector = *updatedModel.(*components.FileSelector)
+
+		if len(m.fileSelector.Options) > 0 && !m.fileSelector.Options[m.fileSelector.Cursor].IsDir {
+			m.textarea.InsertString(" @" + m.fileSelector.Options[m.fileSelector.Cursor].Path)
+			m.textarea.Focus()
+			//
+			m.fileSelector.Focused = false
+			m.fileSelector.SetOptions()
+		}		
+
+		return m, cmd
 
 	default:
 		focused := *m.focused

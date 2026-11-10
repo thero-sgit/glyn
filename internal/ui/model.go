@@ -17,6 +17,7 @@ type Model struct {
 	mHeight        int
 	inputBoxHeight int
 	textarea       textarea.Model
+	prompt         string
 
 	//
 	handler api.Handler

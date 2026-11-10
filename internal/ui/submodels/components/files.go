@@ -60,18 +60,21 @@ func (f *FileSelector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch key.String() {
-	case "enter", "tab":
-		f.ti.SetValue(f.Options[f.Cursor].Path)
-		f.Cursor = 0
-		f.Viewport.GotoTop()
-		f.ti.CursorEnd()
-		f.Options = listMatches(f.ti.Value())
+	case "enter":
+		f.onEnterTab()
+		if len(f.Options) > 0 && !f.Options[f.Cursor].IsDir {
+			f.ti.Reset()
+			return f, nil
+		}
+
+	case "tab":
+		f.onEnterTab()
 
 	case "up":
 		if f.Cursor > 0 {
 			f.Cursor--
 
-			if f.Cursor < 3 {
+			if f.Cursor < 5 {
 				f.Viewport, cmd = f.Viewport.Update(msg)
 			}
 		}
@@ -92,21 +95,30 @@ func (f *FileSelector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		f.ti, cmd = f.ti.Update(msg)
 		f.Viewport.GotoTop()
 		f.ti.CursorEnd()
-
-		if f.ti.Value() == "rm " {
-			f.SetPrompt("rm ")
-		}
-
-		f.Options = listMatches(f.ti.Value())
+		
 		f.Cursor = 0
 	}
 
-	f.renderViewport()
+	f.SetOptions()
 	return f, cmd
 }
 
 func (f *FileSelector) View() string {
 	return lipgloss.NewStyle().MarginBottom(1).Render(lipgloss.JoinVertical(lipgloss.Top, f.ti.View(), f.Viewport.View()))
+}
+
+func (f *FileSelector) SetOptions() {
+	f.Options = listMatches(f.ti.Value())
+	f.renderViewport()
+}
+
+func (f *FileSelector) onEnterTab() {
+	if len(f.Options) > 0 {
+		f.ti.SetValue(f.Options[f.Cursor].Path)
+		f.Cursor = 0
+		f.Viewport.GotoTop()
+		f.ti.CursorEnd()
+	}	
 }
 
 func (f *FileSelector) renderViewport() {
@@ -125,11 +137,6 @@ func (f *FileSelector) renderViewport() {
 
 func (f *FileSelector) SetPrompt(p string) {
 	label := " Add file: "
-
-	if p == "rm " {
-		label = " Remove file: "
-		f.ti.Placeholder = "<filename> to remove"
-	}
 
 	f.ti.Prompt = library.BwLabelStyle.Bold(true).Render(label) + lipgloss.NewStyle().Foreground(library.AccentColor).Bold(true).Render(" "+p)
 	f.Prompt = p
