@@ -71,13 +71,30 @@ func Open(ctx context.Context) (*Store, error) {
 	return &Store{db: db}, nil
 }
 
-func (s *Store) GetSessions() []ChatSession {
-	sessions := []ChatSession {
-		*NewChatSession("dummy session 1", "1", "2hrs"),
-		*NewChatSession("dummy session 2", "2", "3hrs"),
+func (s *Store) ListSessions(ctx context.Context) ([]ChatSession, error) {
+	rows, err := s.db.QueryContext(
+		ctx,
+		`SELECT id, model, title, updated_at
+		 FROM sessions
+		 WHERE project_key = ?
+		 ORDER BY updated_at DESC`,
+		 config.Config.ProjectKey,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []ChatSession
+	for rows.Next() {
+		var s ChatSession
+		if err := rows.Scan(&s.Id, &s.Model, &s.Name, &s.LastUpdated); err != nil {
+			return nil, err
+		}
+		out = append(out, s)
 	}
 
-	return sessions
+	return out, rows.Err()
 }
 
 func (s *Store) StartNewSession(ctx context.Context, title string) (ChatSession, error) {
@@ -94,7 +111,7 @@ func (s *Store) StartNewSession(ctx context.Context, title string) (ChatSession,
 	}
 
 	id, _ := result.LastInsertId()
-	return *NewChatSession(title, fmt.Sprint(id), now), nil
+	return *NewChatSession(title, fmt.Sprint(id), config.Config.Model.Name, now), nil
 }
 
 func (s *Store) AppendMessage(ctx context.Context, sessionId string, msg agent.Message) error {

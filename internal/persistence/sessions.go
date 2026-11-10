@@ -6,16 +6,18 @@ import (
 )
 
 type ChatSession struct {
-	Id  string
+	Id          string
 	Name        string
-	lastUpdated string
+	Model       string
+	LastUpdated string
 }
 
-func NewChatSession(name, id, lastUpdated string) *ChatSession {
+func NewChatSession(name, id, model, lastUpdated string) *ChatSession {
 	return &ChatSession {
 		Id: id,
 		Name: name,
-		lastUpdated: lastUpdated,
+		Model: model,
+		LastUpdated: lastUpdated,
 	}
 }
 
@@ -54,7 +56,7 @@ func (c ChatSession) Pretty(width int, highlight, current bool) string {
 		lipgloss.JoinHorizontal(
 			lipgloss.Left,
 			"   ",
-			style.Render(" · " + c.lastUpdated),
+			style.Render(" · " + c.LastUpdated),
 		),
 	)
 

@@ -63,4 +63,5 @@ type EventCmd struct {
 
 type SessionsReadMsg struct {
 	Sessions []persistence.ChatSession
+	Error    error
 }

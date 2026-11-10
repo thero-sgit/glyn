@@ -105,5 +105,6 @@ func (h *Handler) HandleGetModels() tea.Cmd {
 }
 
 func (h *Handler) HandleReadSessions() tea.Msg {
-	return SessionsReadMsg { Sessions: h.Session.ReadSessions() }
+	s, err := h.Session.ReadSessions()
+	return SessionsReadMsg { Sessions: s, Error: err  }
 }

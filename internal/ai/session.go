@@ -127,8 +127,8 @@ func (s *Session) NewPrompt(message string, c chan agent.Chunk, errChan chan err
     }()
 }
 
-func (s *Session) ReadSessions() []persistence.ChatSession {
-    return s.sessionStore.GetSessions()
+func (s *Session) ReadSessions() ([]persistence.ChatSession, error) {
+    return s.sessionStore.ListSessions(s.Ctx)
 }
 
 func (s *Session) writeToDbWorker(errChan chan<- error) {
