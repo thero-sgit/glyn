@@ -103,20 +103,3 @@ func (s *Sessions) View() string {
 
 	return s.viewport.View()
 }
-
-// func (s *Sessions) loadChatSessions() {
-// 	destination, err := os.ReadDir(filepath.Join(config.Config.DataBaseDir, s.projectKey))
-// 	if err != nil {
-// 		return
-// 	}
-
-// 	var entries []persistence.ChatSession
-// 	for _, e := range destination {
-// 		id := strings.Split(e.Name(), ".")[0]
-// 		if e, err := persistence.NewChatSessionFromId(s.projectKey, id); err == nil {
-// 			entries = append(entries, *e)
-// 		}
-// 	}
-
-// 	s.chats = entries
-// }

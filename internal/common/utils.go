@@ -8,9 +8,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
-// Matching
 type Match interface {
 	Name() 	 string
 	Pretty() string
@@ -99,4 +99,26 @@ func RelativePath(path string) string {
 		},
 		"/",
 	)
+}
+
+func TimeAgo(updatedAt string) string {
+	t, err := time.ParseInLocation(TsFormat, updatedAt, time.Local)
+	if err != nil {
+		return "unknown"
+	}
+
+	d := time.Since(t)
+
+	switch {
+	case d < time.Minute:
+		return "just now"
+	case d < time.Hour:
+		return fmt.Sprintf("%dm ago", int(d.Minutes()))
+	case d < 25*time.Hour:
+		return fmt.Sprintf("%dh ago", int(d.Hours()))
+	case d < 7*24*time.Hour:
+		return fmt.Sprintf("%dd ago", int(d.Hours()/24))
+	default:
+		return t.Format("2 Jan 2006")
+	}
 }

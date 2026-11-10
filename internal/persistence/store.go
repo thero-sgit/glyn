@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/thero-sgit/glyn/internal/ai/agent"
+	"github.com/thero-sgit/glyn/internal/common"
 	"github.com/thero-sgit/glyn/internal/config"
 	_ "modernc.org/sqlite"
 )
@@ -98,7 +99,7 @@ func (s *Store) ListSessions(ctx context.Context) ([]ChatSession, error) {
 }
 
 func (s *Store) StartNewSession(ctx context.Context, title string) (ChatSession, error) {
-	now := time.Now().Format("20060102-150405")
+	now := time.Now().Format(common.TsFormat)
 
 	result, err := s.db.ExecContext(
 		ctx,
@@ -115,8 +116,7 @@ func (s *Store) StartNewSession(ctx context.Context, title string) (ChatSession,
 }
 
 func (s *Store) AppendMessage(ctx context.Context, sessionId string, msg agent.Message) error {
-	now := time.Now().Format("20060102-150405")
-
+	now := time.Now().Format(common.TsFormat)
 	hasToolCalls := len(msg.ToolCalls) > 0
 
 	result, err := s.db.ExecContext(
