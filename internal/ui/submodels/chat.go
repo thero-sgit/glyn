@@ -16,6 +16,7 @@ import (
 type ChatScreen struct {
 	viewport viewport.Model
 	history  []string
+	historyCache string
 
 	//
 	handler *api.Handler
@@ -53,11 +54,12 @@ func ContinueChat(h *api.Handler, from api.ContinueSessionMsg) tea.Model {
 func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		c.viewport.Width, c.viewport.Height = msg.Width, msg.Height
+		if c.viewport.Width != msg.Width {
+			config.Config.SetRenderer(msg.Width)
+			c.history[0] = library.Burner(msg.Width)
+		}
 
-		config.Config.SetRenderer(c.viewport.Width)
-		c.history[0] = library.Burner(c.viewport.Width)
-
+		c.viewport.Width, c.viewport.Height = msg.Width, msg.Height	
 		return c, nil
 
 	case tea.MouseMsg:
@@ -149,6 +151,7 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if c.eventTicking {
 			return c, api.DoTick60()
 		}
+		
 		return c, nil
 
 	case api.ResponseChunkCmd:

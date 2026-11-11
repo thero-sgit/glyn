@@ -62,12 +62,14 @@ func (f *FileSelector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch key.String() {
 	case "enter":
 		f.onEnterTab()
+		f.Options = listMatches(f.ti.Value())
 		if len(f.Options) > 0 && !f.Options[f.Cursor].IsDir {
 			f.ti.Reset()
 			return f, nil
 		}
 
 	case "tab":
+		f.Options = listMatches(f.ti.Value())
 		f.onEnterTab()
 
 	case "up":
@@ -108,7 +110,6 @@ func (f *FileSelector) View() string {
 }
 
 func (f *FileSelector) SetOptions() {
-	f.Options = listMatches(f.ti.Value())
 	f.renderViewport()
 }
 

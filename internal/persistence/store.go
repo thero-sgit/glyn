@@ -48,6 +48,10 @@ var migrations = []string{
 
 type Store struct{ db *sql.DB }
 
+func (s *Store) Close() error {
+	return  s.db.Close()
+}
+
 func Open(ctx context.Context) (*Store, error) {
 	base := config.Config.DataBaseDir
 

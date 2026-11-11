@@ -53,6 +53,7 @@ func (s *Session) Close() error {
 			close(s.dbWorkerStop)
 			s.closeErr = <-s.dbWorkerDone
 		}
+        s.sessionStore.Close()
 	})
 	return s.closeErr
 }
@@ -175,6 +176,7 @@ func (s *Session) writeToDbWorker(notifyCtx context.Context, sessionID string, e
 			}
 		}
 	}
+
 	for {
 		select {
 		case msg := <-s.msgToDiscChan:

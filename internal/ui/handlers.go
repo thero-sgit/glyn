@@ -39,6 +39,9 @@ func (m *Model) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 		key.WithKeys("alt+enter", "ctrl+j"),
 	)
 
+	focused := *m.focused
+	focused.Update(msg)
+
 	return m, nil
 }
 
