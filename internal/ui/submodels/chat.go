@@ -36,19 +36,18 @@ func NewChatScreen(h *api.Handler) tea.Model {
 	return &ChatScreen{
 		viewport: viewport.New(0, 0),
 		handler:  h,
-		history: hist,
+		history:  hist,
 	}
 }
 
 func ContinueChat(h *api.Handler, from api.ContinueSessionMsg) tea.Model {
 	hist := []string{library.Burner(0)}
-	hist = reconstructHistory(hist, from)
-	
-	return &ChatScreen{
+	chat := &ChatScreen{
 		viewport: viewport.New(0, 0),
 		handler:  h,
-		history: hist,
 	}
+	chat.history = reconstructHistory(hist, from)
+	return chat
 }
 
 func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -236,11 +235,21 @@ func (c *ChatScreen) addNewPrompt(message string) {
 	c.eventTicking = false
 }
 
-
 func reconstructHistory(h []string, from api.ContinueSessionMsg) []string {
 	if from.Error == nil {
 		for _, m := range from.Messages {
-			h = append(h, m.Content)
+			switch m.Role {
+			case "user":
+				prompt := components.NewUserPrompt(m.Content, len(h))
+				prompt.Update(api.SentCmd{})
+				h = append(h, prompt.View())
+			case "assistant":
+				if m.Content == "" {
+					continue
+				}
+				response := components.NewHistoricalAgentResponse(len(h), m.Content)
+				h = append(h, response.View())
+			}
 		}
 
 		return h

@@ -58,6 +58,15 @@ func NewAgentResponse(index, width int) *AgentResponse {
 	}
 }
 
+func NewHistoricalAgentResponse(index int, content string) *AgentResponse {
+	response := NewAgentResponse(index, 0)
+	block := &agentResponseBlock{kind: responseBlock}
+	block.response.WriteString(content)
+	response.blocks = append(response.blocks, block)
+	response.Finish()
+	return response
+}
+
 func (a *AgentResponse) Init() tea.Cmd {
 	return nil
 }
