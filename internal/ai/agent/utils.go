@@ -73,7 +73,11 @@ type Message struct {
 	Content    string      `json:"content,omitempty"`
 	ToolCalls  []ToolCall  `json:"tool_calls,omitempty"`
 	ToolCallId string      `json:"tool_call_id,omitempty"`
-	CreatedAt  string
+}
+
+type MessageWrapper struct {
+	Msg  Message
+	Time string
 }
 
 // UI Events

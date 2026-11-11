@@ -26,7 +26,7 @@ type Session struct {
     //
     sessionStore   *persistence.Store
     currentChatSession *persistence.ChatSession
-    msgToDiscChan  chan agent.Message
+    msgToDiscChan  chan agent.MessageWrapper
 }
 
 func (s *Session) SetNewContext() {
@@ -108,8 +108,8 @@ func (s *Session) NewPrompt(message string, c chan agent.Chunk, errChan chan err
     h := append(s.History, agent.Message{
         Role:    "user",
         Content: message,
-        CreatedAt: time.Now().Format(common.TsFormat),
     })
+    now := time.Now().Format(common.TsFormat)
 
     s.Wg.Add(1)
     go func() {
@@ -120,7 +120,7 @@ func (s *Session) NewPrompt(message string, c chan agent.Chunk, errChan chan err
         requestCtx, cancel := context.WithCancel(s.Ctx)
         defer cancel()
 
-        h, err := s.agent.Run(requestCtx, s.groq.handlePrompt, h, c, eventsChan, s.msgToDiscChan)
+        h, err := s.agent.Run(requestCtx, s.groq.handlePrompt, h, now, c, eventsChan, s.msgToDiscChan)
         if err != nil {
             s.handleError(err, errChan)
             return
@@ -190,7 +190,7 @@ func (s *Session) RetrieveModels(c chan []GroqModelInfo, errChan chan error){
 
 func NewSession() *Session {
     a := agent.NewAgent("Main", 25)
-    msgDC := make(chan agent.Message, 2)
+    msgDC := make(chan agent.MessageWrapper, 2)
 
     s := Session{
         groq:  newGroq(),

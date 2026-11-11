@@ -38,19 +38,24 @@ func (a *Agent) Run(
 	ctx context.Context,
 	streamFunc func(ctx context.Context, a *Agent, messages []Message) (ChatCompletionStream, error),
 	history []Message,
+	messageTs string,
 	c chan Chunk,
 	eventsChan chan<- Event,
-	wtdc chan<- Message,
+	wtdc chan<- MessageWrapper,
 ) ([]Message, error) {
 	for turn := 0; turn < a.maxTurns; turn++ {
-		msg, finish, err := a.streamTurn(ctx, streamFunc, history, c, wtdc)
+		msg, finish, err := a.streamTurn(ctx, streamFunc, history, c, wtdc, messageTs)
+		now := time.Now().Format(common.TsFormat)
 		if err != nil {
 			return history, err
 		}
 
 		history = append(history, msg)
 		go func ()  {
-			wtdc <- msg
+			wtdc <- MessageWrapper{
+				Msg: msg,
+				Time: now,
+			}
 		}()
 
 		if len(msg.ToolCalls) == 0 && finish == "stop" {
@@ -63,7 +68,12 @@ func (a *Agent) Run(
 		results := a.executeTools(ctx, msg.ToolCalls, eventsChan)
 		history = append(history, results...)
 		go func ()  {
-			for _, msg := range results { wtdc <- msg }
+			for _, msg := range results {
+				 wtdc <- MessageWrapper{
+					Msg: msg,
+					Time: time.Now().Format(common.TsFormat),
+				 }
+			}
 		}()
 
 		if ctx.Err() != nil {
@@ -79,7 +89,8 @@ func (a *Agent) streamTurn(
 	streamFunc func(ctx context.Context, a *Agent, messages []Message) (ChatCompletionStream, error),
 	history []Message,
 	c chan Chunk,
-	wtdc chan<- Message,
+	wtdc chan<- MessageWrapper,
+	messageTs string,
 ) (Message, string, error) {
 
 	stream, err := streamFunc(ctx, a, history)
@@ -91,7 +102,10 @@ func (a *Agent) streamTurn(
 
 	if msg := history[len(history)-1]; msg.Role == "user" {
 		go func() {
-			wtdc <- msg
+			wtdc <- MessageWrapper{
+				Msg: msg,
+				Time: messageTs,
+			}
 		}()
 	}
 
@@ -159,7 +173,7 @@ func (a *Agent) streamTurn(
 		}
 	}
 	
-	return Message{Role: "assistant", Content: text.String(), ToolCalls: calls, CreatedAt: time.Now().Format(common.TsFormat)}, finish, nil
+	return Message{Role: "assistant", Content: text.String(), ToolCalls: calls}, finish, nil
 }
 
 func (a *Agent) executeTools(ctx context.Context, calls []ToolCall, eventsChan chan<- Event) []Message {

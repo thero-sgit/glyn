@@ -115,14 +115,14 @@ func (s *Store) StartNewSession(ctx context.Context, title string) (ChatSession,
 	return *NewChatSession(title, fmt.Sprint(id), config.Config.Model.Name, now), nil
 }
 
-func (s *Store) AppendMessage(ctx context.Context, sessionId string, msg agent.Message) error {
-	hasToolCalls := len(msg.ToolCalls) > 0
+func (s *Store) AppendMessage(ctx context.Context, sessionId string, wrapper agent.MessageWrapper) error {
+	hasToolCalls := len(wrapper.Msg.ToolCalls) > 0
 
 	result, err := s.db.ExecContext(
 		ctx,
 		`INSERT INTO messages (session_id, role, content, tool_calls, tool_call_id, created_at)
 		 VALUES (?, ?, ?, ?, ?, ?);`,
-		sessionId, msg.Role, msg.Content, hasToolCalls, msg.ToolCallId, msg.CreatedAt,
+		sessionId, wrapper.Msg.Role, wrapper.Msg.Content, hasToolCalls, wrapper.Msg.ToolCallId, wrapper.Time,
 	)
 
 	if err != nil {
@@ -131,7 +131,7 @@ func (s *Store) AppendMessage(ctx context.Context, sessionId string, msg agent.M
 
 	if hasToolCalls {
 		seq, _ := result.LastInsertId()
-		return s.appendToolCalls(ctx, seq, msg.ToolCalls)
+		return s.appendToolCalls(ctx, seq, wrapper.Msg.ToolCalls)
 	}
 
 	return nil
