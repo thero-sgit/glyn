@@ -15,14 +15,22 @@ func main() {
 	zone.SetEnabled(true)
 	config.Init()
 
+	model := ui.InitialModel()
 	program := tea.NewProgram(
-		ui.InitialModel(),
+		model,
 		tea.WithAltScreen(),
 		tea.WithMouseCellMotion(),
 	)
 
-	if _, err := program.Run(); err != nil {
-		fmt.Println("error: ", err)
+	_, runErr := program.Run()
+	closeErr := model.Close()
+	if runErr != nil {
+		fmt.Println("error: ", runErr)
+	}
+	if closeErr != nil {
+		fmt.Println("error: ", closeErr)
+	}
+	if runErr != nil || closeErr != nil {
 		os.Exit(1)
 	}
 }

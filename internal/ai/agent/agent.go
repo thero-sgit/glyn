@@ -44,6 +44,10 @@ func (a *Agent) Run(
 	wtdc chan<- MessageWrapper,
 ) ([]Message, error) {
 	for turn := 0; turn < a.maxTurns; turn++ {
+		if err := ctx.Err(); err != nil {
+			return history, err
+		}
+
 		msg, finish, err := a.streamTurn(ctx, streamFunc, history, c, wtdc, messageTs)
 		now := time.Now().Format(common.TsFormat)
 		if err != nil {
@@ -51,12 +55,7 @@ func (a *Agent) Run(
 		}
 
 		history = append(history, msg)
-		go func ()  {
-			wtdc <- MessageWrapper{
-				Msg: msg,
-				Time: now,
-			}
-		}()
+		persistMessage(ctx, wtdc, MessageWrapper{Msg: msg, Time: now})
 
 		if len(msg.ToolCalls) == 0 && finish == "stop" {
 			return history, nil
@@ -67,14 +66,12 @@ func (a *Agent) Run(
 
 		results := a.executeTools(ctx, msg.ToolCalls, eventsChan)
 		history = append(history, results...)
-		go func ()  {
-			for _, msg := range results {
-				 wtdc <- MessageWrapper{
-					Msg: msg,
-					Time: time.Now().Format(common.TsFormat),
-				 }
-			}
-		}()
+		for _, result := range results {
+			persistMessage(ctx, wtdc, MessageWrapper{
+				Msg:  result,
+				Time: time.Now().Format(common.TsFormat),
+			})
+		}
 
 		if ctx.Err() != nil {
 			return history, ctx.Err()
@@ -98,15 +95,12 @@ func (a *Agent) streamTurn(
 		return Message{}, "", err
 	}
 	defer stream.Close()
-	c <- Chunk{TurnStart: true}
+	if err := sendChunk(ctx, c, Chunk{TurnStart: true}); err != nil {
+		return Message{}, "", err
+	}
 
 	if msg := history[len(history)-1]; msg.Role == "user" {
-		go func() {
-			wtdc <- MessageWrapper{
-				Msg: msg,
-				Time: messageTs,
-			}
-		}()
+		persistMessage(ctx, wtdc, MessageWrapper{Msg: msg, Time: messageTs})
 	}
 
 	var text strings.Builder
@@ -139,12 +133,16 @@ func (a *Agent) streamTurn(
 		}
 
 		if reasoningContent != "" {
-			c <- Chunk{Data: reasoningContent, EOS: false, Reasoning: true}
+			if err := sendChunk(ctx, c, Chunk{Data: reasoningContent, Reasoning: true}); err != nil {
+				return Message{}, "", err
+			}
 		}
 
 		content := delta.Content
 		if content != "" {
-			c <- Chunk{Data: content, EOS: false}
+			if err := sendChunk(ctx, c, Chunk{Data: content}); err != nil {
+				return Message{}, "", err
+			}
 			text.WriteString(content)
 		}
 
@@ -167,13 +165,31 @@ func (a *Agent) streamTurn(
 		if chunk.Choices[0].FinishReason != nil && *chunk.Choices[0].FinishReason != "" {
 			finish = *chunk.Choices[0].FinishReason
 			if finish == "stop" {
-				c <- Chunk{EOS: true}
+				if err := sendChunk(ctx, c, Chunk{EOS: true}); err != nil {
+					return Message{}, "", err
+				}
 			}
 			break
 		}
 	}
-	
+
 	return Message{Role: "assistant", Content: text.String(), ToolCalls: calls}, finish, nil
+}
+
+func persistMessage(ctx context.Context, wtdc chan<- MessageWrapper, msg MessageWrapper) {
+	select {
+	case wtdc <- msg:
+	case <-ctx.Done():
+	}
+}
+
+func sendChunk(ctx context.Context, chunks chan<- Chunk, chunk Chunk) error {
+	select {
+	case chunks <- chunk:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 func (a *Agent) executeTools(ctx context.Context, calls []ToolCall, eventsChan chan<- Event) []Message {
@@ -184,7 +200,11 @@ func (a *Agent) executeTools(ctx context.Context, calls []ToolCall, eventsChan c
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			eventsChan <- ToolStart{call.Id, call.Function.Name, call.Function.Arguments}
+			select {
+			case eventsChan <- ToolStart{call.Id, call.Function.Name, call.Function.Arguments}:
+			case <-ctx.Done():
+				return
+			}
 
 			var result string
 			tool, ok := a.Tools[call.Function.Name]
@@ -203,12 +223,15 @@ func (a *Agent) executeTools(ctx context.Context, calls []ToolCall, eventsChan c
 				}
 			}
 
-			eventsChan <- ToolDone{
+			outputs[i] = Message{Role: "tool", ToolCallId: call.Id, Content: result}
+			select {
+			case eventsChan <- ToolDone{
 				call.Id,
 				call.Function.Name,
 				result,
+			}:
+			case <-ctx.Done():
 			}
-			outputs[i] = Message{Role: "tool", ToolCallId: call.Id, Content: result}
 		}()
 	}
 

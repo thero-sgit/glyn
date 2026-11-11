@@ -23,8 +23,8 @@ type Model struct {
 	handler api.Handler
 
 	//
-	slashCmdCon    components.Selector
-	fileSelector   components.FileSelector
+	slashCmdCon  components.Selector
+	fileSelector components.FileSelector
 
 	// Screens
 	chatScreen     tea.Model
@@ -32,7 +32,7 @@ type Model struct {
 	sessionsScreen tea.Model
 	llmsScreen     tea.Model
 
-	focused        *tea.Model
+	focused *tea.Model
 }
 
 func InitialModel() *Model {
@@ -47,13 +47,17 @@ func InitialModel() *Model {
 		llmsScreen:     submodels.NewModelsModel(),
 	}
 	model.chatScreen = submodels.NewChatScreen(&model.handler)
-	model.focused    = &model.chatScreen
+	model.focused = &model.chatScreen
 
 	return &model
 }
 
 func (m *Model) Init() tea.Cmd {
 	return m.handler.HandleGetModels()
+}
+
+func (m *Model) Close() error {
+	return m.handler.Session.Close()
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -111,7 +115,7 @@ func (m *Model) View() string {
 	footerHeight := 1
 	middleHeight := m.height - headerHeight - footerHeight
 
-	// 
+	//
 	inputBox := m.inputBox(middleHeight)
 
 	//
