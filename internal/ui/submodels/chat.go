@@ -14,18 +14,25 @@ import (
 )
 
 type ChatScreen struct {
-	viewport viewport.Model
-	history  []string
-	historyCache string
+	viewport  viewport.Model
+	emptyView string
+	errorView string
+	turns     []chatTurn
+	pageStart int
 
 	//
 	handler *api.Handler
 
 	//
 	currentPrompt   *components.UserPrompt
-	currentResponse *components.AgentResponse
+	currentRun      *components.Run
 	responseTicking bool
 	eventTicking    bool
+}
+
+type chatTurn struct {
+	prompt *components.UserPrompt
+	run    *components.Run
 }
 
 func (c *ChatScreen) Init() tea.Cmd {
@@ -33,50 +40,46 @@ func (c *ChatScreen) Init() tea.Cmd {
 }
 
 func NewChatScreen(h *api.Handler) tea.Model {
-	hist := []string{library.Burner(0)}
 	return &ChatScreen{
-		viewport: viewport.New(0, 0),
-		handler:  h,
-		history:  hist,
+		viewport:  viewport.New(0, 0),
+		handler:   h,
+		emptyView: library.Burner(0),
 	}
 }
 
 func ContinueChat(h *api.Handler, from api.ContinueSessionMsg) tea.Model {
-	hist := []string{library.Burner(0)}
 	chat := &ChatScreen{
-		viewport: viewport.New(0, 0),
-		handler:  h,
+		viewport:  viewport.New(0, 0),
+		handler:   h,
+		emptyView: library.Burner(0),
 	}
-	chat.history = reconstructHistory(hist, from)
+	chat.reconstructTurns(from)
 	return chat
 }
 
 func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		if c.viewport.Width != msg.Width {
-			config.Config.SetRenderer(msg.Width)
-			c.history[0] = library.Burner(msg.Width)
-		}
+		c.viewport.Width, c.viewport.Height = msg.Width, msg.Height
 
-		c.viewport.Width, c.viewport.Height = msg.Width, msg.Height	
+		config.Config.SetRenderer(c.viewport.Width)
+		c.emptyView = library.Burner(c.viewport.Width)
+
 		return c, nil
 
 	case tea.MouseMsg:
 		var cmd tea.Cmd
 		if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
-			switch {
-			default:
-				if cr := c.currentResponse; cr != nil {
-					cr := *cr
-					updated, uCmd := cr.Update(msg)
-					c.currentResponse = updated.(*components.AgentResponse)
-					c.history[c.currentResponse.HistoryIdx] = c.currentResponse.View()
-					cmd = uCmd
+			pageEnd := min(c.pageStart+1, len(c.turns))
+			var cmds []tea.Cmd
+			for _, turn := range c.turns[c.pageStart:pageEnd] {
+				_, runCmd := turn.run.Update(msg)
+				if runCmd != nil {
+					cmds = append(cmds, runCmd)
 				}
-
-				return c, cmd
 			}
+			cmd = tea.Batch(cmds...)
+			return c, cmd
 		}
 
 		c.viewport, cmd = c.viewport.Update(msg)
@@ -84,21 +87,26 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch msg.String() {
-
-		case "up":
-
-		case "down":
+		case "up", "pgup":
+			if c.pageStart > 0 {
+				c.pageStart--
+				c.viewport.GotoTop()
+			}
+		case "down", "pgdown":
+			if c.pageStart+1 < len(c.turns) {
+				c.pageStart++
+				c.viewport.GotoTop()
+			}
 		}
 
 	case api.ErrorMsg:
 		if c.currentPrompt != nil {
 			c.currentPrompt.Update(msg)
 		}
-		if c.currentResponse != nil {
-			c.currentResponse.Fail(msg.E)
-			c.history[c.currentResponse.HistoryIdx] = c.currentResponse.View()
+		if c.currentRun != nil {
+			c.currentRun.Fail(msg.E)
 		}
-		c.history = append(c.history, msg.E.Error())
+		c.errorView = msg.E.Error()
 
 		return c, nil
 
@@ -112,7 +120,6 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if c.currentPrompt == nil {
 			return c, nil
 		}
-		c.history[c.currentPrompt.HistoryIdx] = c.currentPrompt.View()
 
 		if c.currentPrompt.Errored {
 			return c, nil
@@ -126,14 +133,12 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return c, api.DoTick20()
 
 	case api.TickMsg50:
-		if c.currentResponse == nil {
+		if c.currentRun == nil {
 			c.responseTicking = false
 			return c, nil
 		}
-
-		c.currentResponse.Update(msg)
-		c.history[c.currentResponse.HistoryIdx] = c.currentResponse.View()
-		if c.currentResponse.Working {
+		c.currentRun.Update(msg)
+		if c.currentRun.Working {
 			return c, api.DoTick50()
 		}
 		c.responseTicking = false
@@ -141,17 +146,15 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return c, nil
 
 	case api.TickMsg60:
-		if c.currentResponse == nil {
+		if c.currentRun == nil {
 			c.eventTicking = false
 			return c, nil
 		}
-		c.currentResponse.Update(msg)
-		c.history[c.currentResponse.HistoryIdx] = c.currentResponse.View()
-		c.eventTicking = c.currentResponse.HasActiveTools()
+		c.currentRun.Update(msg)
+		c.eventTicking = c.currentRun.HasActiveTools()
 		if c.eventTicking {
 			return c, api.DoTick60()
 		}
-		
 		return c, nil
 
 	case api.ResponseChunkCmd:
@@ -159,12 +162,14 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			c.currentPrompt.Update(api.SentCmd{})
 		}
 
-		if c.currentResponse == nil {
+		if c.currentRun == nil {
 			return c, nil
 		}
 
-		c.currentResponse.Update(msg)
-		c.history[c.currentResponse.HistoryIdx] = c.currentResponse.View()
+		c.currentRun.Update(msg)
+		if msg.Chunk.EOS {
+			c.errorView = ""
+		}
 		c.viewport.GotoBottom()
 		if msg.Chunk.EOS {
 			c.responseTicking = false
@@ -183,14 +188,13 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case api.EventCmd:
 		switch msg.Event.(type) {
 		case agent.ToolStart:
-			if c.currentResponse == nil {
+			if c.currentRun == nil {
 				return c, api.AwaitEvent(msg.Ctx, msg.C)
 			}
 			if c.currentPrompt != nil && !c.currentPrompt.IsSent {
 				c.currentPrompt.Update(api.SentCmd{})
 			}
-			c.currentResponse.Update(msg.Event)
-			c.history[c.currentResponse.HistoryIdx] = c.currentResponse.View()
+			c.currentRun.Update(msg.Event)
 			cmds := []tea.Cmd{api.AwaitEvent(msg.Ctx, msg.C)}
 			if !c.responseTicking {
 				c.responseTicking = true
@@ -203,9 +207,8 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return c, tea.Batch(cmds...)
 
 		case agent.ToolDone:
-			if c.currentResponse != nil {
-				c.currentResponse.Update(msg.Event)
-				c.history[c.currentResponse.HistoryIdx] = c.currentResponse.View()
+			if c.currentRun != nil {
+				c.currentRun.Update(msg.Event)
 			}
 			return c, api.AwaitEvent(msg.Ctx, msg.C)
 		}
@@ -215,48 +218,100 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (c *ChatScreen) View() string {
-	style := lipgloss.NewStyle().
-		Width(c.viewport.Width).
-		Height(c.viewport.Height)
-
-	if len(c.history) == 1 {
-		style = style.AlignVertical(lipgloss.Center)
+	var content string
+	switch {
+	case len(c.turns) > 0:
+		var sections []string
+		pageEnd := min(c.pageStart+1, len(c.turns))
+		if c.pageStart > 0 || pageEnd < len(c.turns) {
+			sections = append(sections, c.turnNavigationHint())
+		}
+		for _, turn := range c.turns[c.pageStart:pageEnd] {
+			sections = append(sections, turn.prompt.View(), turn.run.View())
+		}
+		content = lipgloss.JoinVertical(lipgloss.Top, sections...)
+		if c.errorView != "" && len(c.turns)-1 < pageEnd {
+			content = lipgloss.JoinVertical(lipgloss.Top, content, c.errorView)
+		}
+	case c.errorView != "":
+		content = c.errorView
+	default:
+		content = lipgloss.NewStyle().
+			Width(c.viewport.Width).
+			Height(c.viewport.Height).
+			AlignVertical(lipgloss.Center).
+			Render(c.emptyView)
 	}
-
-	content := style.Render(strings.Join(c.history, "\n"))
 
 	c.viewport.SetContent(content)
 	return c.viewport.View()
 }
 
+func (c *ChatScreen) turnNavigationHint() string {
+	var hints []string
+	if c.pageStart > 0 {
+		hints = append(hints, lipgloss.NewStyle().
+			Foreground(library.AccentColor).
+			Bold(true).
+			Render("↑ older"))
+	}
+	if c.pageStart+1 < len(c.turns) {
+		hints = append(hints, lipgloss.NewStyle().
+			Foreground(library.AccentColor).
+			Bold(true).
+			Render("↓ newer"))
+	}
+	hints = append(hints, library.SubtleStyle.Render("·  up/down or pgup/pgdn"))
+	return lipgloss.NewStyle().
+		MarginTop(1).
+		MarginBottom(1).
+		PaddingLeft(1).
+		PaddingRight(1).
+		Render(strings.Join(hints, "    "))
+}
+
 func (c *ChatScreen) addNewPrompt(message string) {
-	c.currentPrompt = components.NewUserPrompt(message, len(c.history))
-	c.history = append(c.history, c.currentPrompt.View())
-	c.currentResponse = components.NewAgentResponse(len(c.history), c.viewport.Width)
-	c.history = append(c.history, c.currentResponse.View())
+	c.errorView = ""
+	index := len(c.turns) * 2
+	c.currentPrompt = components.NewUserPrompt(message, index)
+	c.currentRun = components.NewRun("", index+1, c.viewport.Width, message)
+	c.turns = append(c.turns, chatTurn{prompt: c.currentPrompt, run: c.currentRun})
+	c.pageStart = len(c.turns) - 1
 	c.responseTicking = false
 	c.eventTicking = false
 }
 
-func reconstructHistory(h []string, from api.ContinueSessionMsg) []string {
-	if from.Error == nil {
-		for _, m := range from.Messages {
-			switch m.Role {
-			case "user":
-				prompt := components.NewUserPrompt(m.Content, len(h))
-				prompt.Update(api.SentCmd{})
-				h = append(h, prompt.View())
-			case "assistant":
-				if m.Content == "" {
-					continue
-				}
-				response := components.NewHistoricalAgentResponse(len(h), m.Content)
-				h = append(h, response.View())
-			}
-		}
-
-		return h
+func (c *ChatScreen) reconstructTurns(from api.ContinueSessionMsg) {
+	if from.Error != nil {
+		c.errorView = from.Error.Error()
+		return
 	}
 
-	return append(h, from.Error.Error())
+	var messages []agent.Message
+	appendTurn := func() {
+		if len(messages) == 0 {
+			return
+		}
+		index := len(c.turns) * 2
+		prompt := components.NewUserPrompt(messages[0].Content, index)
+		prompt.Update(api.SentCmd{})
+		run := components.NewHistoricalRun("", index+1, messages)
+		c.turns = append(c.turns, chatTurn{prompt: prompt, run: run})
+	}
+
+	for _, message := range from.Messages {
+		if message.Role == "user" {
+			appendTurn()
+			messages = []agent.Message{message}
+		} else if len(messages) > 0 {
+			messages = append(messages, message)
+		}
+	}
+	appendTurn()
+	if len(c.turns) > 0 {
+		last := c.turns[len(c.turns)-1]
+		c.currentPrompt = last.prompt
+		c.currentRun = last.run
+		c.pageStart = len(c.turns) - 1
+	}
 }

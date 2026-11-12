@@ -76,6 +76,7 @@ type Message struct {
 }
 
 type MessageWrapper struct {
+	ID   string
 	Msg  Message
 	Time string
 }

@@ -14,17 +14,22 @@ import (
 	"github.com/thero-sgit/glyn/internal/ui/library"
 )
 
-type AgentResponse struct {
+type Run struct {
+	ID       string
+	Messages []agent.Message
+
 	spinner    spinner.Model
 	status     string
 	HistoryIdx int
 	Working    bool
 
-	blocks       []*agentResponseBlock
-	activeBlock  *agentResponseBlock
-	toolEvents   map[string]*UIEvent
-	failureError string
-	showSteps    bool
+	blocks            []*agentResponseBlock
+	activeBlock       *agentResponseBlock
+	activeMessage     int
+	toolEvents        map[string]*UIEvent
+	failureError      string
+	showSteps         bool
+	completedToolCall map[string]bool
 }
 
 type agentResponseBlockKind uint8
@@ -45,33 +50,61 @@ type agentResponseBlock struct {
 	tool             *UIEvent
 }
 
-func NewAgentResponse(index, width int) *AgentResponse {
+func NewRun(id string, index, width int, userMessage string) *Run {
 	s := spinner.New()
 	s.Spinner = spinner.MiniDot
 
-	return &AgentResponse{
-		spinner:    s,
-		status:     "Thinking",
-		HistoryIdx: index,
-		Working:    true,
-		showSteps:  true,
+	return &Run{
+		ID:                id,
+		Messages:          []agent.Message{{Role: "user", Content: userMessage}},
+		spinner:           s,
+		status:            "Thinking",
+		HistoryIdx:        index,
+		Working:           true,
+		showSteps:         true,
+		activeMessage:     -1,
+		completedToolCall: make(map[string]bool),
 	}
 }
 
-func NewHistoricalAgentResponse(index int, content string) *AgentResponse {
-	response := NewAgentResponse(index, 0)
-	block := &agentResponseBlock{kind: responseBlock}
-	block.response.WriteString(content)
-	response.blocks = append(response.blocks, block)
-	response.Finish()
-	return response
+func NewHistoricalRun(id string, index int, messages []agent.Message) *Run {
+	run := NewRun(id, index, 0, "")
+	run.Messages = append([]agent.Message(nil), messages...)
+	toolResults := make(map[string]string)
+	for _, message := range messages {
+		if message.Role == "tool" {
+			toolResults[message.ToolCallId] = message.Content
+		}
+	}
+
+	for _, message := range messages {
+		if message.Role != "assistant" {
+			continue
+		}
+		if message.Content != "" {
+			block := &agentResponseBlock{kind: responseBlock}
+			block.response.WriteString(message.Content)
+			run.blocks = append(run.blocks, block)
+		}
+		for _, call := range message.ToolCalls {
+			event := agent.ToolStart{ID: call.Id, Name: call.Function.Name, Args: call.Function.Arguments}
+			uiEvent := NewUIEvent(index, event)
+			run.activeBlock = &agentResponseBlock{kind: toolBlock, tool: uiEvent}
+			run.blocks = append(run.blocks, run.activeBlock)
+			if result, ok := toolResults[call.Id]; ok {
+				uiEvent.Update(agent.ToolDone{ID: call.Id, Name: call.Function.Name, Result: result})
+			}
+		}
+	}
+	run.Finish()
+	return run
 }
 
-func (a *AgentResponse) Init() tea.Cmd {
+func (a *Run) Init() tea.Cmd {
 	return nil
 }
 
-func (a *AgentResponse) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (a *Run) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.MouseMsg:
 		if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
@@ -120,6 +153,8 @@ func (a *AgentResponse) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Chunk.TurnStart {
 			a.activeBlock = nil
 			a.status = "Thinking"
+			a.Messages = append(a.Messages, agent.Message{Role: "assistant"})
+			a.activeMessage = len(a.Messages) - 1
 			return a, nil
 		}
 		if msg.Chunk.Reasoning {
@@ -140,6 +175,7 @@ func (a *AgentResponse) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.status = "Responding"
 		block := a.ensureBlock(responseBlock)
 		block.response.WriteString(msg.Chunk.Data)
+		a.ensureAssistantMessage().Content += msg.Chunk.Data
 		return a, nil
 
 	case agent.Event:
@@ -150,6 +186,19 @@ func (a *AgentResponse) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			uiEvent := NewUIEvent(a.HistoryIdx, event)
 			a.toolEvents[event.ID] = uiEvent
+			message := a.ensureAssistantMessage()
+			message.ToolCalls = append(message.ToolCalls, agent.ToolCall{
+				Id:    event.ID,
+				Index: len(message.ToolCalls),
+				Type:  "function",
+				Function: struct {
+					Name      string `json:"name"`
+					Arguments string `json:"arguments"`
+				}{
+					Name:      event.Name,
+					Arguments: event.Args,
+				},
+			})
 			a.activeBlock = &agentResponseBlock{kind: toolBlock, tool: uiEvent}
 			a.blocks = append(a.blocks, a.activeBlock)
 			a.status = "Using tools"
@@ -157,6 +206,14 @@ func (a *AgentResponse) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if uiEvent, ok := a.toolEvents[event.ID]; ok {
 				uiEvent.Update(event)
 				delete(a.toolEvents, event.ID)
+				if !a.completedToolCall[event.ID] {
+					a.Messages = append(a.Messages, agent.Message{
+						Role:       "tool",
+						Content:    event.Result,
+						ToolCallId: event.ID,
+					})
+					a.completedToolCall[event.ID] = true
+				}
 				if len(a.toolEvents) == 0 {
 					a.status = "Thinking"
 				}
@@ -168,7 +225,7 @@ func (a *AgentResponse) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return a, nil
 }
 
-func (a *AgentResponse) Finish() {
+func (a *Run) Finish() {
 	a.Working = false
 	a.status = "Complete"
 	for _, block := range a.blocks {
@@ -184,7 +241,7 @@ func (a *AgentResponse) Finish() {
 	}
 }
 
-func (a *AgentResponse) Fail(err error) {
+func (a *Run) Fail(err error) {
 	a.Working = false
 	a.status = "Failed"
 	a.failureError = err.Error()
@@ -196,7 +253,7 @@ func (a *AgentResponse) Fail(err error) {
 	clear(a.toolEvents)
 }
 
-func (a *AgentResponse) View() string {
+func (a *Run) View() string {
 	status := a.status
 	if a.Working {
 		status = a.spinner.View() + " " + status
@@ -260,11 +317,11 @@ func (a *AgentResponse) View() string {
 	return lipgloss.NewStyle().MarginBottom(1).Render(lipgloss.JoinVertical(lipgloss.Top, sections...))
 }
 
-func (a *AgentResponse) HasActiveTools() bool {
+func (a *Run) HasActiveTools() bool {
 	return len(a.toolEvents) > 0
 }
 
-func (a *AgentResponse) ensureBlock(kind agentResponseBlockKind) *agentResponseBlock {
+func (a *Run) ensureBlock(kind agentResponseBlockKind) *agentResponseBlock {
 	if a.activeBlock != nil && a.activeBlock.kind == kind {
 		return a.activeBlock
 	}
@@ -273,10 +330,18 @@ func (a *AgentResponse) ensureBlock(kind agentResponseBlockKind) *agentResponseB
 	return a.activeBlock
 }
 
-func (a *AgentResponse) stepsZone() string {
+func (a *Run) ensureAssistantMessage() *agent.Message {
+	if a.activeMessage < 0 || a.activeMessage >= len(a.Messages) || a.Messages[a.activeMessage].Role != "assistant" {
+		a.Messages = append(a.Messages, agent.Message{Role: "assistant"})
+		a.activeMessage = len(a.Messages) - 1
+	}
+	return &a.Messages[a.activeMessage]
+}
+
+func (a *Run) stepsZone() string {
 	return fmt.Sprintf("%d-steps", a.HistoryIdx)
 }
 
-func (a *AgentResponse) reasoningZone(index int) string {
+func (a *Run) reasoningZone(index int) string {
 	return fmt.Sprintf("%d-thought-process-%d", a.HistoryIdx, index)
 }
