@@ -53,7 +53,11 @@ func (s *Sessions) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "enter":
-			return s, api.GoGetSessionHistory(s.chats[s.cursor].Id)
+			if len(s.chats) > 0 {
+				return s, api.GoGetSessionHistory(s.chats[s.cursor].Id)
+			}
+			
+			return s, nil
 
 		case "up":
 			if s.cursor > 0 {

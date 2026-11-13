@@ -284,7 +284,6 @@ func (c *ChatScreen) addNewPrompt(message string) {
 func (c *ChatScreen) reconstructTurns(from api.ContinueSessionMsg) {
 	if from.Error != nil {
 		c.errorView = from.Error.Error()
-		return
 	}
 
 	var messages []agent.Message
