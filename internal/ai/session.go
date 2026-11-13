@@ -24,13 +24,17 @@ type Session struct {
 	History []agent.Message
 
 	//
+	lifecycleMu     sync.Mutex
 	sessionStore    *persistence.Store
 	msgToDiscChan   chan agent.MessageWrapper
 	dbWorkerStop    chan struct{}
 	dbWorkerDone    chan error
 	dbWorkerStarted bool
+	activeSessionID string
 	closeOnce       sync.Once
 	closeErr        error
+	errMu           sync.RWMutex
+	errChan         chan error
 }
 
 func (s *Session) SetNewContext() {
@@ -45,20 +49,26 @@ func (s *Session) SetNewContext() {
 
 func (s *Session) Close() error {
 	s.closeOnce.Do(func() {
+		s.lifecycleMu.Lock()
+		defer s.lifecycleMu.Unlock()
+
 		if s.cancl != nil {
 			s.cancl()
 		}
 		s.Wg.Wait()
-		if s.dbWorkerStarted {
-			close(s.dbWorkerStop)
-			s.closeErr = <-s.dbWorkerDone
-		}
-        s.sessionStore.Close()
+		s.closeErr = errors.Join(s.stopDBWorker(), s.sessionStore.Close())
 	})
 	return s.closeErr
 }
 
 func (s *Session) NameSession(message string, errChan chan error) {
+	s.lifecycleMu.Lock()
+	defer s.lifecycleMu.Unlock()
+	if len(s.History) > 0 || s.activeSessionID != "" {
+		return
+	}
+	s.setErrorChannel(errChan)
+
 	req := StreamRequest{
 		Model: "openai/gpt-oss-20b",
 		Messages: []agent.Message{
@@ -104,7 +114,8 @@ func (s *Session) NameSession(message string, errChan chan error) {
 						s.handleError(err, errChan)
 						return
 					}
-					s.startDBWorker(ctx, c.Id, errChan)
+					s.activeSessionID = c.Id
+					s.startDBWorker(ctx, c.Id)
 					return
 				}
 				s.handleError(err, errChan)
@@ -121,10 +132,14 @@ func (s *Session) NameSession(message string, errChan chan error) {
 }
 
 func (s *Session) NewPrompt(message string, c chan agent.Chunk, errChan chan error, eventsChan chan<- agent.Event) {
+	s.lifecycleMu.Lock()
+	defer s.lifecycleMu.Unlock()
+
 	h := append(s.History, agent.Message{
 		Role:    "user",
 		Content: message,
 	})
+	s.setErrorChannel(errChan)
 	now := time.Now().Format(common.TsFormat)
 
 	s.Wg.Add(1)
@@ -151,15 +166,35 @@ func (s *Session) ReadSessions() ([]persistence.ChatSession, error) {
 }
 
 func (s *Session) ContinueSession(sessionId string) ([]agent.Message, error) {
+	s.lifecycleMu.Lock()
+	defer s.lifecycleMu.Unlock()
+
+	if s.cancl != nil {
+		s.cancl()
+	}
+	
+	s.Wg.Wait()
+	s.SetNewContext()
+	s.setErrorChannel(nil)
+
+	oldSessionID := s.activeSessionID
+	stopErr := s.stopDBWorker()
+
 	h, err := s.sessionStore.ListMessagesInSession(s.Ctx, sessionId)
-	if err == nil {
-		s.History = h
+	if err != nil {
+		if oldSessionID != "" {
+			s.startDBWorker(s.Ctx, oldSessionID)
+		}
+		return nil, errors.Join(err, stopErr)
 	}
 
-	return h, err
+	s.History = h
+	s.activeSessionID = sessionId
+	s.startDBWorker(s.Ctx, sessionId)
+	return h, stopErr
 }
 
-func (s *Session) writeToDbWorker(notifyCtx context.Context, sessionID string, errChan chan<- error) {
+func (s *Session) writeToDbWorker(notifyCtx context.Context, sessionID string) {
 	defer close(s.dbWorkerDone)
 	var firstErr error
 	appendMessage := func(ctx context.Context, msg agent.MessageWrapper) {
@@ -167,13 +202,7 @@ func (s *Session) writeToDbWorker(notifyCtx context.Context, sessionID string, e
 			if firstErr == nil {
 				firstErr = err
 			}
-			if errChan != nil {
-				select {
-				case errChan <- err:
-				case <-notifyCtx.Done():
-				default:
-				}
-			}
+			s.notifyDBError(notifyCtx, err)
 		}
 	}
 
@@ -199,12 +228,12 @@ func (s *Session) writeToDbWorker(notifyCtx context.Context, sessionID string, e
 	}
 }
 
-func (s *Session) startDBWorker(ctx context.Context, sessionID string, errChan chan<- error) {
+func (s *Session) startDBWorker(ctx context.Context, sessionID string) {
 	if s.dbWorkerStarted {
 		return
 	}
 	s.dbWorkerStarted = true
-	go s.writeToDbWorker(ctx, sessionID, errChan)
+	go s.writeToDbWorker(ctx, sessionID)
 }
 
 func (s *Session) handleError(err error, errChan chan error) {
@@ -222,11 +251,49 @@ func (s *Session) handleError(err error, errChan chan error) {
 	s.SetNewContext()
 }
 
+func (s *Session) stopDBWorker() error {
+	if !s.dbWorkerStarted {
+		return nil
+	}
+
+	close(s.dbWorkerStop)
+	err := <-s.dbWorkerDone
+
+	s.dbWorkerStarted = false
+	s.dbWorkerStop = make(chan struct{})
+	s.dbWorkerDone = make(chan error, 1)
+	s.msgToDiscChan = make(chan agent.MessageWrapper, 2)
+
+	return err
+}
+
+func (s *Session) setErrorChannel(errChan chan error) {
+	s.errMu.Lock()
+	s.errChan = errChan
+	s.errMu.Unlock()
+}
+
+func (s *Session) notifyDBError(ctx context.Context, err error) {
+	s.errMu.RLock()
+	errChan := s.errChan
+	s.errMu.RUnlock()
+	if errChan == nil {
+		return
+	}
+
+	select {
+	case errChan <- err:
+	case <-ctx.Done():
+	default:
+	}
+}
+
 func (s *Session) RetrieveModels(c chan []GroqModelInfo, errChan chan error) {
 	go func() {
 		res, err := s.groq.getModels(s.Ctx)
 		if err != nil {
 			s.handleError(err, errChan)
+			return
 		}
 
 		var models []GroqModelInfo
