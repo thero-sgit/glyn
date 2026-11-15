@@ -10,9 +10,9 @@ import (
 	"github.com/thero-sgit/glyn/internal/persistence"
 )
 
-type SentCmd  struct {}
+type SentCmd struct{}
 
-type ErrorMsg struct{ 
+type ErrorMsg struct {
 	E error
 	C <-chan error
 }
@@ -77,6 +77,6 @@ func GoGetSessionHistory(id string) tea.Cmd {
 }
 
 type ContinueSessionMsg struct {
-	Messages []agent.Message
+	Messages []agent.MessageWrapper
 	Error    error
 }

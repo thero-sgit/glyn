@@ -67,20 +67,38 @@ func NewRun(id string, index, width int, userMessage string) *Run {
 	}
 }
 
-func NewHistoricalRun(id string, index int, messages []agent.Message) *Run {
+func NewHistoricalRun(id string, index int, wrappers []agent.MessageWrapper) *Run {
 	run := NewRun(id, index, 0, "")
-	run.Messages = append([]agent.Message(nil), messages...)
-	toolResults := make(map[string]string)
-	for _, message := range messages {
-		if message.Role == "tool" {
-			toolResults[message.ToolCallId] = message.Content
-		}
-	}
-
-	for _, message := range messages {
+	run.Messages = make([]agent.Message, 0, len(wrappers))
+	toolEvents := make(map[string]*UIEvent)
+	for _, wrapper := range wrappers {
+		message := wrapper.Msg
+		messageToolCalls := callMap(message.ToolCalls)
+		run.Messages = append(run.Messages, message)
 		if message.Role != "assistant" {
+			if message.Role == "tool" {
+				if uiEvent, ok := toolEvents[message.ToolCallId]; ok {
+					start := uiEvent.e.(agent.ToolStart)
+					uiEvent.Update(agent.ToolDone{
+						ID:     message.ToolCallId,
+						Name:   start.Name,
+						Result: message.Content,
+					})
+					uiEvent.showResult = true
+				} else {
+					uiEvent := NewUIEvent(index, agent.ToolDone{
+						ID:     message.ToolCallId,
+						Name:   messageToolCalls[message.ToolCallId].Function.Name,
+						Result: message.Content,
+					})
+					uiEvent.Done = true
+					uiEvent.showResult = true
+					run.blocks = append(run.blocks, &agentResponseBlock{kind: toolBlock, tool: uiEvent})
+				}
+			}
 			continue
 		}
+
 		if message.Content != "" {
 			block := &agentResponseBlock{kind: responseBlock}
 			block.response.WriteString(message.Content)
@@ -89,11 +107,10 @@ func NewHistoricalRun(id string, index int, messages []agent.Message) *Run {
 		for _, call := range message.ToolCalls {
 			event := agent.ToolStart{ID: call.Id, Name: call.Function.Name, Args: call.Function.Arguments}
 			uiEvent := NewUIEvent(index, event)
-			run.activeBlock = &agentResponseBlock{kind: toolBlock, tool: uiEvent}
-			run.blocks = append(run.blocks, run.activeBlock)
-			if result, ok := toolResults[call.Id]; ok {
-				uiEvent.Update(agent.ToolDone{ID: call.Id, Name: call.Function.Name, Result: result})
+			if call.Id != "" {
+				toolEvents[call.Id] = uiEvent
 			}
+			run.blocks = append(run.blocks, &agentResponseBlock{kind: toolBlock, tool: uiEvent})
 		}
 	}
 	run.Finish()
@@ -344,4 +361,12 @@ func (a *Run) stepsZone() string {
 
 func (a *Run) reasoningZone(index int) string {
 	return fmt.Sprintf("%d-thought-process-%d", a.HistoryIdx, index)
+}
+
+func callMap(calls []agent.ToolCall) map[string]agent.ToolCall {
+	cMap := make(map[string]agent.ToolCall)
+	for i := range calls {
+		cMap[calls[i].Id] = calls[i]
+	}
+	return cMap
 }

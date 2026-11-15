@@ -1,6 +1,7 @@
 package submodels
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/viewport"
@@ -31,8 +32,9 @@ type ChatScreen struct {
 }
 
 type chatTurn struct {
-	prompt *components.UserPrompt
-	run    *components.Run
+	prompt   *components.UserPrompt
+	run      *components.Run
+	wrappers []agent.MessageWrapper
 }
 
 func (c *ChatScreen) Init() tea.Cmd {
@@ -286,27 +288,47 @@ func (c *ChatScreen) reconstructTurns(from api.ContinueSessionMsg) {
 		c.errorView = from.Error.Error()
 	}
 
-	var messages []agent.Message
-	appendTurn := func() {
-		if len(messages) == 0 {
-			return
+	wrappers := append([]agent.MessageWrapper(nil), from.Messages...)
+	sort.SliceStable(wrappers, func(i, j int) bool {
+		return wrappers[i].Time < wrappers[j].Time
+	})
+
+	runIndexes := make(map[string]int)
+	var currentRun int
+	hasCurrentRun := false
+	for _, wrapper := range wrappers {
+		runIndex, exists := runIndexes[wrapper.ID]
+		if wrapper.ID == "" {
+			if wrapper.Msg.Role == "user" || !hasCurrentRun {
+				runIndex = len(c.turns)
+				c.turns = append(c.turns, chatTurn{})
+				currentRun = runIndex
+				hasCurrentRun = true
+			} else {
+				runIndex = currentRun
+			}
+		} else if !exists {
+			runIndex = len(c.turns)
+			runIndexes[wrapper.ID] = runIndex
+			c.turns = append(c.turns, chatTurn{})
 		}
-		index := len(c.turns) * 2
-		prompt := components.NewUserPrompt(messages[0].Content, index)
-		prompt.Update(api.SentCmd{})
-		run := components.NewHistoricalRun("", index+1, messages)
-		c.turns = append(c.turns, chatTurn{prompt: prompt, run: run})
+
+		turn := &c.turns[runIndex]
+		turn.wrappers = append(turn.wrappers, wrapper)
+		if wrapper.Msg.Role == "user" {
+			turn.prompt = components.NewUserPrompt(wrapper.Msg.Content, runIndex*2)
+			turn.prompt.Update(api.SentCmd{})
+		}
 	}
 
-	for _, message := range from.Messages {
-		if message.Role == "user" {
-			appendTurn()
-			messages = []agent.Message{message}
-		} else if len(messages) > 0 {
-			messages = append(messages, message)
+	for runIndex := range c.turns {
+		turn := &c.turns[runIndex]
+		if turn.prompt == nil {
+			continue
 		}
+		turn.run = components.NewHistoricalRun(turn.wrappers[0].ID, runIndex*2+1, turn.wrappers)
 	}
-	appendTurn()
+
 	if len(c.turns) > 0 {
 		last := c.turns[len(c.turns)-1]
 		c.currentPrompt = last.prompt

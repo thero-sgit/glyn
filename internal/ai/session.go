@@ -165,14 +165,14 @@ func (s *Session) ReadSessions() ([]persistence.ChatSession, error) {
 	return s.sessionStore.ListSessions(s.Ctx)
 }
 
-func (s *Session) ContinueSession(sessionId string) ([]agent.Message, error) {
+func (s *Session) ContinueSession(sessionId string) ([]agent.MessageWrapper, error) {
 	s.lifecycleMu.Lock()
 	defer s.lifecycleMu.Unlock()
 
 	if s.cancl != nil {
 		s.cancl()
 	}
-	
+
 	s.Wg.Wait()
 	s.SetNewContext()
 	s.setErrorChannel(nil)
@@ -188,10 +188,18 @@ func (s *Session) ContinueSession(sessionId string) ([]agent.Message, error) {
 		return nil, errors.Join(err, stopErr)
 	}
 
-	s.History = h
+	go s.unwrapMessages(h)
 	s.activeSessionID = sessionId
 	s.startDBWorker(s.Ctx, sessionId)
 	return h, stopErr
+}
+
+func (s *Session) unwrapMessages(messages []agent.MessageWrapper) {
+	var history []agent.Message
+	for i := range messages {
+		history = append(history, messages[i].Msg)
+	}
+	s.History = history
 }
 
 func (s *Session) writeToDbWorker(notifyCtx context.Context, sessionID string) {

@@ -30,8 +30,7 @@ func NewSessionsScreen() tea.Model {
 		viewport: viewport.New(0, 0),
 		projectKey: config.Config.ProjectKey,
 	}
-
-	// s.loadChatSessions()
+	
 	return s
 }
 

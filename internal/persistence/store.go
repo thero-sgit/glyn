@@ -44,12 +44,24 @@ var migrations = []string{
 	CREATE INDEX idx_tool_calls_message ON 	tool_calls(message_seq, id);
 	CREATE INDEX idx_messages_session ON messages(session_id, seq);
 	CREATE INDEX idx_sessions_project ON sessions(project_key, updated_at DESC);`,
+
+	// v2
+	`CREATE TABLE runs (
+		id          INTEGER PRIMARY KEY AUTOINCREMENT,
+		session_id  INTEGER NOT NULL REFERENCES messages(seq) ON DELETE CASCADE
+	);`,
+
+	// v3
+	`DROP TABLE IF EXISTS runs;`,
+
+	// v4
+	`DELETE FROM sessions WHERE id = 3;`,
 }
 
 type Store struct{ db *sql.DB }
 
 func (s *Store) Close() error {
-	return  s.db.Close()
+	return s.db.Close()
 }
 
 func Open(ctx context.Context) (*Store, error) {
@@ -83,7 +95,7 @@ func (s *Store) ListSessions(ctx context.Context) ([]ChatSession, error) {
 		 FROM sessions
 		 WHERE project_key = ?
 		 ORDER BY updated_at DESC`,
-		 config.Config.ProjectKey,
+		config.Config.ProjectKey,
 	)
 	if err != nil {
 		return nil, err
@@ -130,8 +142,8 @@ func (s *Store) AppendMessage(ctx context.Context, sessionId string, wrapper age
 	)
 
 	if err != nil {
-		return  err
-	}	
+		return err
+	}
 
 	if hasToolCalls {
 		seq, _ := result.LastInsertId()
@@ -141,30 +153,86 @@ func (s *Store) AppendMessage(ctx context.Context, sessionId string, wrapper age
 	return nil
 }
 
-func (s *Store) ListMessagesInSession(ctx context.Context, sessionId string) ([]agent.Message, error) {
+func (s *Store) ListMessagesInSession(ctx context.Context, sessionId string) ([]agent.MessageWrapper, error) {
 	rows, err := s.db.QueryContext(
 		ctx,
-		`SELECT role, content, tool_calls, tool_call_id
+		`SELECT seq, role, content, tool_calls, tool_call_id, created_at
 		 FROM messages
 		 WHERE session_id = ?
-		 ORDER BY created_at ASC`,
-		 sessionId,
+		 ORDER BY created_at ASC, seq ASC;`,
+		sessionId,
 	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var out []agent.Message
+	var out []agent.MessageWrapper
+	var messageSeqs []int64
+	var hasToolCalls []bool
 	for rows.Next() {
-		var m agent.Message
-		var has_tool_calls int8
+		var wrapper agent.MessageWrapper
+		var messageSeq int64
+		var hasToolCallsFlag int8
 
-		if err := rows.Scan(&m.Role, &m.Content, &has_tool_calls, &m.ToolCallId); err != nil {
+		if err := rows.Scan(
+			&messageSeq,
+			&wrapper.Msg.Role,
+			&wrapper.Msg.Content,
+			&hasToolCallsFlag,
+			&wrapper.Msg.ToolCallId,
+			&wrapper.Time,
+		); err != nil {
 			return nil, err
 		}
 
-		out = append(out, m)
+		out = append(out, wrapper)
+		messageSeqs = append(messageSeqs, messageSeq)
+		hasToolCalls = append(hasToolCalls, hasToolCallsFlag != 0)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, err
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+
+	for i, hasCalls := range hasToolCalls {
+		if !hasCalls {
+			continue
+		}
+		out[i].Msg.ToolCalls, err = s.listToolCalls(ctx, messageSeqs[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return out, nil
+}
+
+func (s *Store) listToolCalls(ctx context.Context, message_seq int64) ([]agent.ToolCall, error) {
+	rows, err := s.db.QueryContext(
+		ctx,
+		`SELECT id, idx, type, name, args
+		 FROM tool_calls
+		 WHERE message_seq = ?
+		 ORDER BY idx ASC, id ASC`,
+		message_seq,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []agent.ToolCall
+	for rows.Next() {
+		var call agent.ToolCall
+		if err := rows.Scan(&call.Id, &call.Index, &call.Type, &call.Function.Name, &call.Function.Arguments); err != nil {
+			return nil, err
+		}
+
+		out = append(out, call)
 	}
 
 	return out, rows.Err()
