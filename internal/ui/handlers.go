@@ -75,15 +75,16 @@ func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 
 		default:
 			focused := *m.focused
-			focused.Update(msg)
-			return m, nil
+			updated, cmd := focused.Update(msg)
+			*m.focused = updated
+			return m, cmd
 		}
 	}
 
 	focused := *m.focused
-	focused.Update(msg)
-
-	return m, nil
+	updated, cmd := focused.Update(msg)
+	*m.focused = updated
+	return m, cmd
 }
 
 func (m *Model) handleModelsCmd(msg api.ModelsCmd) (tea.Model, tea.Cmd) {
@@ -173,7 +174,7 @@ func (m *Model) handleUpArrows(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case m.textarea.Focused():
 		var cmd tea.Cmd
 		m.textarea, cmd = m.textarea.Update(msg)
-		return m, cmd 
+		return m, cmd
 
 	case m.slashCmdCon.Focused:
 		updatedModel, cmd := m.slashCmdCon.Update(msg)
@@ -192,7 +193,7 @@ func (m *Model) handleUpArrows(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		focused.Update(msg)
 
 		return m, nil
-	}	
+	}
 }
 
 func (m *Model) handleAtKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -248,13 +249,13 @@ func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		slashCon := m.slashCmdCon
 		slashCon.Focused = false
 
-		switch slashCon.Options[slashCon.Cursor].Pretty() {		
+		switch slashCon.Options[slashCon.Cursor].Pretty() {
 		case "/help":
 			m.focused = &m.helpScreen
-		case"/sessions":
+		case "/sessions":
 			m.focused = &m.sessionsScreen
 			cmd = m.handler.HandleReadSessions
-		case"/model":
+		case "/model":
 			m.focused = &m.llmsScreen
 		}
 
@@ -272,7 +273,7 @@ func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			//
 			m.fileSelector.Focused = false
 			m.fileSelector.SetOptions()
-		}		
+		}
 
 		return m, cmd
 
@@ -330,11 +331,11 @@ func (m *Model) handleGenericKey(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) sendPromptCmd() (tea.Model, tea.Cmd) {
-	if strings.Trim(strings.TrimSpace(m.textarea.Value()), "\n") != "" {		
+	if strings.Trim(strings.TrimSpace(m.textarea.Value()), "\n") != "" {
 		var cmd tea.Cmd
 
 		m.chatScreen, cmd = m.chatScreen.Update(
-			api.PromptCmd {
+			api.PromptCmd{
 				Message: m.textarea.Value(),
 			},
 		)

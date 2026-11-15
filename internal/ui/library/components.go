@@ -140,14 +140,14 @@ func TokenUsageProgessBar(usage float32) string {
 		Render(filled + unFilled + fmt.Sprintf(" [%f%s] ", usage, "%"))
 }
 
-func RetryButton() string {
+func RetryButton(zoneID string) string {
 	b := lipgloss.NewStyle().
 		Italic(true).
 		Underline(true).
 		Foreground(lipgloss.Color("#d94444")).
 		Render("Retry " + "\u21BB")
 
-	return zone.Mark("retry-button", b)
+	return zone.Mark(zoneID, b)
 }
 
 func FilesForContextLabel(files []string) string {

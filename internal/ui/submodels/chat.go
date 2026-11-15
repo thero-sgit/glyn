@@ -74,7 +74,16 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
 			pageEnd := min(c.pageStart+1, len(c.turns))
 			var cmds []tea.Cmd
-			for _, turn := range c.turns[c.pageStart:pageEnd] {
+			for index := c.pageStart; index < pageEnd; index++ {
+				turn := &c.turns[index]
+				if turn.prompt != nil {
+					if message, retry := turn.prompt.RetryClicked(msg); retry {
+						return c, c.retryTurn(index, message)
+					}
+				}
+				if turn.run == nil {
+					continue
+				}
 				_, runCmd := turn.run.Update(msg)
 				if runCmd != nil {
 					cmds = append(cmds, runCmd)
@@ -281,6 +290,25 @@ func (c *ChatScreen) addNewPrompt(message string) {
 	c.pageStart = len(c.turns) - 1
 	c.responseTicking = false
 	c.eventTicking = false
+}
+
+func (c *ChatScreen) retryTurn(index int, message string) tea.Cmd {
+	if index == len(c.turns)-1 {
+		prompt := components.NewUserPrompt(message, index*2)
+		run := components.NewRun("", index*2+1, c.viewport.Width, message)
+		c.turns[index] = chatTurn{prompt: prompt, run: run}
+		c.currentPrompt = prompt
+		c.currentRun = run
+		c.pageStart = index
+		c.errorView = ""
+		c.responseTicking = false
+		c.eventTicking = false
+	} else {
+		c.addNewPrompt(message)
+	}
+	c.viewport.GotoTop()
+
+	return tea.Batch(c.handler.HandlePrompt(message), api.DoTick20())
 }
 
 func (c *ChatScreen) reconstructTurns(from api.ContinueSessionMsg) {

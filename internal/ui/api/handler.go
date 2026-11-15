@@ -18,17 +18,33 @@ func NewHandler() Handler {
 }
 
 func errorListener(ctx context.Context, ch <-chan error) tea.Cmd {
-    return func() tea.Msg {
-        select {
-        case err, ok := <-ch:
-            if !ok {
-                return nil
-            }
-            return ErrorMsg{err, ch}
-        case <-ctx.Done():
-            return nil
-        }
-    }
+	return func() tea.Msg {
+		select {
+		case err, ok := <-ch:
+			if !ok {
+				return nil
+			}
+			return ErrorMsg{err, ch}
+		default:
+		}
+
+		select {
+		case err, ok := <-ch:
+			if !ok {
+				return nil
+			}
+			return ErrorMsg{err, ch}
+		case <-ctx.Done():
+			select {
+			case err, ok := <-ch:
+				if ok {
+					return ErrorMsg{err, ch}
+				}
+			default:
+			}
+			return nil
+		}
+	}
 }
 
 func AwaitEvent(ctx context.Context, ch <-chan agent.Event) tea.Cmd {
