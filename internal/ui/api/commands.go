@@ -22,6 +22,14 @@ type ModelsCmd struct {
 	C chan []ai.GroqModelInfo
 }
 
+type ModelsLoadingTick struct{}
+
+func DoModelsLoadingTick() tea.Cmd {
+	return tea.Tick(100*time.Millisecond, func(time.Time) tea.Msg {
+		return ModelsLoadingTick{}
+	})
+}
+
 type TickMsg20 time.Time
 
 func DoTick20() tea.Cmd {

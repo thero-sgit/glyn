@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -18,6 +19,8 @@ type Model struct {
 	inputBoxHeight int
 	textarea       textarea.Model
 	prompt         string
+	modelsSpinner  spinner.Model
+	modelsLoading  bool
 
 	//
 	handler api.Handler
@@ -37,9 +40,13 @@ type Model struct {
 
 func InitialModel() *Model {
 	h := api.NewHandler()
+	modelsSpinner := spinner.New()
+	modelsSpinner.Spinner = spinner.Dot
 
 	model := Model{
 		handler:        h,
+		modelsSpinner:  modelsSpinner,
+		modelsLoading:  true,
 		slashCmdCon:    components.NewSelector("Command", "/", "/", "<command>", common.ListCmdMatches),
 		fileSelector:   components.NewFileSelector(),
 		helpScreen:     submodels.NewHelpModel(),
@@ -53,7 +60,7 @@ func InitialModel() *Model {
 }
 
 func (m *Model) Init() tea.Cmd {
-	return m.handler.HandleGetModels()
+	return tea.Batch(m.handler.HandleGetModels(), api.DoModelsLoadingTick())
 }
 
 func (m *Model) Close() error {
@@ -76,6 +83,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case api.ModelsCmd:
 		return m.handleModelsCmd(msg)
+
+	case api.ModelsLoadingTick:
+		return m.handleModelsLoadingTick()
 
 	case api.TickMsg20:
 		return m.handleTick20(msg)

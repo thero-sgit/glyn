@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
 	"github.com/thero-sgit/glyn/internal/config"
@@ -15,10 +16,12 @@ import (
 
 func (m *Model) handleErrMsg(msg api.ErrorMsg) (tea.Model, tea.Cmd) {
 	library.SendPromptBtnState = library.SendPromptBtnStates[0]
+	m.modelsLoading = false
 	focused := *m.focused
-	focused.Update(msg)
+	updated, cmd := focused.Update(msg)
+	*m.focused = updated
 
-	return m, nil
+	return m, cmd
 }
 
 func (m *Model) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
@@ -88,9 +91,18 @@ func (m *Model) handleMouseAction(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) handleModelsCmd(msg api.ModelsCmd) (tea.Model, tea.Cmd) {
+	m.modelsLoading = false
 	var cmd tea.Cmd
 	m.llmsScreen, cmd = m.llmsScreen.Update(msg)
 	return m, cmd
+}
+
+func (m *Model) handleModelsLoadingTick() (tea.Model, tea.Cmd) {
+	if !m.modelsLoading {
+		return m, nil
+	}
+	m.modelsSpinner, _ = m.modelsSpinner.Update(spinner.TickMsg{})
+	return m, api.DoModelsLoadingTick()
 }
 
 func (m *Model) handleTick20(msg api.TickMsg20) (tea.Model, tea.Cmd) {

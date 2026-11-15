@@ -9,6 +9,14 @@ import (
 
 func (m Model) headerBar(headerHeight int) string {
 	version := library.SubtleStyle.Render(config.Config.Version)
+	if m.modelsLoading {
+		version = lipgloss.JoinHorizontal(
+			lipgloss.Right,
+			m.modelsSpinner.View(),
+			" ",
+			version,
+		)
+	}
 
 	return lipgloss.NewStyle().
 		Width(m.width).
