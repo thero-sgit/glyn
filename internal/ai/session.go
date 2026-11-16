@@ -298,7 +298,7 @@ func (s *Session) notifyDBError(ctx context.Context, err error) {
 
 func (s *Session) RetrieveModels(c chan []GroqModelInfo, errChan chan error) {
 	go func() {
-		res, err := s.groq.getModels(s.Ctx)
+		res, err := s.groq.getModels(context.Background())
 		if err != nil {
 			s.handleError(err, errChan)
 			return
