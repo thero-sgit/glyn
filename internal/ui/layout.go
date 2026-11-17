@@ -9,14 +9,6 @@ import (
 
 func (m Model) headerBar(headerHeight int) string {
 	version := library.SubtleStyle.Render(config.Config.Version)
-	if m.modelsLoading {
-		version = lipgloss.JoinHorizontal(
-			lipgloss.Right,
-			m.modelsSpinner.View(),
-			" ",
-			version,
-		)
-	}
 
 	return lipgloss.NewStyle().
 		Width(m.width).
@@ -77,8 +69,12 @@ func (m *Model) inputBox(h int) string {
 		Render("@")
 
 	addFileButton := zone.Mark("add-file-btn", addFile)
-	modeLabelButton := zone.Mark("mode-toggle-btn", library.LabelValueBand(config.Config.Mode.Icon, config.Config.Mode.Name, ""))
 	modelLabelBtn := zone.Mark("model-selector-btn", library.LabelValueBand("\u27E1", config.Config.Model.Name, config.Config.Effort.Name))
+	if m.modelsLoading {
+		modelLabelBtn = m.modelsSpinner.View()
+	}
+
+	modeLabelButton := zone.Mark("mode-toggle-btn", library.LabelValueBand(config.Config.Mode.Icon, config.Config.Mode.Name, ""))
 
 	inpLabels := lipgloss.NewStyle().PaddingLeft(1).Render(
 		lipgloss.JoinHorizontal(

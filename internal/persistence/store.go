@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/url"
 	"path/filepath"
 	"time"
 
@@ -67,8 +68,12 @@ func (s *Store) Close() error {
 func Open(ctx context.Context) (*Store, error) {
 	base := config.Config.DataBaseDir
 
-	dsn := "file:" + filepath.Join(base, "glyn.db") +
-		"?_pragma=journal_mode(WAL)&_pragma=foreign_keys(1)&_pragma=busy_timeout(5000)"
+	path := filepath.ToSlash(filepath.Join(base, "glyn.db"))
+	dsn := (&url.URL{
+		Scheme:   "file",
+		Path:     path,
+		RawQuery: "_pragma=journal_mode(WAL)&_pragma=foreign_keys(1)&_pragma=busy_timeout(5000)",
+	}).String()
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, err

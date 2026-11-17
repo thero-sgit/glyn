@@ -3,10 +3,12 @@ package config
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 
 	"github.com/charmbracelet/glamour"
@@ -109,7 +111,7 @@ func (c *configuration) SetRenderer(width int) {
 func projectRoot(start string) string {
 	dir := start
 	for {
-		if _, err :=  os.Stat(filepath.Join(dir, ".git")); err == nil {
+		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
 			return dir
 		}
 
@@ -153,27 +155,47 @@ func dataBaseDir() (string, error) {
 	}
 
 	if d := os.Getenv("XDG_DATA_HOME"); d != "" {
-		return filepath.Join(d, "glyn"), nil
+		return filepath.Join(d, "glyn", "sessions"), nil
 	}
 
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
+	var base string
+	switch runtime.GOOS {
+	case "windows", "darwin":
+		var err error
+		base, err = os.UserConfigDir()
+		if err != nil {
+			return "", err
+		}
+	default:
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+		base = filepath.Join(home, ".local", "share")
 	}
 
-	return filepath.Join(home, ".local", "share", "glyn", "data"), nil
+	return filepath.Join(base, "glyn", "sessions"), nil
 }
 
 func Init() {
-	Config = configuration {
-		Version:     "v1.0.0",
-		WorkingDir:  getWd(),
-		DataBaseDir: getWd() + "/sessions", // TO-D: change temp dir
-		GroqApiKey:  apiKey(),
-		Model:		 NewToggle("\u27E1", []string{""}),
-		Effort:      NewToggle("\u26CF", []string{"medium", "high", "low"}),
+	Config = configuration{
+		Version:    "v1.0.0",
+		WorkingDir: getWd(),
+		GroqApiKey: apiKey(),
+		Model:      NewToggle("\u27E1", []string{""}),
+		Effort:     NewToggle("\u26CF", []string{"medium", "high", "low"}),
 	}
 
+	base, e := dataBaseDir()
+	if e != nil {
+		log.Fatal(e)
+	}
+
+	if e := os.MkdirAll(base, 0755); e != nil {
+		panic(fmt.Sprintf("error creating data:\n\t %s", e.Error()))
+	}
+
+	Config.DataBaseDir = base
 	Config.SanitizedWd = common.RelativePath(Config.WorkingDir)
 	Config.ProjectKey, _ = projectKey(Config.WorkingDir)
 	Config.Mode = NewToggle(" ?", modes)
