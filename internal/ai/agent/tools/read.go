@@ -1,4 +1,4 @@
-package agent
+package tools
 
 import (
 	"bufio"
@@ -11,14 +11,6 @@ import (
 	"github.com/thero-sgit/glyn/internal/common"
 )
 
-type Tool interface {
-	Name()   string
-	Schema() map[string]any
-	Run(ctx context.Context, args json.RawMessage) (string, error)
-}
-
-
-// - Read file
 type ReadFile struct {
 	Root string
 }

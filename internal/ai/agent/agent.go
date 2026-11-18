@@ -12,18 +12,19 @@ import (
 
 	"github.com/thero-sgit/glyn/internal/common"
 	"github.com/thero-sgit/glyn/internal/config"
+	"github.com/thero-sgit/glyn/internal/ai/agent/tools"
 )
 
 type Agent struct {
 	role     string
 	maxTurns int
-	Tools    map[string]Tool
+	Tools    map[string]tools.Tool
 }
 
 func NewAgent(role string, maxTurns int) Agent {
-	tools := map[string]Tool{
-		"read_file": ReadFile{
-			config.Config.WorkingDir,
+	tools := map[string]tools.Tool{
+		"read_file": tools.ReadFile{
+			Root: config.Config.WorkingDir,
 		},
 	}
 
