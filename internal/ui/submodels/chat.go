@@ -15,11 +15,13 @@ import (
 )
 
 type ChatScreen struct {
-	viewport  viewport.Model
-	emptyView string
-	errorView string
-	turns     []chatTurn
-	pageStart int
+	viewport     viewport.Model
+	emptyView    string
+	errorView    string
+	turns        []chatTurn
+	pageStart    int
+	contentDirty bool
+	cachedView   string
 
 	//
 	handler *api.Handler
@@ -43,17 +45,19 @@ func (c *ChatScreen) Init() tea.Cmd {
 
 func NewChatScreen(h *api.Handler) tea.Model {
 	return &ChatScreen{
-		viewport:  viewport.New(0, 0),
-		handler:   h,
-		emptyView: library.Burner(0),
+		viewport:     viewport.New(0, 0),
+		handler:      h,
+		emptyView:    library.Burner(0),
+		contentDirty: true,
 	}
 }
 
 func ContinueChat(h *api.Handler, from api.ContinueSessionMsg) tea.Model {
 	chat := &ChatScreen{
-		viewport:  viewport.New(0, 0),
-		handler:   h,
-		emptyView: library.Burner(0),
+		viewport:     viewport.New(0, 0),
+		handler:      h,
+		emptyView:    library.Burner(0),
+		contentDirty: true,
 	}
 	chat.reconstructTurns(from)
 	return chat
@@ -62,15 +66,27 @@ func ContinueChat(h *api.Handler, from api.ContinueSessionMsg) tea.Model {
 func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
+		if c.viewport.Width != msg.Width || c.viewport.Height != msg.Height {
+			c.contentDirty = true
+		}
+		widthChanged := c.viewport.Width != msg.Width
 		c.viewport.Width, c.viewport.Height = msg.Width, msg.Height
 
-		config.Config.SetRenderer(c.viewport.Width)
+		if widthChanged {
+			config.Config.SetRenderer(c.viewport.Width)
+		}
 		c.emptyView = library.Burner(c.viewport.Width)
+		for i := range c.turns {
+			if c.turns[i].run != nil {
+				c.turns[i].run.SetWidth(c.viewport.Width)
+			}
+		}
 
 		return c, nil
 
 	case tea.MouseMsg:
 		var cmd tea.Cmd
+		c.contentDirty = true
 		if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
 			pageEnd := min(c.pageStart+1, len(c.turns))
 			var cmds []tea.Cmd
@@ -101,16 +117,19 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "up", "pgup":
 			if c.pageStart > 0 {
 				c.pageStart--
+				c.contentDirty = true
 				c.viewport.GotoTop()
 			}
 		case "down", "pgdown":
 			if c.pageStart+1 < len(c.turns) {
 				c.pageStart++
+				c.contentDirty = true
 				c.viewport.GotoTop()
 			}
 		}
 
 	case api.ErrorMsg:
+		c.contentDirty = true
 		if c.currentPrompt != nil {
 			c.currentPrompt.Update(msg)
 		}
@@ -122,6 +141,7 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return c, nil
 
 	case api.PromptCmd:
+		c.contentDirty = true
 		c.addNewPrompt(msg.Message)
 		cmd := c.handler.HandlePrompt(msg.Message)
 
@@ -140,6 +160,7 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return c, nil
 		}
 
+		c.contentDirty = true
 		c.currentPrompt.Update(msg)
 		return c, api.DoTick20()
 
@@ -148,6 +169,7 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			c.responseTicking = false
 			return c, nil
 		}
+		c.contentDirty = true
 		c.currentRun.Update(msg)
 		if c.currentRun.Working {
 			return c, api.DoTick50()
@@ -161,6 +183,7 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			c.eventTicking = false
 			return c, nil
 		}
+		c.contentDirty = true
 		c.currentRun.Update(msg)
 		c.eventTicking = c.currentRun.HasActiveTools()
 		if c.eventTicking {
@@ -169,6 +192,7 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return c, nil
 
 	case api.ResponseChunkCmd:
+		c.contentDirty = true
 		if c.currentPrompt != nil && !c.currentPrompt.IsSent {
 			c.currentPrompt.Update(api.SentCmd{})
 		}
@@ -205,6 +229,7 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if c.currentPrompt != nil && !c.currentPrompt.IsSent {
 				c.currentPrompt.Update(api.SentCmd{})
 			}
+			c.contentDirty = true
 			c.currentRun.Update(msg.Event)
 			cmds := []tea.Cmd{api.AwaitEvent(msg.Ctx, msg.C)}
 			if !c.responseTicking {
@@ -219,6 +244,7 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case agent.ToolDone:
 			if c.currentRun != nil {
+				c.contentDirty = true
 				c.currentRun.Update(msg.Event)
 			}
 			return c, api.AwaitEvent(msg.Ctx, msg.C)
@@ -229,6 +255,10 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (c *ChatScreen) View() string {
+	if !c.contentDirty {
+		return c.cachedView
+	}
+
 	var content string
 	switch {
 	case len(c.turns) > 0:
@@ -255,7 +285,9 @@ func (c *ChatScreen) View() string {
 	}
 
 	c.viewport.SetContent(content)
-	return c.viewport.View()
+	c.cachedView = c.viewport.View()
+	c.contentDirty = false
+	return c.cachedView
 }
 
 func (c *ChatScreen) turnNavigationHint() string {
@@ -282,6 +314,7 @@ func (c *ChatScreen) turnNavigationHint() string {
 }
 
 func (c *ChatScreen) addNewPrompt(message string) {
+	c.contentDirty = true
 	c.errorView = ""
 	index := len(c.turns) * 2
 	c.currentPrompt = components.NewUserPrompt(message, index)
@@ -293,6 +326,7 @@ func (c *ChatScreen) addNewPrompt(message string) {
 }
 
 func (c *ChatScreen) retryTurn(index int, message string) tea.Cmd {
+	c.contentDirty = true
 	if index == len(c.turns)-1 {
 		prompt := components.NewUserPrompt(message, index*2)
 		run := components.NewRun("", index*2+1, c.viewport.Width, message)
@@ -354,8 +388,9 @@ func (c *ChatScreen) reconstructTurns(from api.ContinueSessionMsg) {
 		if turn.prompt == nil {
 			continue
 		}
-		turn.run = components.NewHistoricalRun(turn.wrappers[0].ID, runIndex*2+1, turn.wrappers)
+		turn.run = components.NewHistoricalRun(turn.wrappers[0].ID, runIndex*2+1, c.viewport.Width, turn.wrappers)
 	}
+	c.contentDirty = true
 
 	if len(c.turns) > 0 {
 		last := c.turns[len(c.turns)-1]

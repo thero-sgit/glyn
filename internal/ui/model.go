@@ -21,6 +21,8 @@ type Model struct {
 	prompt         string
 	modelsSpinner  spinner.Model
 	modelsLoading  bool
+	sessionSpinner spinner.Model
+	sessionLoading bool
 
 	//
 	handler api.Handler
@@ -42,11 +44,14 @@ func InitialModel() *Model {
 	h := api.NewHandler()
 	modelsSpinner := spinner.New()
 	modelsSpinner.Spinner = spinner.Dot
+	sessionSpinner := spinner.New()
+	sessionSpinner.Spinner = spinner.Dot
 
 	model := Model{
 		handler:        h,
 		modelsSpinner:  modelsSpinner,
 		modelsLoading:  true,
+		sessionSpinner: sessionSpinner,
 		slashCmdCon:    components.NewSelector("Command", "/", "/", "<command>", common.ListCmdMatches),
 		fileSelector:   components.NewFileSelector(),
 		helpScreen:     submodels.NewHelpModel(),
@@ -87,6 +92,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case api.ModelsLoadingTick:
 		return m.handleModelsLoadingTick()
 
+	case api.SessionLoadingTick:
+		return m.handleSessionLoadingTick()
+
 	case api.TickMsg20:
 		return m.handleTick20(msg)
 
@@ -120,22 +128,25 @@ func (m *Model) View() string {
 		return "IniTializing screen..."
 	}
 
-	//
 	headerHeight := 2
 	footerHeight := 1
-	middleHeight := m.height - headerHeight - footerHeight
+	inputBox := m.inputBox()
 
-	//
-	inputBox := m.inputBox(middleHeight)
-
-	//
-	focused := *m.focused
-	focused.Update(tea.WindowSizeMsg{
-		Width:  m.width,
-		Height: m.mHeight,
-	})
-
-	content := lipgloss.NewStyle().Padding(0, 2, 0, 2).Height(m.mHeight).Render(focused.View())
+	var content string
+	if m.sessionLoading {
+		loading := lipgloss.JoinHorizontal(
+			lipgloss.Center,
+			m.sessionSpinner.View(),
+			" Loading session...",
+		)
+		content = lipgloss.NewStyle().
+			Width(max(0, m.width-4)).
+			Height(m.mHeight).
+			Align(lipgloss.Center, lipgloss.Center).
+			Render(loading)
+	} else {
+		content = lipgloss.NewStyle().Padding(0, 2, 0, 2).Height(m.mHeight).Render((*m.focused).View())
+	}
 	screen := lipgloss.JoinVertical(lipgloss.Left, m.headerBar(headerHeight), content, inputBox, m.footerBar(footerHeight))
 
 	return zone.Scan(screen)

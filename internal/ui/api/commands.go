@@ -30,6 +30,14 @@ func DoModelsLoadingTick() tea.Cmd {
 	})
 }
 
+type SessionLoadingTick struct{}
+
+func DoSessionLoadingTick() tea.Cmd {
+	return tea.Tick(100*time.Millisecond, func(time.Time) tea.Msg {
+		return SessionLoadingTick{}
+	})
+}
+
 type TickMsg20 time.Time
 
 func DoTick20() tea.Cmd {

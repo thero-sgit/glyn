@@ -22,6 +22,7 @@ type Run struct {
 	status     string
 	HistoryIdx int
 	Working    bool
+	width      int
 
 	blocks            []*agentResponseBlock
 	activeBlock       *agentResponseBlock
@@ -30,6 +31,8 @@ type Run struct {
 	failureError      string
 	showSteps         bool
 	completedToolCall map[string]bool
+	viewDirty         bool
+	cachedView        string
 }
 
 type agentResponseBlockKind uint8
@@ -61,14 +64,16 @@ func NewRun(id string, index, width int, userMessage string) *Run {
 		status:            "Thinking",
 		HistoryIdx:        index,
 		Working:           true,
+		width:             width,
 		showSteps:         true,
 		activeMessage:     -1,
 		completedToolCall: make(map[string]bool),
+		viewDirty:         true,
 	}
 }
 
-func NewHistoricalRun(id string, index int, wrappers []agent.MessageWrapper) *Run {
-	run := NewRun(id, index, 0, "")
+func NewHistoricalRun(id string, index, width int, wrappers []agent.MessageWrapper) *Run {
+	run := NewRun(id, index, width, "")
 	run.Messages = make([]agent.Message, 0, len(wrappers))
 	toolEvents := make(map[string]*UIEvent)
 	for _, wrapper := range wrappers {
@@ -122,6 +127,7 @@ func (a *Run) Init() tea.Cmd {
 }
 
 func (a *Run) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	a.viewDirty = true
 	switch msg := msg.(type) {
 	case tea.MouseMsg:
 		if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
@@ -243,6 +249,7 @@ func (a *Run) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (a *Run) Finish() {
+	a.viewDirty = true
 	a.Working = false
 	a.status = "Complete"
 	for _, block := range a.blocks {
@@ -259,6 +266,7 @@ func (a *Run) Finish() {
 }
 
 func (a *Run) Fail(err error) {
+	a.viewDirty = true
 	a.Working = false
 	a.status = "Failed"
 	a.failureError = err.Error()
@@ -271,6 +279,10 @@ func (a *Run) Fail(err error) {
 }
 
 func (a *Run) View() string {
+	if !a.viewDirty {
+		return a.cachedView
+	}
+
 	status := a.status
 	if a.Working {
 		status = a.spinner.View() + " " + status
@@ -307,7 +319,10 @@ func (a *Run) View() string {
 				label := library.SubtleStyle.Render("  " + toggle + " Thought process")
 				sections = append(sections, zone.Mark(a.reasoningZone(index), label))
 				if block.showReasoning {
-					sections = append(sections, library.SubtleStyle.MarginLeft(4).Render(block.reasoning.String()))
+					sections = append(sections, lipgloss.NewStyle().
+						Width(max(1, a.width-4)).
+						MarginLeft(4).
+						Render(block.reasoning.String()))
 				}
 			}
 		case toolBlock:
@@ -331,11 +346,21 @@ func (a *Run) View() string {
 		sections = append(sections, library.SubtleStyle.Render(a.failureError))
 	}
 
-	return lipgloss.NewStyle().MarginBottom(1).Render(lipgloss.JoinVertical(lipgloss.Top, sections...))
+	a.cachedView = lipgloss.NewStyle().MarginBottom(1).Render(lipgloss.JoinVertical(lipgloss.Top, sections...))
+	a.viewDirty = false
+	return a.cachedView
 }
 
 func (a *Run) HasActiveTools() bool {
 	return len(a.toolEvents) > 0
+}
+
+func (a *Run) SetWidth(width int) {
+	if a.width == width {
+		return
+	}
+	a.width = width
+	a.viewDirty = true
 }
 
 func (a *Run) ensureBlock(kind agentResponseBlockKind) *agentResponseBlock {

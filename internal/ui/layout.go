@@ -19,25 +19,16 @@ func (m Model) headerBar(headerHeight int) string {
 		Render(version)
 }
 
-func (m *Model) inputBox(h int) string {
-	taHeight := 4
-	if m.textarea.Length() > 0 || m.fileSelector.Focused || m.slashCmdCon.Focused {
-		taHeight = 8
-	}
-
+func (m *Model) inputBox() string {
 	if m.fileSelector.Focused {
-		m.fileSelector.Viewport.Height = taHeight - 3
+		m.fileSelector.Viewport.Height = m.inputBoxHeight - 3
 		m.fileSelector.Viewport.Width = m.width - 8
 
 	} else if m.slashCmdCon.Focused {
-		m.slashCmdCon.Viewport.Height = taHeight - 3
+		m.slashCmdCon.Viewport.Height = m.inputBoxHeight - 3
 		m.slashCmdCon.Viewport.Width = m.width - 8
 
-	} else {
-		m.textarea.SetHeight(taHeight - 1)
 	}
-
-	m.mHeight = h - taHeight
 
 	//
 	prompt := lipgloss.NewStyle().
@@ -91,10 +82,28 @@ func (m *Model) inputBox(h int) string {
 
 	return lipgloss.NewStyle().
 		Width(m.width).
-		Height(taHeight).
+		Height(m.inputBoxHeight).
 		PaddingLeft(2).
 		PaddingRight(2).
 		Render(promptBox)
+}
+
+func (m *Model) inputHeight() int {
+	if m.textarea.Length() > 0 || m.fileSelector.Focused || m.slashCmdCon.Focused {
+		return 8
+	}
+	return 4
+}
+
+func (m *Model) updateInputLayout() bool {
+	previousHeight := m.mHeight
+	previousInputHeight := m.inputBoxHeight
+	m.inputBoxHeight = m.inputHeight()
+	m.mHeight = max(0, m.height-3-m.inputBoxHeight)
+	if previousInputHeight != m.inputBoxHeight && !m.fileSelector.Focused && !m.slashCmdCon.Focused {
+		m.textarea.SetHeight(m.inputBoxHeight - 1)
+	}
+	return previousHeight != m.mHeight
 }
 
 func (m Model) footerBar(footerHeight int) string {
