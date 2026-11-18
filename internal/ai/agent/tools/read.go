@@ -15,15 +15,9 @@ type ReadFile struct {
 	Root string
 }
 
-type readArgs struct {
-	Path   string `json:"path"`
-	Offset int    `json:"offset"`
-	Limit  int    `json:"limit"`
-}
-
-func (r ReadFile) Run(ctx context.Context, raw json.RawMessage) (string, error) {
+func (r ReadFile) Run(ctx context.Context, args json.RawMessage) (string, error) {
 	var rArgs readArgs
-	if err := json.Unmarshal(raw, &rArgs); err != nil {
+	if err := json.Unmarshal(args, &rArgs); err != nil {
 		return "", err
 	}
 
@@ -75,7 +69,7 @@ func (r ReadFile) Run(ctx context.Context, raw json.RawMessage) (string, error) 
 		shown++
 	}
 
-	return builder.String(), scanner.Err()
+	return common.Truncate(builder.String(), 20_000), scanner.Err()
 }
 
 func (r ReadFile) Schema() map[string]any {
@@ -113,5 +107,10 @@ func (r ReadFile) Schema() map[string]any {
 }
 
 func (r ReadFile) Name() string { return "read_file" }
-
 // ---
+
+type readArgs struct {
+	Path   string `json:"path"`
+	Offset int    `json:"offset"`
+	Limit  int    `json:"limit"`
+}

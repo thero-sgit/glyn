@@ -43,16 +43,17 @@ func (m toggle) Pretty() string {
 var Config configuration
 
 type configuration struct {
-	Version     string
-	WorkingDir  string
-	DataBaseDir string
-	SanitizedWd string
-	GroqApiKey  string
-	Model       toggle
-	Effort      toggle
-	Mode        toggle
-	MdRenderer  glamour.TermRenderer
-	ProjectKey  string
+	Version          string
+	WorkingDir       string
+	DataBaseDir      string
+	SanitizedWd      string
+	GroqApiKey       string
+	LangSearchApiKey string
+	Model            toggle
+	Effort           toggle
+	Mode             toggle
+	MdRenderer       glamour.TermRenderer
+	ProjectKey       string
 }
 
 func getWd() string {
@@ -87,13 +88,23 @@ func getWd() string {
 	return cleanPath
 }
 
-func apiKey() string {
-	apiKey := os.Getenv("GROQ_API_KEY")
-	if apiKey == "" {
+type keys struct {
+	groq 	   string
+	langSearch string
+}
+
+func getApiKeys() keys {
+	groqKey := os.Getenv("GROQ_API_KEY")
+	if groqKey == "" {
 		log.Fatalf("GROQ_API_KEY is missing. Get your api key from Groq (https://console.groq.com/keys)")
 	}
 
-	return apiKey
+	langSearchKey := "sk-0a76c74359a14c13b3f0fcb378749cbc" // os.Getenv("LANGSEARCH_API_KEY")
+
+	return keys {
+		groq: groqKey,
+		langSearch: langSearchKey,
+	}
 }
 
 func (c *configuration) SetRenderer(width int) {
@@ -178,12 +189,14 @@ func dataBaseDir() (string, error) {
 }
 
 func Init() {
+	apiKeys := getApiKeys()
 	Config = configuration{
-		Version:    "v1.0.0",
-		WorkingDir: getWd(),
-		GroqApiKey: apiKey(),
-		Model:      NewToggle("\u27E1", []string{""}),
-		Effort:     NewToggle("\u26CF", []string{"medium", "high", "low"}),
+		Version:          "v1.0.0",
+		WorkingDir:       getWd(),
+		GroqApiKey:       apiKeys.groq,
+		LangSearchApiKey: apiKeys.langSearch,
+		Model:            NewToggle("\u27E1", []string{""}),
+		Effort:           NewToggle("\u26CF", []string{"medium", "high", "low"}),
 	}
 
 	base, e := dataBaseDir()

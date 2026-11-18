@@ -26,6 +26,7 @@ func NewAgent(role string, maxTurns int) Agent {
 		"read_file": tools.ReadFile{
 			Root: config.Config.WorkingDir,
 		},
+		"web_search": tools.WebSearchTool(),
 	}
 
 	return Agent{
@@ -220,7 +221,7 @@ func (a *Agent) executeTools(ctx context.Context, calls []ToolCall, eventsChan c
 				if err != nil {
 					result = "error: " + err.Error()
 				} else {
-					result = common.Truncate(r, 20_000)
+					result = r
 				}
 			}
 

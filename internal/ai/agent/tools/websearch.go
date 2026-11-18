@@ -1,17 +1,49 @@
 package tools
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+
+	"github.com/thero-sgit/glyn/internal/config"
 )
 
-type WebSearch struct {}
-
-func (w *WebSearch) Run(ctx context.Context, args json.RawMessage) (string, error) {
-	return "", nil
+type WebSearch struct {
+	url string
+	key string
 }
 
-func (w *WebSearch) Schema() map[string]any {
+func WebSearchTool() WebSearch {
+	return WebSearch{
+		url: "https://api.langsearch.com/v1/web-search",
+		key: config.Config.LangSearchApiKey,
+	}
+}
+
+func (w WebSearch) Run(ctx context.Context, args json.RawMessage) (string, error) {
+	var searchArgs SearchRequest
+	if err := json.Unmarshal(args, &searchArgs); err != nil {
+		return "", err
+	}
+
+	response, err := w.getResults(ctx, searchArgs)
+	if err != nil {
+		return "", err
+	}
+
+	data, err := json.MarshalIndent(response.Data, "", "	")
+	if err != nil {
+		return "", err
+	}
+
+	results := fmt.Sprintf("<search_results>\n%s\n<search_results>", data)
+	return results, nil
+}
+
+func (w WebSearch) Schema() map[string]any {
 	return map[string]any{
 		"type":      "function",
 		"function" : map[string]any {
@@ -71,10 +103,43 @@ func (w *WebSearch) Schema() map[string]any {
 
 func (w WebSearch) Name() string {return "web_search"}
 
+func (w WebSearch) getResults(ctx context.Context, reqBody SearchRequest) (*SearchResponse, error) {
+	jsonData, err := json.Marshal(reqBody)
+	if err != nil {
+		return &SearchResponse{}, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", w.url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return &SearchResponse{}, err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+ w.key)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return &SearchResponse{}, err
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		return &SearchResponse{}, fmt.Errorf("API Error (%d): %s", resp.StatusCode, string(body))
+	}
+
+	var response SearchResponse
+	if err := json.Unmarshal(body, &response); err != nil {
+		return &SearchResponse{}, fmt.Errorf("Unmarshal Error %s:", err.Error())
+	}
+
+	return &response, nil
+}
+
 // ---
 type SearchRequest struct {
 	Query string            `json:"query"`
-	Count uint8              `json:"count,omitempty"`
+	Count uint8             `json:"count,omitempty"`
 	Freshness string        `json:"freshness,omitempty"`
 	IncludeDomains []string `json:"includeDomains,omitempty"`
 	ExcludeDomains []string `json:"excludeDomains,omitempty"`
