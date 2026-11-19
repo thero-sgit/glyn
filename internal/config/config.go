@@ -98,8 +98,7 @@ func getApiKeys() keys {
 	if groqKey == "" {
 		log.Fatalf("GROQ_API_KEY is missing. Get your api key from Groq (https://console.groq.com/keys)")
 	}
-
-	langSearchKey := "sk-0a76c74359a14c13b3f0fcb378749cbc" // os.Getenv("LANGSEARCH_API_KEY")
+	langSearchKey := os.Getenv("LANGSEARCH_API_KEY")
 
 	return keys {
 		groq: groqKey,
