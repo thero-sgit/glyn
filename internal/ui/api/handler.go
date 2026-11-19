@@ -5,7 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/thero-sgit/glyn/internal/ai"
-	"github.com/thero-sgit/glyn/internal/ai/agent"
+	"github.com/thero-sgit/glyn/internal/ai/common"
 )
 
 type Handler struct {
@@ -47,7 +47,7 @@ func errorListener(ctx context.Context, ch <-chan error) tea.Cmd {
 	}
 }
 
-func AwaitEvent(ctx context.Context, ch <-chan agent.Event) tea.Cmd {
+func AwaitEvent(ctx context.Context, ch <-chan common.Event) tea.Cmd {
 	return func() tea.Msg {
 		select {
 		case event, ok := <-ch:
@@ -62,7 +62,7 @@ func AwaitEvent(ctx context.Context, ch <-chan agent.Event) tea.Cmd {
 	}
 }
 
-func AwaitResponse(ctx context.Context, ch chan agent.Chunk) tea.Cmd {
+func AwaitResponse(ctx context.Context, ch chan common.Chunk) tea.Cmd {
 	return func() tea.Msg {
 		select {
 		case completion, ok := <-ch:
@@ -78,8 +78,8 @@ func AwaitResponse(ctx context.Context, ch chan agent.Chunk) tea.Cmd {
 }
 
 func (h *Handler) HandlePrompt(prompt string) tea.Cmd {
-	responseChan    := make(chan agent.Chunk)
-	eventsChan      := make(chan agent.Event)
+	responseChan    := make(chan common.Chunk)
+	eventsChan      := make(chan common.Event)
 	errChan         := make(chan error, 2)
 
 	reqCtx := h.Session.Ctx

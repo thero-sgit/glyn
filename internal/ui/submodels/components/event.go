@@ -9,7 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
-	"github.com/thero-sgit/glyn/internal/ai/agent"
+	"github.com/thero-sgit/glyn/internal/ai/common"
 	"github.com/thero-sgit/glyn/internal/ui/api"
 	"github.com/thero-sgit/glyn/internal/ui/library"
 )
@@ -20,13 +20,13 @@ type UIEvent struct {
 	showResult bool
 	//
 	spinner    spinner.Model
-	e          agent.Event
+	e          common.Event
 	args       string
 	viewDirty  bool
 	cachedView string
 }
 
-func NewUIEvent(index int, event agent.Event) *UIEvent {
+func NewUIEvent(index int, event common.Event) *UIEvent {
 	s := spinner.New()
 	s.Spinner = spinner.Pulse
 
@@ -48,7 +48,7 @@ func (u *UIEvent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.MouseMsg:
 		if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
-			if result, ok := u.e.(agent.ToolDone); ok && result.Result != "" &&
+			if result, ok := u.e.(common.ToolDone); ok && result.Result != "" &&
 				zone.Get(u.resultZone()).InBounds(msg) {
 				u.showResult = !u.showResult
 			}
@@ -60,10 +60,10 @@ func (u *UIEvent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return u, cmd
 
-	case agent.Event:
+	case common.Event:
 		switch e := msg.(type) {
-		case agent.ToolDone:
-			if start, ok := u.e.(agent.ToolStart); ok && start.ID == e.ID {
+		case common.ToolDone:
+			if start, ok := u.e.(common.ToolStart); ok && start.ID == e.ID {
 				u.e = e
 				u.Done = true
 			}
@@ -82,10 +82,10 @@ func (u *UIEvent) View() string {
 
 	var name, detail string
 	switch event := u.e.(type) {
-	case agent.ToolStart:
+	case common.ToolStart:
 		name = toolLabel(event.Name)
 		detail = toolDetail(u.args)
-	case agent.ToolDone:
+	case common.ToolDone:
 		name = toolLabel(event.Name)
 		detail = toolDetail(u.args)
 	default:
@@ -101,7 +101,7 @@ func (u *UIEvent) View() string {
 	if detail != "" {
 		line += " " + library.SubtleStyle.Render(detail)
 	}
-	if result, ok := u.e.(agent.ToolDone); ok && result.Result != "" {
+	if result, ok := u.e.(common.ToolDone); ok && result.Result != "" {
 		toggle := "› Result"
 		if u.showResult {
 			toggle = "⌄ Result"
@@ -118,8 +118,8 @@ func (u *UIEvent) View() string {
 	return u.cachedView
 }
 
-func toolStartArgs(event agent.Event) string {
-	if start, ok := event.(agent.ToolStart); ok {
+func toolStartArgs(event common.Event) string {
+	if start, ok := event.(common.ToolStart); ok {
 		return start.Args
 	}
 	return ""
@@ -128,9 +128,9 @@ func toolStartArgs(event agent.Event) string {
 func (u *UIEvent) resultZone() string {
 	var id string
 	switch event := u.e.(type) {
-	case agent.ToolStart:
+	case common.ToolStart:
 		id = event.ID
-	case agent.ToolDone:
+	case common.ToolDone:
 		id = event.ID
 	}
 	return fmt.Sprintf("%d-tool-result-%s", u.HistoryIdx, id)
@@ -163,11 +163,11 @@ func toolDetail(value string) string {
 	return truncateDetail(value, 120)
 }
 
-func eventName(event agent.Event) string {
+func eventName(event common.Event) string {
 	switch event := event.(type) {
-	case agent.ToolStart:
+	case common.ToolStart:
 		return event.Name
-	case agent.ToolDone:
+	case common.ToolDone:
 		return event.Name
 	default:
 		return ""

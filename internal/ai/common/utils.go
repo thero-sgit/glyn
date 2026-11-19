@@ -1,4 +1,4 @@
-package agent
+package common
 
 import (
 	"bufio"
@@ -105,4 +105,8 @@ type Chunk struct {
     EOS       bool
     Reasoning bool
     TurnStart bool
+}
+
+func PruneAndFit(messages []Message) []Message {
+	return []Message{}
 }

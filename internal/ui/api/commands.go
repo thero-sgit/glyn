@@ -6,7 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/thero-sgit/glyn/internal/ai"
-	"github.com/thero-sgit/glyn/internal/ai/agent"
+	"github.com/thero-sgit/glyn/internal/ai/common"
 	"github.com/thero-sgit/glyn/internal/persistence"
 )
 
@@ -67,14 +67,14 @@ type PromptCmd struct {
 }
 
 type ResponseChunkCmd struct {
-	Chunk agent.Chunk
-	C     chan agent.Chunk
+	Chunk common.Chunk
+	C     chan common.Chunk
 }
 
 type EventCmd struct {
-	Event agent.Event
+	Event common.Event
 	Ctx   context.Context
-	C     <-chan agent.Event
+	C     <-chan common.Event
 }
 
 type SessionsReadMsg struct {
@@ -93,6 +93,6 @@ func GoGetSessionHistory(id string) tea.Cmd {
 }
 
 type ContinueSessionMsg struct {
-	Messages []agent.MessageWrapper
+	Messages []common.MessageWrapper
 	Error    error
 }

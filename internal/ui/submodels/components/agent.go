@@ -8,7 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
-	"github.com/thero-sgit/glyn/internal/ai/agent"
+	"github.com/thero-sgit/glyn/internal/ai/common"
 	"github.com/thero-sgit/glyn/internal/config"
 	"github.com/thero-sgit/glyn/internal/ui/api"
 	"github.com/thero-sgit/glyn/internal/ui/library"
@@ -16,7 +16,7 @@ import (
 
 type Run struct {
 	ID       string
-	Messages []agent.Message
+	Messages []common.Message
 
 	spinner    spinner.Model
 	status     string
@@ -59,7 +59,7 @@ func NewRun(id string, index, width int, userMessage string) *Run {
 
 	return &Run{
 		ID:                id,
-		Messages:          []agent.Message{{Role: "user", Content: userMessage}},
+		Messages:          []common.Message{{Role: "user", Content: userMessage}},
 		spinner:           s,
 		status:            "Thinking",
 		HistoryIdx:        index,
@@ -72,9 +72,9 @@ func NewRun(id string, index, width int, userMessage string) *Run {
 	}
 }
 
-func NewHistoricalRun(id string, index, width int, wrappers []agent.MessageWrapper) *Run {
+func NewHistoricalRun(id string, index, width int, wrappers []common.MessageWrapper) *Run {
 	run := NewRun(id, index, width, "")
-	run.Messages = make([]agent.Message, 0, len(wrappers))
+	run.Messages = make([]common.Message, 0, len(wrappers))
 	toolEvents := make(map[string]*UIEvent)
 	for _, wrapper := range wrappers {
 		message := wrapper.Msg
@@ -83,15 +83,15 @@ func NewHistoricalRun(id string, index, width int, wrappers []agent.MessageWrapp
 		if message.Role != "assistant" {
 			if message.Role == "tool" {
 				if uiEvent, ok := toolEvents[message.ToolCallId]; ok {
-					start := uiEvent.e.(agent.ToolStart)
-					uiEvent.Update(agent.ToolDone{
+					start := uiEvent.e.(common.ToolStart)
+					uiEvent.Update(common.ToolDone{
 						ID:     message.ToolCallId,
 						Name:   start.Name,
 						Result: message.Content,
 					})
 					uiEvent.showResult = true
 				} else {
-					uiEvent := NewUIEvent(index, agent.ToolDone{
+					uiEvent := NewUIEvent(index, common.ToolDone{
 						ID:     message.ToolCallId,
 						Name:   messageToolCalls[message.ToolCallId].Function.Name,
 						Result: message.Content,
@@ -110,7 +110,7 @@ func NewHistoricalRun(id string, index, width int, wrappers []agent.MessageWrapp
 			run.blocks = append(run.blocks, block)
 		}
 		for _, call := range message.ToolCalls {
-			event := agent.ToolStart{ID: call.Id, Name: call.Function.Name, Args: call.Function.Arguments}
+			event := common.ToolStart{ID: call.Id, Name: call.Function.Name, Args: call.Function.Arguments}
 			uiEvent := NewUIEvent(index, event)
 			if call.Id != "" {
 				toolEvents[call.Id] = uiEvent
@@ -176,7 +176,7 @@ func (a *Run) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Chunk.TurnStart {
 			a.activeBlock = nil
 			a.status = "Thinking"
-			a.Messages = append(a.Messages, agent.Message{Role: "assistant"})
+			a.Messages = append(a.Messages, common.Message{Role: "assistant"})
 			a.activeMessage = len(a.Messages) - 1
 			return a, nil
 		}
@@ -201,16 +201,16 @@ func (a *Run) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.ensureAssistantMessage().Content += msg.Chunk.Data
 		return a, nil
 
-	case agent.Event:
+	case common.Event:
 		switch event := msg.(type) {
-		case agent.ToolStart:
+		case common.ToolStart:
 			if a.toolEvents == nil {
 				a.toolEvents = make(map[string]*UIEvent)
 			}
 			uiEvent := NewUIEvent(a.HistoryIdx, event)
 			a.toolEvents[event.ID] = uiEvent
 			message := a.ensureAssistantMessage()
-			message.ToolCalls = append(message.ToolCalls, agent.ToolCall{
+			message.ToolCalls = append(message.ToolCalls, common.ToolCall{
 				Id:    event.ID,
 				Index: len(message.ToolCalls),
 				Type:  "function",
@@ -225,12 +225,12 @@ func (a *Run) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.activeBlock = &agentResponseBlock{kind: toolBlock, tool: uiEvent}
 			a.blocks = append(a.blocks, a.activeBlock)
 			a.status = "Using tools"
-		case agent.ToolDone:
+		case common.ToolDone:
 			if uiEvent, ok := a.toolEvents[event.ID]; ok {
 				uiEvent.Update(event)
 				delete(a.toolEvents, event.ID)
 				if !a.completedToolCall[event.ID] {
-					a.Messages = append(a.Messages, agent.Message{
+					a.Messages = append(a.Messages, common.Message{
 						Role:       "tool",
 						Content:    event.Result,
 						ToolCallId: event.ID,
@@ -372,9 +372,9 @@ func (a *Run) ensureBlock(kind agentResponseBlockKind) *agentResponseBlock {
 	return a.activeBlock
 }
 
-func (a *Run) ensureAssistantMessage() *agent.Message {
+func (a *Run) ensureAssistantMessage() *common.Message {
 	if a.activeMessage < 0 || a.activeMessage >= len(a.Messages) || a.Messages[a.activeMessage].Role != "assistant" {
-		a.Messages = append(a.Messages, agent.Message{Role: "assistant"})
+		a.Messages = append(a.Messages, common.Message{Role: "assistant"})
 		a.activeMessage = len(a.Messages) - 1
 	}
 	return &a.Messages[a.activeMessage]
@@ -388,8 +388,8 @@ func (a *Run) reasoningZone(index int) string {
 	return fmt.Sprintf("%d-thought-process-%d", a.HistoryIdx, index)
 }
 
-func callMap(calls []agent.ToolCall) map[string]agent.ToolCall {
-	cMap := make(map[string]agent.ToolCall)
+func callMap(calls []common.ToolCall) map[string]common.ToolCall {
+	cMap := make(map[string]common.ToolCall)
 	for i := range calls {
 		cMap[calls[i].Id] = calls[i]
 	}

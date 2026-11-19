@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/thero-sgit/glyn/internal/ai/agent"
-	"github.com/thero-sgit/glyn/internal/common"
+	"github.com/thero-sgit/glyn/internal/ai/common"
+	co "github.com/thero-sgit/glyn/internal/common"
 	"github.com/thero-sgit/glyn/internal/config"
 	_ "modernc.org/sqlite"
 )
@@ -45,18 +45,6 @@ var migrations = []string{
 	CREATE INDEX idx_tool_calls_message ON 	tool_calls(message_seq, id);
 	CREATE INDEX idx_messages_session ON messages(session_id, seq);
 	CREATE INDEX idx_sessions_project ON sessions(project_key, updated_at DESC);`,
-
-	// v2
-	`CREATE TABLE runs (
-		id          INTEGER PRIMARY KEY AUTOINCREMENT,
-		session_id  INTEGER NOT NULL REFERENCES messages(seq) ON DELETE CASCADE
-	);`,
-
-	// v3
-	`DROP TABLE IF EXISTS runs;`,
-
-	// v4
-	`DELETE FROM sessions WHERE id = 3;`,
 }
 
 type Store struct{ db *sql.DB }
@@ -120,7 +108,7 @@ func (s *Store) ListSessions(ctx context.Context) ([]ChatSession, error) {
 }
 
 func (s *Store) StartNewSession(ctx context.Context, title string) (ChatSession, error) {
-	now := time.Now().Format(common.TsFormat)
+	now := time.Now().Format(co.TsFormat)
 
 	result, err := s.db.ExecContext(
 		ctx,
@@ -136,7 +124,7 @@ func (s *Store) StartNewSession(ctx context.Context, title string) (ChatSession,
 	return *NewChatSession(title, fmt.Sprint(id), config.Config.Model.Name, now), nil
 }
 
-func (s *Store) AppendMessage(ctx context.Context, sessionId string, wrapper agent.MessageWrapper) error {
+func (s *Store) AppendMessage(ctx context.Context, sessionId string, wrapper common.MessageWrapper) error {
 	hasToolCalls := len(wrapper.Msg.ToolCalls) > 0
 
 	result, err := s.db.ExecContext(
@@ -158,7 +146,7 @@ func (s *Store) AppendMessage(ctx context.Context, sessionId string, wrapper age
 	return nil
 }
 
-func (s *Store) ListMessagesInSession(ctx context.Context, sessionId string) ([]agent.MessageWrapper, error) {
+func (s *Store) ListMessagesInSession(ctx context.Context, sessionId string) ([]common.MessageWrapper, error) {
 	rows, err := s.db.QueryContext(
 		ctx,
 		`SELECT seq, role, content, tool_calls, tool_call_id, created_at
@@ -172,11 +160,11 @@ func (s *Store) ListMessagesInSession(ctx context.Context, sessionId string) ([]
 	}
 	defer rows.Close()
 
-	var out []agent.MessageWrapper
+	var out []common.MessageWrapper
 	var messageSeqs []int64
 	var hasToolCalls []bool
 	for rows.Next() {
-		var wrapper agent.MessageWrapper
+		var wrapper common.MessageWrapper
 		var messageSeq int64
 		var hasToolCallsFlag int8
 
@@ -216,7 +204,7 @@ func (s *Store) ListMessagesInSession(ctx context.Context, sessionId string) ([]
 	return out, nil
 }
 
-func (s *Store) listToolCalls(ctx context.Context, message_seq int64) ([]agent.ToolCall, error) {
+func (s *Store) listToolCalls(ctx context.Context, message_seq int64) ([]common.ToolCall, error) {
 	rows, err := s.db.QueryContext(
 		ctx,
 		`SELECT id, idx, type, name, args
@@ -230,9 +218,9 @@ func (s *Store) listToolCalls(ctx context.Context, message_seq int64) ([]agent.T
 	}
 	defer rows.Close()
 
-	var out []agent.ToolCall
+	var out []common.ToolCall
 	for rows.Next() {
-		var call agent.ToolCall
+		var call common.ToolCall
 		if err := rows.Scan(&call.Id, &call.Index, &call.Type, &call.Function.Name, &call.Function.Arguments); err != nil {
 			return nil, err
 		}
@@ -243,7 +231,7 @@ func (s *Store) listToolCalls(ctx context.Context, message_seq int64) ([]agent.T
 	return out, rows.Err()
 }
 
-func (s *Store) appendToolCalls(ctx context.Context, seq int64, calls []agent.ToolCall) error {
+func (s *Store) appendToolCalls(ctx context.Context, seq int64, calls []common.ToolCall) error {
 	for _, call := range calls {
 		if _, err := s.db.ExecContext(
 			ctx,

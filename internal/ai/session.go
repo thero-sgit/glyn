@@ -10,7 +10,8 @@ import (
 	"time"
 
 	"github.com/thero-sgit/glyn/internal/ai/agent"
-	"github.com/thero-sgit/glyn/internal/common"
+	"github.com/thero-sgit/glyn/internal/ai/common"
+	co "github.com/thero-sgit/glyn/internal/common"
 	"github.com/thero-sgit/glyn/internal/persistence"
 )
 
@@ -21,12 +22,12 @@ type Session struct {
 	Wg    sync.WaitGroup
 	agent *agent.Agent
 
-	History []agent.Message
+	History []common.Message
 
 	//
 	lifecycleMu     sync.Mutex
 	sessionStore    *persistence.Store
-	msgToDiscChan   chan agent.MessageWrapper
+	msgToDiscChan   chan common.MessageWrapper
 	dbWorkerStop    chan struct{}
 	dbWorkerDone    chan error
 	dbWorkerStarted bool
@@ -71,7 +72,7 @@ func (s *Session) NameSession(message string, errChan chan error) {
 
 	req := StreamRequest{
 		Model: "openai/gpt-oss-20b",
-		Messages: []agent.Message{
+		Messages: []common.Message{
 			{Role: "system", Content: "Generate a 3-5 word title for this prompt. Return ONLY the title. MUST BE 3 TO 5 WORDS!"},
 			{Role: "user", Content: message},
 		},
@@ -131,16 +132,19 @@ func (s *Session) NameSession(message string, errChan chan error) {
 	}()
 }
 
-func (s *Session) NewPrompt(message string, c chan agent.Chunk, errChan chan error, eventsChan chan<- agent.Event) {
+func (s *Session) NewPrompt(message string, c chan common.Chunk, errChan chan error, eventsChan chan<- common.Event) {
 	s.lifecycleMu.Lock()
 	defer s.lifecycleMu.Unlock()
 
-	h := append(s.History, agent.Message{
+	h := append(s.History, common.Message{
 		Role:    "user",
 		Content: message,
 	})
+
+	h = common.PruneAndFit(h)
+
 	s.setErrorChannel(errChan)
-	now := time.Now().Format(common.TsFormat)
+	now := time.Now().Format(co.TsFormat)
 
 	s.Wg.Add(1)
 	ctx := s.Ctx
@@ -165,7 +169,7 @@ func (s *Session) ReadSessions() ([]persistence.ChatSession, error) {
 	return s.sessionStore.ListSessions(s.Ctx)
 }
 
-func (s *Session) ContinueSession(sessionId string) ([]agent.MessageWrapper, error) {
+func (s *Session) ContinueSession(sessionId string) ([]common.MessageWrapper, error) {
 	s.lifecycleMu.Lock()
 	defer s.lifecycleMu.Unlock()
 
@@ -194,8 +198,8 @@ func (s *Session) ContinueSession(sessionId string) ([]agent.MessageWrapper, err
 	return h, stopErr
 }
 
-func (s *Session) unwrapMessages(messages []agent.MessageWrapper) {
-	var history []agent.Message
+func (s *Session) unwrapMessages(messages []common.MessageWrapper) {
+	var history []common.Message
 	for i := range messages {
 		history = append(history, messages[i].Msg)
 	}
@@ -205,7 +209,7 @@ func (s *Session) unwrapMessages(messages []agent.MessageWrapper) {
 func (s *Session) writeToDbWorker(notifyCtx context.Context, sessionID string) {
 	defer close(s.dbWorkerDone)
 	var firstErr error
-	appendMessage := func(ctx context.Context, msg agent.MessageWrapper) {
+	appendMessage := func(ctx context.Context, msg common.MessageWrapper) {
 		if err := s.sessionStore.AppendMessage(ctx, sessionID, msg); err != nil {
 			if firstErr == nil {
 				firstErr = err
@@ -270,7 +274,7 @@ func (s *Session) stopDBWorker() error {
 	s.dbWorkerStarted = false
 	s.dbWorkerStop = make(chan struct{})
 	s.dbWorkerDone = make(chan error, 1)
-	s.msgToDiscChan = make(chan agent.MessageWrapper, 2)
+	s.msgToDiscChan = make(chan common.MessageWrapper, 2)
 
 	return err
 }
@@ -317,7 +321,7 @@ func (s *Session) RetrieveModels(c chan []GroqModelInfo, errChan chan error) {
 
 func NewSession() *Session {
 	a := agent.NewAgent("Main", 25)
-	msgDC := make(chan agent.MessageWrapper, 2)
+	msgDC := make(chan common.MessageWrapper, 2)
 
 	s := Session{
 		groq:          newGroq(),

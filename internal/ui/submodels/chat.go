@@ -7,7 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/thero-sgit/glyn/internal/ai/agent"
+	"github.com/thero-sgit/glyn/internal/ai/common"
 	"github.com/thero-sgit/glyn/internal/config"
 	"github.com/thero-sgit/glyn/internal/ui/api"
 	"github.com/thero-sgit/glyn/internal/ui/library"
@@ -36,7 +36,7 @@ type ChatScreen struct {
 type chatTurn struct {
 	prompt   *components.UserPrompt
 	run      *components.Run
-	wrappers []agent.MessageWrapper
+	wrappers []common.MessageWrapper
 }
 
 func (c *ChatScreen) Init() tea.Cmd {
@@ -222,7 +222,7 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case api.EventCmd:
 		switch msg.Event.(type) {
-		case agent.ToolStart:
+		case common.ToolStart:
 			if c.currentRun == nil {
 				return c, api.AwaitEvent(msg.Ctx, msg.C)
 			}
@@ -242,7 +242,7 @@ func (c *ChatScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return c, tea.Batch(cmds...)
 
-		case agent.ToolDone:
+		case common.ToolDone:
 			if c.currentRun != nil {
 				c.contentDirty = true
 				c.currentRun.Update(msg.Event)
@@ -350,7 +350,7 @@ func (c *ChatScreen) reconstructTurns(from api.ContinueSessionMsg) {
 		c.errorView = from.Error.Error()
 	}
 
-	wrappers := append([]agent.MessageWrapper(nil), from.Messages...)
+	wrappers := append([]common.MessageWrapper(nil), from.Messages...)
 	sort.SliceStable(wrappers, func(i, j int) bool {
 		return wrappers[i].Time < wrappers[j].Time
 	})

@@ -12,12 +12,13 @@ import (
 	"time"
 
 	"github.com/thero-sgit/glyn/internal/ai/agent"
+	"github.com/thero-sgit/glyn/internal/ai/common"
 	"github.com/thero-sgit/glyn/internal/config"
 )
 
 type StreamRequest struct {
 	Model           string           `json:"model"`
-	Messages        []agent.Message  `json:"messages"`
+	Messages        []common.Message  `json:"messages"`
 	ReasoningFormat string           `json:"reasoning_format,omitempty"`
 	ReasoningEffort string           `json:"reasoning_effort,omitempty"`
 	Stream          bool             `json:"stream"`
@@ -36,15 +37,15 @@ func newGroq() *groq {
 	}
 }
 
-func (g groq) CreateChatCompletionStream(ctx context.Context, reqBody StreamRequest) (*agent.ChatCompletionStream, error) {
+func (g groq) CreateChatCompletionStream(ctx context.Context, reqBody StreamRequest) (*common.ChatCompletionStream, error) {
 	jsonData, err := json.Marshal(reqBody)
 	if err != nil {
-		return &agent.ChatCompletionStream{}, err
+		return &common.ChatCompletionStream{}, err
 	}
 
 	req, err := http.NewRequestWithContext(ctx, "POST", g.url+"/chat/completions", bytes.NewBuffer(jsonData))
 	if err != nil {
-		return &agent.ChatCompletionStream{}, err
+		return &common.ChatCompletionStream{}, err
 	}
 
 	req.Header.Set("Authorization", "Bearer "+g.apiKey)
@@ -52,21 +53,21 @@ func (g groq) CreateChatCompletionStream(ctx context.Context, reqBody StreamRequ
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return &agent.ChatCompletionStream{}, err
+		return &common.ChatCompletionStream{}, err
 	}
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return &agent.ChatCompletionStream{}, fmt.Errorf("API Error (%d): %s", resp.StatusCode, string(body))
+		return &common.ChatCompletionStream{}, fmt.Errorf("API Error (%d): %s", resp.StatusCode, string(body))
 	}
 
-	return &agent.ChatCompletionStream{
+	return &common.ChatCompletionStream{
 		Body:   resp.Body,
 		Reader: bufio.NewReader(resp.Body),
 	}, nil
 }
 
-func (g groq) handlePrompt(ctx context.Context, a *agent.Agent, messages []agent.Message) (agent.ChatCompletionStream, error) {
+func (g groq) handlePrompt(ctx context.Context, a *agent.Agent, messages []common.Message) (common.ChatCompletionStream, error) {
 	req := StreamRequest{
 		Model:           config.Config.Model.Name,
 		Messages:        messages,
@@ -78,7 +79,7 @@ func (g groq) handlePrompt(ctx context.Context, a *agent.Agent, messages []agent
 
 	stream, err := g.CreateChatCompletionStream(ctx, req)
 	if err != nil {
-		return agent.ChatCompletionStream{}, fmt.Errorf("groq completion failed: %w", err)
+		return common.ChatCompletionStream{}, fmt.Errorf("groq completion failed: %w", err)
 	}
 
 	return *stream, nil
