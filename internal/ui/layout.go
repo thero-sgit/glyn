@@ -1,7 +1,6 @@
 package ui
 
 import (
-
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 	"github.com/thero-sgit/glyn/internal/config"
@@ -30,7 +29,6 @@ func (m *Model) inputBox() string {
 		m.slashCmdCon.Viewport.Width = m.width - 8
 
 	}
-	m.updateInputLayout()
 
 	//
 	prompt := lipgloss.NewStyle().
@@ -38,7 +36,7 @@ func (m *Model) inputBox() string {
 		AlignHorizontal(lipgloss.Center).
 		AlignVertical(lipgloss.Center).
 		Render("  >  ")
-		
+
 	textArea := lipgloss.JoinHorizontal(lipgloss.Left, prompt, m.textarea.View())
 	textArea = zone.Mark("text-area", textArea)
 
@@ -99,11 +97,13 @@ func (m *Model) inputHeight() int {
 
 func (m *Model) updateInputLayout() bool {
 	previousHeight := m.mHeight
-	previousInputHeight := m.inputBoxHeight
 	m.inputBoxHeight = m.inputHeight()
-	m.mHeight = max(0, m.height-m.inputBoxHeight)
-	if previousInputHeight != m.inputBoxHeight && !m.fileSelector.Focused && !m.slashCmdCon.Focused {
-		m.textarea.SetHeight(m.inputBoxHeight - 1)
+	m.mHeight = max(0, m.height-3-m.inputBoxHeight)
+	if !m.fileSelector.Focused && !m.slashCmdCon.Focused {
+		textareaHeight := m.inputBoxHeight - 1
+		if m.textarea.Height() != textareaHeight {
+			m.textarea.SetHeight(textareaHeight)
+		}
 	}
 	return previousHeight != m.mHeight
 }
