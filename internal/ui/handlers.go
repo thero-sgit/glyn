@@ -290,12 +290,13 @@ func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		updatedModel, cmd := m.fileSelector.Update(msg)
 		m.fileSelector = *updatedModel.(*components.FileSelector)
 
-		if len(m.fileSelector.Options) > 0 && !m.fileSelector.Options[m.fileSelector.Cursor].IsDir {
-			m.textarea.InsertString(" @" + m.fileSelector.Options[m.fileSelector.Cursor].Path)
+		if m.fileSelector.SelectedFile != nil {
+			m.textarea.InsertString(" @" + m.fileSelector.SelectedFile.Path)
 			m.textarea.InsertString(fmt.Sprint(m.textarea.Length()))
 			m.textarea.Focus()
 			//
 			m.fileSelector.Focused = false
+			m.fileSelector.SelectedFile = nil
 			m.fileSelector.SetOptions()
 			m.syncInputLayout()
 		}

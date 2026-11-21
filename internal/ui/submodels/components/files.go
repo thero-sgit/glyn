@@ -24,8 +24,11 @@ type FileSelector struct {
 	Prompt   string
 
 	//
-	Options []FileEntry
-	Cursor  int
+	Options      []FileEntry
+	Cursor       int
+	SelectedFile *FileEntry
+
+	cachedDirs map[string][]FileEntry
 
 	//
 	Focused bool
@@ -41,11 +44,12 @@ func NewFileSelector() FileSelector {
 	ti.Placeholder = "<filename> to add / rm + space to remove file"
 
 	fib := FileSelector{
-		ti:      ti,
-		Options: listMatches(""),
+		ti:         ti,
+		cachedDirs: make(map[string][]FileEntry),
 	}
 
 	fib.SetPrompt("@")
+	fib.refreshOptions(true)
 	fib.renderViewport()
 
 	return fib
@@ -56,20 +60,31 @@ func (f *FileSelector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if !ok {
 		return f, nil
 	}
+	f.SelectedFile = nil
 
 	var cmd tea.Cmd
 
 	switch key.String() {
 	case "enter":
-		f.onEnterTab()
-		f.Options = listMatches(f.ti.Value())
-		if len(f.Options) > 0 && !f.Options[f.Cursor].IsDir {
+		f.refreshOptions(true)
+		if len(f.Options) == 0 {
+			break
+		}
+
+		selected := f.Options[f.Cursor]
+		if selected.IsDir {
+			f.ti.SetValue(selected.Path)
+			f.ti.CursorEnd()
+			f.Viewport.GotoTop()
+			f.Cursor = 0
+			f.refreshOptions(true)
+		} else {
+			f.SelectedFile = &selected
 			f.ti.Reset()
-			return f, nil
 		}
 
 	case "tab":
-		f.Options = listMatches(f.ti.Value())
+		f.refreshOptions(true)
 		f.onEnterTab()
 
 	case "up":
@@ -92,13 +107,14 @@ func (f *FileSelector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case "left", "right":
 		f.ti, cmd = f.ti.Update(msg)
+		f.refreshOptions(false)
 
 	default:
 		f.ti, cmd = f.ti.Update(msg)
 		f.Viewport.GotoTop()
 		f.ti.CursorEnd()
-		
 		f.Cursor = 0
+		f.refreshOptions(false)
 	}
 
 	f.SetOptions()
@@ -119,7 +135,8 @@ func (f *FileSelector) onEnterTab() {
 		f.Cursor = 0
 		f.Viewport.GotoTop()
 		f.ti.CursorEnd()
-	}	
+		f.refreshOptions(true)
+	}
 }
 
 func (f *FileSelector) renderViewport() {
@@ -136,40 +153,58 @@ func (f *FileSelector) renderViewport() {
 	f.Viewport.SetContent(strings.Join(rows, "\n"))
 }
 
+func (f *FileSelector) refreshOptions(readDirectory bool) {
+	dir, prefix := filepath.Split(f.ti.Value())
+	if dir == "" {
+		dir = "."
+	}
+	dir = filepath.Clean(dir)
+
+	if readDirectory {
+		destination, err := os.ReadDir(dir)
+		if err != nil {
+			delete(f.cachedDirs, dir)
+			f.Options = nil
+			f.Cursor = 0
+			return
+		}
+
+		entries := make([]FileEntry, 0, len(destination))
+		for _, entry := range destination {
+			name := entry.Name()
+			path := filepath.Join(dir, name)
+			if entry.IsDir() {
+				name += string(os.PathSeparator)
+				path += string(os.PathSeparator)
+			}
+			entries = append(entries, FileEntry{
+				Name:  name,
+				Path:  path,
+				IsDir: entry.IsDir(),
+			})
+		}
+		f.cachedDirs[dir] = entries
+	}
+
+	f.Options = f.Options[:0]
+	prefix = strings.ToLower(prefix)
+	for _, entry := range f.cachedDirs[dir] {
+		if strings.HasPrefix(strings.ToLower(strings.TrimSuffix(entry.Name, string(os.PathSeparator))), prefix) {
+			f.Options = append(f.Options, entry)
+		}
+	}
+	if f.Cursor >= len(f.Options) {
+		f.Cursor = len(f.Options) - 1
+	}
+	if f.Cursor < 0 {
+		f.Cursor = 0
+	}
+}
+
 func (f *FileSelector) SetPrompt(p string) {
 	label := " Add file: "
 
 	f.ti.Prompt = library.BwLabelStyle.Bold(true).Render(label) + lipgloss.NewStyle().Foreground(library.AccentColor).Bold(true).Render(" "+p)
 	f.Prompt = p
 	f.ti.Reset()
-}
-
-func listMatches(token string) []FileEntry {
-	dir, prefix := filepath.Split(token)
-
-	if dir == "" {
-		dir = "."
-	}
-
-	destination, err := os.ReadDir(dir)
-	if err != nil {
-		return []FileEntry{}
-	}
-
-	var entries []FileEntry
-	for _, e := range destination {
-		name := e.Name()
-
-		if strings.HasPrefix(strings.ToLower(name), strings.ToLower(prefix)) {
-			path_ := filepath.Join(dir, name)
-			if e.IsDir() {
-				name = name + "/"
-				path_ = path_ + "/"
-			}
-
-			entries = append(entries, FileEntry{name, path_, e.IsDir()})
-		}
-	}
-
-	return entries
 }
