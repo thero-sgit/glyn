@@ -78,10 +78,7 @@ func Truncate(s string, max int) string {
     }
     
     cut = strings.ToValidUTF8(cut, "")
-    return cut + fmt.Sprintf(
-        "\n\n[output truncated: showed %d of %d bytes. Narrow your search or read a smaller range.]",
-        len(cut), len(s),
-    )
+    return cut
 }
 
 func RelativePath(path string) string {

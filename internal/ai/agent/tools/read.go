@@ -34,7 +34,7 @@ func (r ReadFile) Run(ctx context.Context, args json.RawMessage) (string, error)
 	}
 	defer file.Close()
 
-	// 
+	//
 	f, err := common.BinaryCheck(file)
 	if err != nil {
 		return "", err
@@ -51,11 +51,11 @@ func (r ReadFile) Run(ctx context.Context, args json.RawMessage) (string, error)
 		if line < rArgs.Offset {
 			continue
 		}
-		
+
 		if shown >= rArgs.Limit {
 			fmt.Fprintf(
 				&builder,
-				"... truncated, file continues past line %d. Use offset=%d to read more.\n", line - 1, line,
+				"... truncated, file continues past line %d. Use offset=%d to read more.\n", line-1, line,
 			)
 
 			break
@@ -69,35 +69,43 @@ func (r ReadFile) Run(ctx context.Context, args json.RawMessage) (string, error)
 		shown++
 	}
 
-	return common.Truncate(builder.String(), 20_000), scanner.Err()
+	s := builder.String()
+	cut := common.Truncate(s, 20_000)
+
+	return WrapToolResult(
+		r.Name(),
+		cut+fmt.Sprintf(
+			"\n\n[output truncated: showed %d of %d bytes. Narrow your search or read a smaller range.]",
+			len(cut), len(s),
+		),
+	), scanner.Err()
 }
 
 func (r ReadFile) Schema() map[string]any {
 	return map[string]any{
-		"type":      "function",
-		"function" : map[string]any {
+		"type": "function",
+		"function": map[string]any{
 			"name":        "read_file",
 			"description": "Read file of given path",
 
-			"parameters":  map[string]any {
+			"parameters": map[string]any{
 				"type": "object",
 
-				"properties": map[string]any {
-					"path": map[string]any {
-						"type": "string",
+				"properties": map[string]any{
+					"path": map[string]any{
+						"type":        "string",
 						"description": "The path of file to read",
 					},
 
-					"offset": map[string]any {
-						"type": "integer",
+					"offset": map[string]any{
+						"type":        "integer",
 						"description": "line in file to start from (1-based start line)",
 					},
 
-					"limit": map[string]any {
-						"type": "integer",
+					"limit": map[string]any{
+						"type":        "integer",
 						"description": "line in file to stop at",
 					},
-
 				},
 
 				"required": []string{"path", "offset", "limit"},
@@ -107,10 +115,19 @@ func (r ReadFile) Schema() map[string]any {
 }
 
 func (r ReadFile) Name() string { return "read_file" }
+
 // ---
 
 type readArgs struct {
 	Path   string `json:"path"`
 	Offset int    `json:"offset"`
 	Limit  int    `json:"limit"`
+}
+
+func StubReadFileResult(result string) string {
+	result, ok := TrimWrap("<tool_results:read_file>", result)
+	if !ok {
+		return "stub_generation_failed..."
+	}
+	return common.Truncate(result, 25) + "\n\t... truncated."
 }

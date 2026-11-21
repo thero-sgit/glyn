@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -291,6 +292,7 @@ func (m *Model) handleEnterKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 		if len(m.fileSelector.Options) > 0 && !m.fileSelector.Options[m.fileSelector.Cursor].IsDir {
 			m.textarea.InsertString(" @" + m.fileSelector.Options[m.fileSelector.Cursor].Path)
+			m.textarea.InsertString(fmt.Sprint(m.textarea.Length()))
 			m.textarea.Focus()
 			//
 			m.fileSelector.Focused = false

@@ -39,8 +39,7 @@ func (w WebSearch) Run(ctx context.Context, args json.RawMessage) (string, error
 		return "", err
 	}
 
-	results := fmt.Sprintf("<search_results>\n%s\n<search_results>", data)
-	return results, nil
+	return WrapToolResult(w.Name(), fmt.Sprint(data)), nil
 }
 
 func (w WebSearch) Schema() map[string]any {
@@ -155,25 +154,43 @@ type SearchResult struct {
 	DatePublished string `json:"datePublished,omitempty"`
 }
 
+type ResponseData struct {
+	Type string `json:"_type"`
+
+	QueryContext struct {
+		OriginalQuery string `json:"originalQuery,omitempty"`
+	} `json:"queryContext,omitempty"`
+
+	WebPages struct {
+		Value []SearchResult    `json:"value"`
+		WebSearchUrl string     `json:"webSearchUrl,omitempty"`
+		SomeResultsRemoved bool `json:"someResultsRemoved,omitempty"`
+	} `json:"webPages,omitempty"`
+}
+
 type SearchResponse struct {
 	Code int   `json:"code,omitempty"`
 	LogID string `json:"log_id,omitempty"`
 	Msg string 	 `json:"msg,omitempty"`
-	Data struct {
-		Type string `json:"_type"`
-
-		QueryContext struct {
-			OriginalQuery string `json:"originalQuery,omitempty"`
-		} `json:"queryContext,omitempty"`
-
-		WebPages struct {
-			Value []SearchResult    `json:"value"`
-			WebSearchUrl string     `json:"webSearchUrl,omitempty"`
-			SomeResultsRemoved bool `json:"someResultsRemoved,omitempty"`
-		} `json:"webPages,omitempty"`
-	} `json:"data"`
+	Data ResponseData `json:"data"`
 	Usage struct {
 		InputTokens  uint32 `json:"input_tokens"`
 		OutputTokens uint32 `json:"output_tokens"`
 	}`json:"usage"`
+}
+
+func StubWebSearchResults(results string) []string {
+	results, _ = TrimWrap("<tool_results:web_search>", results)
+
+	var data ResponseData
+	if e := json.Unmarshal([]byte(results), &data); e != nil {
+		return []string{"stub_generation_failed..."}
+	}
+
+	var stubs []string
+	for _, result := range data.WebPages.Value {
+		stubs = append(stubs, fmt.Sprintf("[web_search result: %s (%s), page_id stored as %s ]", result.Name, result.Url, result.ID))
+	}
+
+	return stubs
 }

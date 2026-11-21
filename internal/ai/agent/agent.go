@@ -58,7 +58,7 @@ func (a *Agent) Run(
 		}
 
 		if msg.Role == "tool" {
-			history = common.PruneAndFit(history)
+			history = *common.PruneAndFit(&history)
 		}
 
 		history = append(history, msg)

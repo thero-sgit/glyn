@@ -141,7 +141,7 @@ func (s *Session) NewPrompt(message string, c chan common.Chunk, errChan chan er
 		Content: message,
 	})
 
-	h = common.PruneAndFit(h)
+	h = *common.PruneAndFit(&h)
 
 	s.setErrorChannel(errChan)
 	now := time.Now().Format(co.TsFormat)

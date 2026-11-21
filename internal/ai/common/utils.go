@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/thero-sgit/glyn/internal/ai/agent/tools"
 )
 
 type ChatCompletionStream struct {
@@ -48,19 +50,19 @@ func (s *ChatCompletionStream) Recv() (GroqStreamChunk, error) {
 type GroqStreamChunk struct {
 	Choices []struct {
 		Delta struct {
-			Content 		 string      `json:"content"`
-			ReasoningContent string      `json:"reasoning_content"`
-			Reasoning 		 string      `json:"reasoning"`
-			ToolCalls        []ToolCall  `json:"tool_calls,omitempty"`
+			Content          string     `json:"content"`
+			ReasoningContent string     `json:"reasoning_content"`
+			Reasoning        string     `json:"reasoning"`
+			ToolCalls        []ToolCall `json:"tool_calls,omitempty"`
 		} `json:"delta"`
 		FinishReason *string `json:"finish_reason"`
 	} `json:"choices"`
 }
 
 type ToolCall struct {
-	Id       string `json:"id"`
-	Index    int    `json:"index"`
-	Type     string `json:"type"`
+	Id    string `json:"id"`
+	Index int    `json:"index"`
+	Type  string `json:"type"`
 
 	Function struct {
 		Name      string `json:"name"`
@@ -69,10 +71,10 @@ type ToolCall struct {
 }
 
 type Message struct {
-	Role 	   string      `json:"role"`
-	Content    string      `json:"content,omitempty"`
-	ToolCalls  []ToolCall  `json:"tool_calls,omitempty"`
-	ToolCallId string      `json:"tool_call_id,omitempty"`
+	Role       string     `json:"role"`
+	Content    string     `json:"content,omitempty"`
+	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`
+	ToolCallId string     `json:"tool_call_id,omitempty"`
 }
 
 type MessageWrapper struct {
@@ -87,26 +89,50 @@ type Event interface {
 }
 
 type ToolStart struct{ ID, Name, Args string }
+
 func (t ToolStart) Pretty() string {
 	return fmt.Sprintf("%s %s", t.Name, t.Args)
 }
 
-
 type ToolDone struct{ ID, Name, Result string }
+
 func (t ToolDone) Pretty() string {
 	return fmt.Sprintf("%s", t.Name)
 }
 
 type TurnDone struct{}
 
+func (TurnDone) Pretty() string { return "" }
 
 type Chunk struct {
-    Data      string
-    EOS       bool
-    Reasoning bool
-    TurnStart bool
+	Data      string
+	EOS       bool
+	Reasoning bool
+	TurnStart bool
 }
 
-func PruneAndFit(messages []Message) []Message {
-	return []Message{}
+func PruneAndFit(messages *[]Message) *[]Message {
+	if messages == nil {
+		return nil
+	}
+
+	for i := range *messages {
+		message := &(*messages)[i]
+		if message.Role == "tool" {
+			switch {
+			case strings.HasPrefix(message.Content, "<tool_results:web_search>"):
+				message.Content = tools.WrapToolResult(
+					fmt.Sprintf("web_search:tool_call_id=%s", message.ToolCallId),
+					strings.Join(tools.StubWebSearchResults(message.Content), "\n"),
+				)
+			case strings.HasPrefix(message.Content, "<tool_results:read_file>"):
+				message.Content = tools.WrapToolResult(
+					fmt.Sprintf("read_file:tool_call_id=%s", message.ToolCallId),
+					tools.StubReadFileResult(message.Content),
+				)
+			}
+		}
+	}
+
+	return messages
 }
